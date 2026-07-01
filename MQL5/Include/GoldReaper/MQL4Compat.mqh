@@ -144,6 +144,12 @@ double AccountFreeMarginCheck(string symbol,int cmd,double volume)
 bool RefreshRates() { return true; }
 
 //====================================================================
+// IsDemo()/IsTesting() kieu MQL4 (khong con la ham co san trong MQL5)
+//====================================================================
+bool IsDemo()    { return AccountInfoInteger(ACCOUNT_TRADE_MODE)==ACCOUNT_TRADE_MODE_DEMO; }
+bool IsTesting() { return (bool)MQLInfoInteger(MQL_TESTER); }
+
+//====================================================================
 // Cac ham thoi gian kieu MQL4 (khong con trong MQL5)
 //====================================================================
 int TimeYear(datetime t)      { MqlDateTime s; TimeToStruct(t,s); return s.year; }

@@ -113,6 +113,7 @@ input string LotSizeSettings="----------------------- LotSize Settings ---------
 input double ForceBalanceToUse=0 ; // manually set balance to use (if > 0)
 input e_Risk Risk=1234 ; // Lotsize Calculation method
 input double StartLots=0.01 ; // Start Lots
+double g_startLots=0.0; // ban sao co the ghi duoc cua input StartLots (input la hang so trong MQL5, khong the gan lai)
 input double MaxAllowedDD=30 ; // Max Allowed TOTAL Drawdown
 input bool UseWeightedLots=true ; // Weighted Lotsize
 input double MaxRiskPerStrategy_=1 ; // Max Risk Per Strat
@@ -537,6 +538,7 @@ double g_balSnapshot=0.0;
 
 int OnInit()
 {
+g_startLots=StartLots;
 double lv_d2;
 double lv_d3;
 int lv_i4;
@@ -802,7 +804,7 @@ g_nfpDates[238]=D'2007.02.02 12:30';
 g_nfpDates[239]=D'2007.01.05 12:30';
 if(Risk==1234)
 {
-StartLots=MarketInfo(g_tradeSymbol,MODE_MINLOT);
+g_startLots=MarketInfo(g_tradeSymbol,MODE_MINLOT);
 }
 if(TradeFrequency==5&&Risk==1234)
 {
@@ -967,10 +969,10 @@ g_useMonFilter=true;
 }
 g_st2_lots=(double)TimeCurrent();
 g_spread=MarketInfo(g_tradeSymbol,MODE_ASK)-MarketInfo(g_tradeSymbol,MODE_BID);
-g_pairStratLots[g_pairIdx]=NormalizeDouble(MathFloor(StartLots*100.0)/100.0,2);
+g_pairStratLots[g_pairIdx]=NormalizeDouble(MathFloor(g_startLots*100.0)/100.0,2);
 if(MarketInfo(g_tradeSymbol,MODE_LOTSTEP)==0.1)
 {
-g_pairStratLots[g_pairIdx]=NormalizeDouble((MathFloor(StartLots*10.0))/10.0,1);
+g_pairStratLots[g_pairIdx]=NormalizeDouble((MathFloor(g_startLots*10.0))/10.0,1);
 if(g_pairStratLots[g_pairIdx]<0.1)
 {
 g_pairStratLots[g_pairIdx]=0.1;
@@ -1120,9 +1122,9 @@ if(Risk> 0)
 {
 g_useZoneRecovery=true;
 }
-if(StartLots<0.0)
+if(g_startLots<0.0)
 {
-StartLots=0.01;
+g_startLots=0.01;
 }
 if(g_zrMaxLoss>MarketInfo(g_tradeSymbol,MODE_MAXLOT))
 {
@@ -1178,8 +1180,8 @@ for(lv_i9=0;lv_i9<99;lv_i9++)
 g_pairSellTickets[lv_i9]=0;
 g_pairBuyTickets[lv_i9]=0;
 g_pairLastBar[lv_i9]=iTime(g_tradeSymbol,MT4Period(g_entryTF),1);
-if(!(g_pairStratLots[lv_i9]<StartLots)) continue;
-g_pairStratLots[lv_i9]=StartLots;
+if(!(g_pairStratLots[lv_i9]<g_startLots)) continue;
+g_pairStratLots[lv_i9]=g_startLots;
 
 }
 g_chartID=0;
@@ -2967,7 +2969,7 @@ if(!(g_tradeHistory[lv_i1][0]>0.0)) continue;
 if(g_tradeHistory[lv_i1][1]==4.0&&MarketInfo(g_tradeSymbol,MODE_ASK)<g_tradeHistory[lv_i1][0]-g_minStopLevel)
 {
 Print("Restoring pending buy-order ");
-g_lastError=OrderSend(g_tradeSymbol,OP_BUYSTOP,g_tradeHistory[lv_i1][2],g_tradeHistory[lv_i1][0],int(g_maxVolatility*g_pointSize),g_tradeHistory[lv_i1][0]-(g_minProfitClose+g_newsImpactLevel)*g_pointSize,g_maxLossClose*g_pointSize+g_tradeHistory[lv_i1][0],g_currentSymbol,g_magicMain,g_lastTradeTime+172800/*=2 ngay*/,Green);
+g_lastError=(int)OrderSend(g_tradeSymbol,OP_BUYSTOP,g_tradeHistory[lv_i1][2],g_tradeHistory[lv_i1][0],int(g_maxVolatility*g_pointSize),g_tradeHistory[lv_i1][0]-(g_minProfitClose+g_newsImpactLevel)*g_pointSize,g_maxLossClose*g_pointSize+g_tradeHistory[lv_i1][0],g_currentSymbol,g_magicMain,g_lastTradeTime+172800/*=2 ngay*/,Green);
 g_tp_hitBuy=false;
 tmp_d1=g_tradeHistory[lv_i1][0];
 tmp_l2=g_lastError;
@@ -2989,7 +2991,7 @@ if(1==0)//false
 do
 {
 Sleep((uint)2500);
-g_lastError=OrderSend(g_tradeSymbol,OP_BUYSTOP,g_tradeHistory[lv_i1][2],g_tradeHistory[lv_i1][0],int(g_maxVolatility*g_pointSize),g_tradeHistory[lv_i1][0]-(g_minProfitClose+g_newsImpactLevel)*g_pointSize,g_maxLossClose*g_pointSize+g_tradeHistory[lv_i1][0],g_currentSymbol,g_magicMain,g_lastTradeTime+172800/*=2 ngay*/,Green);
+g_lastError=(int)OrderSend(g_tradeSymbol,OP_BUYSTOP,g_tradeHistory[lv_i1][2],g_tradeHistory[lv_i1][0],int(g_maxVolatility*g_pointSize),g_tradeHistory[lv_i1][0]-(g_minProfitClose+g_newsImpactLevel)*g_pointSize,g_maxLossClose*g_pointSize+g_tradeHistory[lv_i1][0],g_currentSymbol,g_magicMain,g_lastTradeTime+172800/*=2 ngay*/,Green);
 g_tp_hitBuy=false;
 tmp_d4=g_tradeHistory[lv_i1][0];
 tmp_l5=g_lastError;
@@ -3011,7 +3013,7 @@ Print("error:\'"+GetErrorDescription(MT4_LastError())+"\'whensettingentryorder")
 }
 if(!(g_tradeHistory[lv_i1][1]==5.0)||!(MarketInfo(g_tradeSymbol,MODE_BID)>g_tradeHistory[lv_i1][0]+g_minStopLevel)) continue;
 Print("Restoring pending sell-order ");
-g_lastError=OrderSend(g_tradeSymbol,OP_SELLSTOP,g_tradeHistory[lv_i1][2],g_tradeHistory[lv_i1][0],int(g_maxVolatility*g_pointSize),(g_minProfitClose+g_newsImpactLevel)*g_pointSize+g_tradeHistory[lv_i1][0],g_tradeHistory[lv_i1][0]-g_maxLossClose*g_pointSize,g_currentSymbol,g_magicMain,g_lastTradeTime+172800/*=2 ngay*/,Green);
+g_lastError=(int)OrderSend(g_tradeSymbol,OP_SELLSTOP,g_tradeHistory[lv_i1][2],g_tradeHistory[lv_i1][0],int(g_maxVolatility*g_pointSize),(g_minProfitClose+g_newsImpactLevel)*g_pointSize+g_tradeHistory[lv_i1][0],g_tradeHistory[lv_i1][0]-g_maxLossClose*g_pointSize,g_currentSymbol,g_magicMain,g_lastTradeTime+172800/*=2 ngay*/,Green);
 g_tp_hitSell=false;
 tmp_d7=g_tradeHistory[lv_i1][0];
 tmp_l8=g_lastError;
@@ -3033,7 +3035,7 @@ if(1==0)//false
 do
 {
 Sleep((uint)2500);
-g_lastError=OrderSend(g_tradeSymbol,OP_SELLSTOP,g_tradeHistory[lv_i1][2],g_tradeHistory[lv_i1][0],int(g_maxVolatility*g_pointSize),(g_minProfitClose+g_newsImpactLevel)*g_pointSize+g_tradeHistory[lv_i1][0],g_tradeHistory[lv_i1][0]-g_maxLossClose*g_pointSize,g_currentSymbol,g_magicMain,g_lastTradeTime+172800/*=2 ngay*/,Green);
+g_lastError=(int)OrderSend(g_tradeSymbol,OP_SELLSTOP,g_tradeHistory[lv_i1][2],g_tradeHistory[lv_i1][0],int(g_maxVolatility*g_pointSize),(g_minProfitClose+g_newsImpactLevel)*g_pointSize+g_tradeHistory[lv_i1][0],g_tradeHistory[lv_i1][0]-g_maxLossClose*g_pointSize,g_currentSymbol,g_magicMain,g_lastTradeTime+172800/*=2 ngay*/,Green);
 g_tp_hitSell=false;
 tmp_d10=g_tradeHistory[lv_i1][0];
 tmp_l11=g_lastError;
@@ -3239,11 +3241,11 @@ if(Risk==0)
 {
 if(MarketInfo(g_tradeSymbol,MODE_LOTSTEP)==0.1)
 {
-lv_d2=NormalizeDouble(param1*0.01*StartLots,1);
+lv_d2=NormalizeDouble(param1*0.01*g_startLots,1);
 }
 if(MarketInfo(g_tradeSymbol,MODE_LOTSTEP)==0.01)
 {
-lv_d2=NormalizeDouble(param1*0.01*StartLots,2);
+lv_d2=NormalizeDouble(param1*0.01*g_startLots,2);
 }
 }
 if(Risk==9999)
@@ -3892,11 +3894,11 @@ if(MarketInfo(g_tradeSymbol,MODE_ASK)<lv_d4-g_stopLevelPts*g_pointSize&&MarketIn
 {
 if(!(setSL_TP_After_Entry))
 {
-g_lastError=OrderSend(g_tradeSymbol,OP_BUYSTOP,g_pairStratLots[g_pairIdx],lv_d4,int(g_maxVolatility*g_pointSize),lv_d5,lv_d6,g_currentSymbol,g_magicMain,g_lastTradeTime,Green);
+g_lastError=(int)OrderSend(g_tradeSymbol,OP_BUYSTOP,g_pairStratLots[g_pairIdx],lv_d4,int(g_maxVolatility*g_pointSize),lv_d5,lv_d6,g_currentSymbol,g_magicMain,g_lastTradeTime,Green);
 }
 else
 {
-g_lastError=OrderSend(g_tradeSymbol,OP_BUYSTOP,g_pairStratLots[g_pairIdx],lv_d4,int(g_maxVolatility*g_pointSize),0.0,0.0,g_currentSymbol,g_magicMain,g_lastTradeTime,Green);
+g_lastError=(int)OrderSend(g_tradeSymbol,OP_BUYSTOP,g_pairStratLots[g_pairIdx],lv_d4,int(g_maxVolatility*g_pointSize),0.0,0.0,g_currentSymbol,g_magicMain,g_lastTradeTime,Green);
 }
 g_tp_hitBuy=false;
 if(g_lastError<=0)
@@ -3913,11 +3915,11 @@ Sleep((uint)2500);
 if(!(setSL_TP_After_Entry))
 {
 tmp_i16 = (int)(g_maxVolatility*g_pointSize);
-g_lastError=OrderSend(g_tradeSymbol,OP_BUYSTOP,g_pairStratLots[g_pairIdx],lv_d4,tmp_i16,lv_d5,lv_d6,g_currentSymbol,g_magicMain,g_lastTradeTime,Green);
+g_lastError=(int)OrderSend(g_tradeSymbol,OP_BUYSTOP,g_pairStratLots[g_pairIdx],lv_d4,tmp_i16,lv_d5,lv_d6,g_currentSymbol,g_magicMain,g_lastTradeTime,Green);
 }
 else
 {
-g_lastError=OrderSend(g_tradeSymbol,OP_BUYSTOP,g_pairStratLots[g_pairIdx],lv_d4,int(g_maxVolatility*g_pointSize),0.0,0.0,g_currentSymbol,g_magicMain,g_lastTradeTime,Green);
+g_lastError=(int)OrderSend(g_tradeSymbol,OP_BUYSTOP,g_pairStratLots[g_pairIdx],lv_d4,int(g_maxVolatility*g_pointSize),0.0,0.0,g_currentSymbol,g_magicMain,g_lastTradeTime,Green);
 }
 g_tp_hitBuy=false;
 }
@@ -4118,11 +4120,11 @@ if(MarketInfo(g_tradeSymbol,MODE_BID)>g_stopLevelPts*g_pointSize+lv_d4&&MarketIn
 {
 if(!(setSL_TP_After_Entry))
 {
-g_lastError=OrderSend(g_tradeSymbol,OP_SELLSTOP,g_pairStratLots[g_pairIdx],lv_d4,int(g_maxVolatility*g_pointSize),lv_d5,lv_d6,g_currentSymbol,g_magicMain,g_lastTradeTime,Red);
+g_lastError=(int)OrderSend(g_tradeSymbol,OP_SELLSTOP,g_pairStratLots[g_pairIdx],lv_d4,int(g_maxVolatility*g_pointSize),lv_d5,lv_d6,g_currentSymbol,g_magicMain,g_lastTradeTime,Red);
 }
 else
 {
-g_lastError=OrderSend(g_tradeSymbol,OP_SELLSTOP,g_pairStratLots[g_pairIdx],lv_d4,int(g_maxVolatility*g_pointSize),0.0,0.0,g_currentSymbol,g_magicMain,g_lastTradeTime,Red);
+g_lastError=(int)OrderSend(g_tradeSymbol,OP_SELLSTOP,g_pairStratLots[g_pairIdx],lv_d4,int(g_maxVolatility*g_pointSize),0.0,0.0,g_currentSymbol,g_magicMain,g_lastTradeTime,Red);
 }
 g_tp_hitSell=false;
 if(g_lastError<=0)
@@ -4139,11 +4141,11 @@ Sleep((uint)2500);
 if(!(setSL_TP_After_Entry))
 {
 tmp_i16 = (int)(g_maxVolatility*g_pointSize);
-g_lastError=OrderSend(g_tradeSymbol,OP_SELLSTOP,g_pairStratLots[g_pairIdx],lv_d4,tmp_i16,lv_d5,lv_d6,g_currentSymbol,g_magicMain,g_lastTradeTime,Red);
+g_lastError=(int)OrderSend(g_tradeSymbol,OP_SELLSTOP,g_pairStratLots[g_pairIdx],lv_d4,tmp_i16,lv_d5,lv_d6,g_currentSymbol,g_magicMain,g_lastTradeTime,Red);
 }
 else
 {
-g_lastError=OrderSend(g_tradeSymbol,OP_SELLSTOP,g_pairStratLots[g_pairIdx],lv_d4,int(g_maxVolatility*g_pointSize),0.0,0.0,g_currentSymbol,g_magicMain,g_lastTradeTime,Red);
+g_lastError=(int)OrderSend(g_tradeSymbol,OP_SELLSTOP,g_pairStratLots[g_pairIdx],lv_d4,int(g_maxVolatility*g_pointSize),0.0,0.0,g_currentSymbol,g_magicMain,g_lastTradeTime,Red);
 }
 g_tp_hitSell=false;
 }
@@ -6170,7 +6172,7 @@ lv_d7=OrderOpenPrice();
 lv_dt8=OrderExpiration();
 lv_s9=OrderComment();
 _orderOK = OrderDelete((int)lv_l5,Red);
-lv_i10=OrderSend(g_tradeSymbol,OP_BUYSTOP,g_pairStratLots[g_pairIdx],lv_d7,(int)g_maxVolatility,lv_d4,lv_d6,lv_s9,g_magicMain,lv_dt8,Green);
+lv_i10=(int)OrderSend(g_tradeSymbol,OP_BUYSTOP,g_pairStratLots[g_pairIdx],lv_d7,(int)g_maxVolatility,lv_d4,lv_d6,lv_s9,g_magicMain,lv_dt8,Green);
 tmp_l1=lv_i10;
 tmp_l2=lv_l5;
 for(tmp_i3=0;tmp_i3<100;tmp_i3=tmp_i3+1)
@@ -6191,7 +6193,7 @@ lv_d14=OrderOpenPrice();
 lv_dt15=OrderExpiration();
 lv_s16=OrderComment();
 _orderOK = OrderDelete((int)lv_l12,Red);
-lv_i17=OrderSend(g_tradeSymbol,OP_SELLSTOP,g_pairStratLots[g_pairIdx],lv_d14,(int)g_maxVolatility,lv_d11,lv_d13,lv_s16,g_magicMain,lv_dt15,Green);
+lv_i17=(int)OrderSend(g_tradeSymbol,OP_SELLSTOP,g_pairStratLots[g_pairIdx],lv_d14,(int)g_maxVolatility,lv_d11,lv_d13,lv_s16,g_magicMain,lv_dt15,Green);
 tmp_l4=lv_i17;
 tmp_l5=lv_l12;
 for(tmp_i6=0;tmp_i6<100;tmp_i6=tmp_i6+1)
@@ -6361,7 +6363,7 @@ ObjectCreate(0,"linet",OBJ_LABEL,0,0,0.0);
 ObjectSetInteger(0,"linet",OBJPROP_CORNER,lv_i11);
 ObjectSetInteger(0,"linet",OBJPROP_YDISTANCE,long(lv_i13+InfoPanelSizeAdjust*60.0+lv_i8));
 ObjectSetInteger(0,"linet",OBJPROP_XDISTANCE,lv_i12+lv_i7);
-ObjectSetString(0,"linet",OBJPROP_TEXT,"Manual lot size: "+string(StartLots)+"lots");
+ObjectSetString(0,"linet",OBJPROP_TEXT,"Manual lot size: "+string(g_startLots)+"lots");
 ObjectSetInteger(0,"linet",OBJPROP_COLOR,g_panelFgColor);
 }
 }
@@ -6673,7 +6675,7 @@ ObjectSetString(0,"linet",OBJPROP_TEXT,"Max risk per strategy: "+string(MaxRiskP
 }
 else
 {
-ObjectSetString(0,"linet",OBJPROP_TEXT,"Manual lot size: "+string(StartLots)+"lots");
+ObjectSetString(0,"linet",OBJPROP_TEXT,"Manual lot size: "+string(g_startLots)+"lots");
 }
 }
 }
@@ -9411,8 +9413,8 @@ if(lv_i2>=1987&&lv_i2<=2006)
 {
 lv_i5 = (int)(MathMod(lv_i2*6+2-lv_i2/4,7.0)+1.0);
 lv_i6 = (int)(31.0-(MathMod(lv_i2*5/4+1,7.0)));
-lv_dt3=StringToTime(StringConcatenate(lv_i2,".04.01"))+(lv_i5-1)*86400+7200/*=2 gio*/;
-lv_dt4=StringToTime(StringConcatenate(lv_i2,".10.01"))+(lv_i6-1)*86400+7200/*=2 gio*/;
+lv_dt3=StringToTime(((string)lv_i2+".04.01"))+(lv_i5-1)*86400+7200/*=2 gio*/;
+lv_dt4=StringToTime(((string)lv_i2+".10.01"))+(lv_i6-1)*86400+7200/*=2 gio*/;
 }
 else
 {
@@ -9420,8 +9422,8 @@ if(lv_i2>=2007)
 {
 lv_i5 = (int)(14.0-(MathMod(lv_i2*5/4+1,7.0)));
 lv_i6 = (int)(7.0-(MathMod(lv_i2*5/4+1,7.0)));
-lv_dt3=StringToTime(StringConcatenate(lv_i2,".03.01"))+(lv_i5-1)*86400+7200/*=2 gio*/;
-lv_dt4=StringToTime(StringConcatenate(lv_i2,".11.01"))+(lv_i6-1)*86400+7200/*=2 gio*/;
+lv_dt3=StringToTime(((string)lv_i2+".03.01"))+(lv_i5-1)*86400+7200/*=2 gio*/;
+lv_dt4=StringToTime(((string)lv_i2+".11.01"))+(lv_i6-1)*86400+7200/*=2 gio*/;
 }
 }
 if(TimeDayOfYear(TimeCurrent())> TimeDayOfYear(lv_dt3)&&TimeDayOfYear(TimeCurrent())< TimeDayOfYear(lv_dt4))
