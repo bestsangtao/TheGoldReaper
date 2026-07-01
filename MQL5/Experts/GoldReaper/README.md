@@ -34,6 +34,12 @@ dau file). Tom tat:
   voi ham co san cua MQL5), `HistoryTotal()`, va toan bo
   `OrderTicket/OrderType/OrderLots/OrderOpenPrice/.../OrderComment` ->
   anh xa sang Position/Order/History deal cua MQL5.
+- Vao/sua/dong/huy lenh (`OrderSend/OrderModify/OrderClose/OrderDelete`
+  kieu MQL4) duoc thuc thi ben trong bang lop **CTrade** chuan cua
+  MetaQuotes (`Trade/Trade.mqh`) thay vi tu dung `MqlTradeRequest` thu
+  cong - tan dung filling-mode tu dong (`SetTypeFillingBySymbol`) va
+  cac ham `Buy/Sell/OrderOpen/PositionModify/PositionClose(Partial)/
+  OrderDelete` da duoc MetaQuotes kiem thu san.
 - `MarketInfo()`, `AccountBalance()/AccountEquity()/AccountCurrency()`,
   `AccountFreeMarginCheck()` -> `SymbolInfo*`/`AccountInfo*`.
 - `Year()/Month()/Day()/Hour()/Minute()/Seconds()/DayOfWeek()` va cac
