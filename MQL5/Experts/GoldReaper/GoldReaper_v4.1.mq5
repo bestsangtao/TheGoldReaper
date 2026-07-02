@@ -549,7 +549,6 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  if ( 临_count <= 0 )   return;
  for (临_i = 临_count ; 临_i < 300 ; 临_i ++)   总_391_da_5DFC_si300[临_i] = 0 ;
  g_nfpFromCalendar = true ;
- Print("NFP: da lay ",临_count," ngay tu Lich MQL5 (thay cho mang hardcode).");
  }
 //BuildNFPDatesFromCalendar <<==--------   --------
 
