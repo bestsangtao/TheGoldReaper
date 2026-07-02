@@ -2,7 +2,10 @@
 //| Strategy10_MTFRsiTrend.mqh                                       |
 //| Gate: multi-timeframe confirmation - RSI on the working          |
 //| timeframe crosses the midline (50) in the same direction that    |
-//| RSI on a higher timeframe is already positioned.                  |
+//| RSI on the higher timeframe (inherited from CStrategyBase) is    |
+//| already positioned. This strategy's own gate IS the multi-       |
+//| timeframe check, so it uses RSI on both timeframes directly      |
+//| rather than the generic EMA HTF filter used by strategies 1-9.   |
 //+------------------------------------------------------------------+
 #property strict
 #include <GeminiAI/StrategyBase.mqh>
@@ -12,17 +15,17 @@ class CStrategy10_MTFRsiTrend : public CStrategyBase
 private:
    int               m_hRsiLow, m_hRsiHigh;
    int               m_rsiPeriod;
-   ENUM_TIMEFRAMES   m_higherTf;
 
 public:
    void     Configure(const string symbol, const ENUM_TIMEFRAMES tf, const long magic,
                       const ENUM_TIMEFRAMES higherTf = PERIOD_H4, const int rsiPeriod = 14,
-                      const int cooldownSec = 1800, const int snapshotBars = 120)
+                      const int cooldownSec = 1800, const int snapshotBars = 120, const int htfBars = 60,
+                      const int htfEmaFast = 50, const int htfEmaSlow = 200)
      {
-      BaseInit(symbol, tf, magic);
+      BaseInit(symbol, tf, magic, higherTf, htfBars, htfEmaFast, htfEmaSlow);
       m_id = 10; m_name = "MTFRsiTrend";
       m_cooldownSec = cooldownSec; m_snapshotBars = snapshotBars;
-      m_higherTf = higherTf; m_rsiPeriod = rsiPeriod;
+      m_rsiPeriod = rsiPeriod;
      }
 
    virtual bool Init(void) override
@@ -49,8 +52,8 @@ public:
       if(CopyBuffer(m_hRsiLow, 0, 0, 3, rsiLow) < 3) return false;
       if(CopyBuffer(m_hRsiHigh, 0, 0, 2, rsiHigh) < 2) return false;
 
-      bool lowCrossUp   = (rsiLow[2] <= 50.0 && rsiLow[1] > 50.0);
-      bool lowCrossDown = (rsiLow[2] >= 50.0 && rsiLow[1] < 50.0);
+      bool lowCrossUp    = (rsiLow[2] <= 50.0 && rsiLow[1] > 50.0);
+      bool lowCrossDown  = (rsiLow[2] >= 50.0 && rsiLow[1] < 50.0);
       bool higherBullish = (rsiHigh[1] > 50.0);
       bool higherBearish = (rsiHigh[1] < 50.0);
 

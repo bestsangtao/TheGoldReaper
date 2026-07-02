@@ -148,8 +148,11 @@ public:
          "You are the decision engine of an MT5 trading strategy module (id=" + IntegerToString(strategyId) +
          ", name=\"" + strategyName + "\").\n" +
          "The module's gating condition just fired: " + conditionDesc + "\n" +
-         "Analyze the market data JSON below (OHLC candles, indicator values, timeframe, symbol, account info) " +
-         "and decide whether to take a trade. Be conservative: if the setup is not clearly favorable, return action=NONE.\n" +
+         "The market data JSON below is MULTI-TIMEFRAME: \"ohlc\"/\"common_indicators\" describe the strategy's " +
+         "working timeframe (\"timeframe\"), and \"htf_ohlc\"/\"htf_indicators\" describe a higher timeframe " +
+         "(\"higher_timeframe\") for trend/context confirmation. You MUST cross-check both timeframes before " +
+         "deciding: only take the trade if the higher timeframe context does not contradict the working-timeframe " +
+         "setup. Be conservative: if the setup is not clearly favorable on both timeframes, return action=NONE.\n" +
          "If action is BUY or SELL, you MUST provide stop_loss and take_profit as absolute prices consistent with the symbol's price scale. " +
          "If order_type is LIMIT or STOP, entry_price must be provided; for MARKET it may be 0.\n" +
          "Respond using the exact JSON schema provided, no extra commentary.\n\n" +

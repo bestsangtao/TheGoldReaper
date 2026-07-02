@@ -2,7 +2,8 @@
 //| Strategy03_DonchianBreakout.mqh                                  |
 //| Gate: close breaks outside the N-bar Donchian channel (highest   |
 //| high / lowest low of the previous N closed bars) on strong       |
-//| volume relative to its recent average.                           |
+//| volume relative to its recent average, confirmed by higher-      |
+//| timeframe EMA trend agreement (multi-timeframe).                  |
 //+------------------------------------------------------------------+
 #property strict
 #include <GeminiAI/StrategyBase.mqh>
@@ -16,16 +17,18 @@ private:
 public:
    void     Configure(const string symbol, const ENUM_TIMEFRAMES tf, const long magic,
                       const int channelPeriod = 20, const double volumeMultiplier = 1.5,
-                      const int cooldownSec = 1800, const int snapshotBars = 120)
+                      const ENUM_TIMEFRAMES higherTf = PERIOD_H4,
+                      const int cooldownSec = 1800, const int snapshotBars = 120, const int htfBars = 60,
+                      const int htfEmaFast = 50, const int htfEmaSlow = 200)
      {
-      BaseInit(symbol, tf, magic);
+      BaseInit(symbol, tf, magic, higherTf, htfBars, htfEmaFast, htfEmaSlow);
       m_id = 3; m_name = "DonchianBreakout";
       m_cooldownSec = cooldownSec; m_snapshotBars = snapshotBars;
       m_channelPeriod = channelPeriod; m_volumeMultiplier = volumeMultiplier;
      }
 
-   virtual bool Init(void) override { return true; } // uses raw price data, no indicator handles needed
-   virtual void Deinit(void) override {}
+   virtual bool Init(void) override { return InitHtfFilter(); } // no own indicator handles, uses raw price/volume
+   virtual void Deinit(void) override { DeinitHtfFilter(); }
 
    virtual bool CheckSignal(string &json, string &note) override
      {
@@ -56,16 +59,23 @@ public:
       bool breakoutUp   = (lastClose > channelHigh);
       bool breakoutDown = (lastClose < channelLow);
 
-      if((breakoutUp || breakoutDown) && volumeConfirms)
-        {
-         json = StringFormat("{\"channel_high\":%.5f,\"channel_low\":%.5f,\"last_close\":%.5f,\"last_volume\":%d,\"avg_volume\":%.1f}",
-                              channelHigh, channelLow, lastClose, (int)lastVol, avgVol);
-         note = StringFormat("%d-bar Donchian channel breakout %s with volume %d vs avg %.1f",
-                              m_channelPeriod, breakoutUp ? "up" : "down", (int)lastVol, avgVol);
-         MarkTriggered();
-         return true;
-        }
-      return false;
+      if(!((breakoutUp || breakoutDown) && volumeConfirms))
+         return false;
+
+      string htfJson;
+      ENUM_HTF_BIAS bias = HtfBias(htfJson);
+      bool htfAgrees = (breakoutUp && bias == HTF_BULLISH) || (breakoutDown && bias == HTF_BEARISH);
+      if(!htfAgrees)
+         return false;
+
+      string ownJson = StringFormat("{\"channel_high\":%.5f,\"channel_low\":%.5f,\"last_close\":%.5f,\"last_volume\":%d,\"avg_volume\":%.1f}",
+                                     channelHigh, channelLow, lastClose, (int)lastVol, avgVol);
+      json = JsonMergeObjects(ownJson, htfJson);
+      note = StringFormat("%d-bar Donchian channel breakout %s with volume %d vs avg %.1f, confirmed by %s bias on %s",
+                           m_channelPeriod, breakoutUp ? "up" : "down", (int)lastVol, avgVol,
+                           breakoutUp ? "bullish" : "bearish", EnumToString(m_higherTf));
+      MarkTriggered();
+      return true;
      }
   };
 //+------------------------------------------------------------------+

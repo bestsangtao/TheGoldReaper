@@ -21,6 +21,8 @@ struct SManagedPosition
    string            strategyName;
    string            symbol;
    ENUM_TIMEFRAMES   tf;
+   ENUM_TIMEFRAMES   higherTf;
+   int               htfBars;
    ENUM_POSITION_TYPE type;
    double            entryPrice;
    double            atrAtEntry;
@@ -73,7 +75,8 @@ private:
          DoubleToString(profit, 2), DoubleToString(moveInAtr, 2), m_positions[idx].ratchetLevel);
 
       string marketJson = CMarketSnapshot::Build(m_positions[idx].symbol, m_positions[idx].tf, m_snapshotBars,
-                                                  "{}", "momentum management checkpoint reached");
+                                                  "{}", "momentum management checkpoint reached",
+                                                  m_positions[idx].higherTf, m_positions[idx].htfBars);
       return "{\"position\":" + posFields + ",\"market\":" + marketJson + "}";
      }
 
@@ -133,7 +136,8 @@ public:
    bool              IsManaged(const ulong ticket) const { return FindIndex(ticket) >= 0; }
 
    void              Register(const ulong ticket, const int strategyId, const long magic, const string strategyName,
-                               const string symbol, const ENUM_TIMEFRAMES tf, const ENUM_POSITION_TYPE type,
+                               const string symbol, const ENUM_TIMEFRAMES tf, const ENUM_TIMEFRAMES higherTf,
+                               const int htfBars, const ENUM_POSITION_TYPE type,
                                const double entryPrice, const double atrAtEntry)
      {
       if(IsManaged(ticket))
@@ -146,6 +150,8 @@ public:
       m_positions[n].strategyName = strategyName;
       m_positions[n].symbol = symbol;
       m_positions[n].tf = tf;
+      m_positions[n].higherTf = higherTf;
+      m_positions[n].htfBars = htfBars;
       m_positions[n].type = type;
       m_positions[n].entryPrice = entryPrice;
       m_positions[n].atrAtEntry = atrAtEntry > 0 ? atrAtEntry : SymbolInfoDouble(symbol, SYMBOL_POINT) * 100;

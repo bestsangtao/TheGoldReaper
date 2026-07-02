@@ -57,9 +57,15 @@ input double           InpMomentumStepATR   = 0.5;                   // Extra AT
 input int              InpManageCooldownSec = 300;                   // Minimum seconds between management calls per position
 input int              InpManageSnapshotBars= 60;                    // OHLC bars sent with each management call
 
+input group "=== Multi-Timeframe Filter (shared by all strategies) ==="
+input int               InpHtfBars       = 60;                       // Higher-TF OHLC candles sent to the AI
+input int               InpHtfEmaFast    = 50;                       // Higher-TF EMA fast period (trend filter)
+input int               InpHtfEmaSlow    = 200;                      // Higher-TF EMA slow period (trend filter)
+
 input group "=== Strategy 1: Trend EMA Cross + ADX ==="
 input bool              InpS1_Enable   = true;
 input ENUM_TIMEFRAMES   InpS1_TF       = PERIOD_H1;
+input ENUM_TIMEFRAMES   InpS1_HigherTF = PERIOD_H4;
 input int               InpS1_FastEma  = 20;
 input int               InpS1_SlowEma  = 50;
 input int               InpS1_AdxPeriod= 14;
@@ -70,6 +76,7 @@ input int               InpS1_Bars     = 120;
 input group "=== Strategy 2: Bollinger Band + RSI Mean Reversion ==="
 input bool              InpS2_Enable      = true;
 input ENUM_TIMEFRAMES   InpS2_TF          = PERIOD_M15;
+input ENUM_TIMEFRAMES   InpS2_HigherTF    = PERIOD_H1;
 input int               InpS2_BandsPeriod = 20;
 input double            InpS2_BandsDev    = 2.0;
 input int               InpS2_RsiPeriod   = 14;
@@ -81,6 +88,7 @@ input int               InpS2_Bars        = 120;
 input group "=== Strategy 3: Donchian Channel Breakout ==="
 input bool              InpS3_Enable   = true;
 input ENUM_TIMEFRAMES   InpS3_TF       = PERIOD_H1;
+input ENUM_TIMEFRAMES   InpS3_HigherTF = PERIOD_H4;
 input int               InpS3_Channel  = 20;
 input double            InpS3_VolMult  = 1.5;
 input int               InpS3_Cooldown = 1800;
@@ -89,6 +97,7 @@ input int               InpS3_Bars     = 120;
 input group "=== Strategy 4: MACD Momentum Cross ==="
 input bool              InpS4_Enable   = true;
 input ENUM_TIMEFRAMES   InpS4_TF       = PERIOD_M30;
+input ENUM_TIMEFRAMES   InpS4_HigherTF = PERIOD_H4;
 input int               InpS4_Fast     = 12;
 input int               InpS4_Slow     = 26;
 input int               InpS4_Signal   = 9;
@@ -98,6 +107,7 @@ input int               InpS4_Bars     = 120;
 input group "=== Strategy 5: Stochastic Reversal ==="
 input bool              InpS5_Enable   = true;
 input ENUM_TIMEFRAMES   InpS5_TF       = PERIOD_M15;
+input ENUM_TIMEFRAMES   InpS5_HigherTF = PERIOD_H1;
 input int               InpS5_K        = 5;
 input int               InpS5_D        = 3;
 input int               InpS5_Slowing  = 3;
@@ -109,6 +119,7 @@ input int               InpS5_Bars     = 120;
 input group "=== Strategy 6: Ichimoku Cloud ==="
 input bool              InpS6_Enable   = true;
 input ENUM_TIMEFRAMES   InpS6_TF       = PERIOD_H1;
+input ENUM_TIMEFRAMES   InpS6_HigherTF = PERIOD_H4;
 input int               InpS6_Tenkan   = 9;
 input int               InpS6_Kijun    = 26;
 input int               InpS6_Senkou   = 52;
@@ -118,6 +129,7 @@ input int               InpS6_Bars     = 150;
 input group "=== Strategy 7: ATR Volatility Breakout ==="
 input bool              InpS7_Enable   = true;
 input ENUM_TIMEFRAMES   InpS7_TF       = PERIOD_M30;
+input ENUM_TIMEFRAMES   InpS7_HigherTF = PERIOD_H4;
 input int               InpS7_AtrPeriod= 14;
 input double            InpS7_Expansion= 1.8;
 input int               InpS7_Cooldown = 1800;
@@ -126,6 +138,7 @@ input int               InpS7_Bars     = 120;
 input group "=== Strategy 8: Parabolic SAR Flip ==="
 input bool              InpS8_Enable   = true;
 input ENUM_TIMEFRAMES   InpS8_TF       = PERIOD_H1;
+input ENUM_TIMEFRAMES   InpS8_HigherTF = PERIOD_H4;
 input double            InpS8_Step     = 0.02;
 input double            InpS8_Max      = 0.2;
 input int               InpS8_Cooldown = 1200;
@@ -134,6 +147,7 @@ input int               InpS8_Bars     = 120;
 input group "=== Strategy 9: CCI Extreme Reversal ==="
 input bool              InpS9_Enable   = true;
 input ENUM_TIMEFRAMES   InpS9_TF       = PERIOD_M15;
+input ENUM_TIMEFRAMES   InpS9_HigherTF = PERIOD_H1;
 input int               InpS9_CciPeriod= 14;
 input double            InpS9_Extreme  = 100.0;
 input int               InpS9_Cooldown = 900;
@@ -191,61 +205,71 @@ int OnInit()
    if(InpS1_Enable)
      {
       CStrategy01_TrendEMA *s = new CStrategy01_TrendEMA();
-      s.Configure(_Symbol, InpS1_TF, InpMagicBase + 1, InpS1_FastEma, InpS1_SlowEma, InpS1_AdxPeriod, InpS1_AdxLevel, InpS1_Cooldown, InpS1_Bars);
+      s.Configure(_Symbol, InpS1_TF, InpMagicBase + 1, InpS1_FastEma, InpS1_SlowEma, InpS1_AdxPeriod, InpS1_AdxLevel,
+                  InpS1_HigherTF, InpS1_Cooldown, InpS1_Bars, InpHtfBars, InpHtfEmaFast, InpHtfEmaSlow);
       AddStrategy(s);
      }
    if(InpS2_Enable)
      {
       CStrategy02_BollingerRSI *s = new CStrategy02_BollingerRSI();
-      s.Configure(_Symbol, InpS2_TF, InpMagicBase + 2, InpS2_BandsPeriod, InpS2_BandsDev, InpS2_RsiPeriod, InpS2_RsiOB, InpS2_RsiOS, InpS2_Cooldown, InpS2_Bars);
+      s.Configure(_Symbol, InpS2_TF, InpMagicBase + 2, InpS2_BandsPeriod, InpS2_BandsDev, InpS2_RsiPeriod, InpS2_RsiOB, InpS2_RsiOS,
+                  InpS2_HigherTF, InpS2_Cooldown, InpS2_Bars, InpHtfBars, InpHtfEmaFast, InpHtfEmaSlow);
       AddStrategy(s);
      }
    if(InpS3_Enable)
      {
       CStrategy03_DonchianBreakout *s = new CStrategy03_DonchianBreakout();
-      s.Configure(_Symbol, InpS3_TF, InpMagicBase + 3, InpS3_Channel, InpS3_VolMult, InpS3_Cooldown, InpS3_Bars);
+      s.Configure(_Symbol, InpS3_TF, InpMagicBase + 3, InpS3_Channel, InpS3_VolMult,
+                  InpS3_HigherTF, InpS3_Cooldown, InpS3_Bars, InpHtfBars, InpHtfEmaFast, InpHtfEmaSlow);
       AddStrategy(s);
      }
    if(InpS4_Enable)
      {
       CStrategy04_MACDMomentum *s = new CStrategy04_MACDMomentum();
-      s.Configure(_Symbol, InpS4_TF, InpMagicBase + 4, InpS4_Fast, InpS4_Slow, InpS4_Signal, InpS4_Cooldown, InpS4_Bars);
+      s.Configure(_Symbol, InpS4_TF, InpMagicBase + 4, InpS4_Fast, InpS4_Slow, InpS4_Signal,
+                  InpS4_HigherTF, InpS4_Cooldown, InpS4_Bars, InpHtfBars, InpHtfEmaFast, InpHtfEmaSlow);
       AddStrategy(s);
      }
    if(InpS5_Enable)
      {
       CStrategy05_StochasticReversal *s = new CStrategy05_StochasticReversal();
-      s.Configure(_Symbol, InpS5_TF, InpMagicBase + 5, InpS5_K, InpS5_D, InpS5_Slowing, InpS5_OB, InpS5_OS, InpS5_Cooldown, InpS5_Bars);
+      s.Configure(_Symbol, InpS5_TF, InpMagicBase + 5, InpS5_K, InpS5_D, InpS5_Slowing, InpS5_OB, InpS5_OS,
+                  InpS5_HigherTF, InpS5_Cooldown, InpS5_Bars, InpHtfBars, InpHtfEmaFast, InpHtfEmaSlow);
       AddStrategy(s);
      }
    if(InpS6_Enable)
      {
       CStrategy06_Ichimoku *s = new CStrategy06_Ichimoku();
-      s.Configure(_Symbol, InpS6_TF, InpMagicBase + 6, InpS6_Tenkan, InpS6_Kijun, InpS6_Senkou, InpS6_Cooldown, InpS6_Bars);
+      s.Configure(_Symbol, InpS6_TF, InpMagicBase + 6, InpS6_Tenkan, InpS6_Kijun, InpS6_Senkou,
+                  InpS6_HigherTF, InpS6_Cooldown, InpS6_Bars, InpHtfBars, InpHtfEmaFast, InpHtfEmaSlow);
       AddStrategy(s);
      }
    if(InpS7_Enable)
      {
       CStrategy07_ATRVolatilityBreakout *s = new CStrategy07_ATRVolatilityBreakout();
-      s.Configure(_Symbol, InpS7_TF, InpMagicBase + 7, InpS7_AtrPeriod, InpS7_Expansion, InpS7_Cooldown, InpS7_Bars);
+      s.Configure(_Symbol, InpS7_TF, InpMagicBase + 7, InpS7_AtrPeriod, InpS7_Expansion,
+                  InpS7_HigherTF, InpS7_Cooldown, InpS7_Bars, InpHtfBars, InpHtfEmaFast, InpHtfEmaSlow);
       AddStrategy(s);
      }
    if(InpS8_Enable)
      {
       CStrategy08_ParabolicSAR *s = new CStrategy08_ParabolicSAR();
-      s.Configure(_Symbol, InpS8_TF, InpMagicBase + 8, InpS8_Step, InpS8_Max, InpS8_Cooldown, InpS8_Bars);
+      s.Configure(_Symbol, InpS8_TF, InpMagicBase + 8, InpS8_Step, InpS8_Max,
+                  InpS8_HigherTF, InpS8_Cooldown, InpS8_Bars, InpHtfBars, InpHtfEmaFast, InpHtfEmaSlow);
       AddStrategy(s);
      }
    if(InpS9_Enable)
      {
       CStrategy09_CCIExtreme *s = new CStrategy09_CCIExtreme();
-      s.Configure(_Symbol, InpS9_TF, InpMagicBase + 9, InpS9_CciPeriod, InpS9_Extreme, InpS9_Cooldown, InpS9_Bars);
+      s.Configure(_Symbol, InpS9_TF, InpMagicBase + 9, InpS9_CciPeriod, InpS9_Extreme,
+                  InpS9_HigherTF, InpS9_Cooldown, InpS9_Bars, InpHtfBars, InpHtfEmaFast, InpHtfEmaSlow);
       AddStrategy(s);
      }
    if(InpS10_Enable)
      {
       CStrategy10_MTFRsiTrend *s = new CStrategy10_MTFRsiTrend();
-      s.Configure(_Symbol, InpS10_TF, InpMagicBase + 10, InpS10_HigherTF, InpS10_RsiPeriod, InpS10_Cooldown, InpS10_Bars);
+      s.Configure(_Symbol, InpS10_TF, InpMagicBase + 10, InpS10_HigherTF, InpS10_RsiPeriod,
+                  InpS10_Cooldown, InpS10_Bars, InpHtfBars, InpHtfEmaFast, InpHtfEmaSlow);
       AddStrategy(s);
      }
 
@@ -319,7 +343,8 @@ double ComputeAtrNow(const string symbol, const ENUM_TIMEFRAMES tf)
 //+------------------------------------------------------------------+
 void HandleStrategySignal(CStrategyBase *strat, const string &indicatorsJson, const string &conditionNote)
   {
-   string marketJson = CMarketSnapshot::Build(strat.Symbol(), strat.Timeframe(), strat.SnapshotBars(), indicatorsJson, conditionNote);
+   string marketJson = CMarketSnapshot::Build(strat.Symbol(), strat.Timeframe(), strat.SnapshotBars(), indicatorsJson, conditionNote,
+                                              strat.HigherTimeframe(), strat.HtfBars());
 
    SEntryDecision dec;
    if(!g_gemini.RequestEntryDecision(strat.Id(), strat.Name(), conditionNote, marketJson, dec))
@@ -405,7 +430,8 @@ void OnTradeTransaction(const MqlTradeTransaction &trans, const MqlTradeRequest 
    double entryPrice = PositionGetDouble(POSITION_PRICE_OPEN);
    double atr = ComputeAtrNow(strat.Symbol(), strat.Timeframe());
 
-   g_momentumGate.Register(posTicket, strat.Id(), magic, strat.Name(), strat.Symbol(), strat.Timeframe(), type, entryPrice, atr);
+   g_momentumGate.Register(posTicket, strat.Id(), magic, strat.Name(), strat.Symbol(), strat.Timeframe(),
+                           strat.HigherTimeframe(), strat.HtfBars(), type, entryPrice, atr);
    Print("[", strat.Name(), "] position opened, ticket=", posTicket, " entry=", entryPrice, " atr=", atr, " - now under momentum management");
   }
 //+------------------------------------------------------------------+

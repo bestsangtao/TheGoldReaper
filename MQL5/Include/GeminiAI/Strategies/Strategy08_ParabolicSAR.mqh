@@ -1,7 +1,8 @@
 //+------------------------------------------------------------------+
 //| Strategy08_ParabolicSAR.mqh                                      |
 //| Gate: Parabolic SAR dot flips to the opposite side of price -    |
-//| a trend-reversal / trend-start signal.                           |
+//| a trend-reversal / trend-start signal, confirmed by higher-      |
+//| timeframe EMA trend agreement (multi-timeframe).                  |
 //+------------------------------------------------------------------+
 #property strict
 #include <GeminiAI/StrategyBase.mqh>
@@ -15,9 +16,11 @@ private:
 public:
    void     Configure(const string symbol, const ENUM_TIMEFRAMES tf, const long magic,
                       const double step = 0.02, const double maximum = 0.2,
-                      const int cooldownSec = 1200, const int snapshotBars = 120)
+                      const ENUM_TIMEFRAMES higherTf = PERIOD_H4,
+                      const int cooldownSec = 1200, const int snapshotBars = 120, const int htfBars = 60,
+                      const int htfEmaFast = 50, const int htfEmaSlow = 200)
      {
-      BaseInit(symbol, tf, magic);
+      BaseInit(symbol, tf, magic, higherTf, htfBars, htfEmaFast, htfEmaSlow);
       m_id = 8; m_name = "ParabolicSAR";
       m_cooldownSec = cooldownSec; m_snapshotBars = snapshotBars;
       m_step = step; m_maximum = maximum;
@@ -26,12 +29,13 @@ public:
    virtual bool Init(void) override
      {
       m_hSar = iSAR(m_symbol, m_tf, m_step, m_maximum);
-      return (m_hSar != INVALID_HANDLE);
+      return (m_hSar != INVALID_HANDLE && InitHtfFilter());
      }
 
    virtual void Deinit(void) override
      {
       if(m_hSar != INVALID_HANDLE) IndicatorRelease(m_hSar);
+      DeinitHtfFilter();
      }
 
    virtual bool CheckSignal(string &json, string &note) override
@@ -54,15 +58,22 @@ public:
       bool bullishFlip = (wasAbove && nowBelow);
       bool bearishFlip = (wasBelow && nowAbove);
 
-      if(bullishFlip || bearishFlip)
-        {
-         json = StringFormat("{\"sar\":%.5f,\"last_close\":%.5f}", sar[0], close1);
-         note = StringFormat("Parabolic SAR (step=%.3f, max=%.2f) flipped %s of price",
-                              m_step, m_maximum, bullishFlip ? "below" : "above");
-         MarkTriggered();
-         return true;
-        }
-      return false;
+      if(!(bullishFlip || bearishFlip))
+         return false;
+
+      string htfJson;
+      ENUM_HTF_BIAS bias = HtfBias(htfJson);
+      bool htfAgrees = (bullishFlip && bias == HTF_BULLISH) || (bearishFlip && bias == HTF_BEARISH);
+      if(!htfAgrees)
+         return false;
+
+      string ownJson = StringFormat("{\"sar\":%.5f,\"last_close\":%.5f}", sar[0], close1);
+      json = JsonMergeObjects(ownJson, htfJson);
+      note = StringFormat("Parabolic SAR (step=%.3f, max=%.2f) flipped %s of price, confirmed by %s bias on %s",
+                           m_step, m_maximum, bullishFlip ? "below" : "above",
+                           bullishFlip ? "bullish" : "bearish", EnumToString(m_higherTf));
+      MarkTriggered();
+      return true;
      }
   };
 //+------------------------------------------------------------------+

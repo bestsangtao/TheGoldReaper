@@ -2,24 +2,32 @@
 
 An MT5 (MQL5) Expert Advisor that uses the Google Gemini API as its trading
 decision engine. It ships with **10 fully independent gating strategies**,
-each watching its own indicators on its own timeframe. When a strategy's
-condition fires, the EA packages recent OHLC candles + indicator values +
-timeframe/account context into JSON and asks Gemini for a concrete trade
-decision (BUY/SELL, order type, entry, stop loss, take profit). Once the
-resulting position is open, a separate **momentum-based management gate**
-periodically re-asks Gemini how to manage the trade (trail the stop, lock in
-profit, move SL/TP, close early, partial close).
+each watching its own indicator(s) **and** a higher-timeframe trend filter —
+every strategy is multi-timeframe by construction, not just single-TF pattern
+matching. When a strategy's condition fires (own-TF indicator signal AND
+higher-TF confirmation agree), the EA packages recent OHLC candles + a full
+indicator basket for **both timeframes** + account context into JSON and asks
+Gemini for a concrete trade decision (BUY/SELL, order type, entry, stop loss,
+take profit) — Gemini is explicitly instructed to cross-check both timeframes
+before deciding. Once the resulting position is open, a separate
+**momentum-based management gate** periodically re-asks Gemini (again with
+both-timeframe data) how to manage the trade (trail the stop, lock in profit,
+move SL/TP, close early, partial close).
 
 ## How it works
 
 ```
-Strategy gate fires (its own indicators/logic)
+Strategy gate fires:
+  own-timeframe indicator signal (e.g. EMA cross, MACD cross, breakout...)
+  AND higher-timeframe EMA trend filter agrees (multi-timeframe gating)
         |
         v
-Build JSON: OHLC candles + common indicator basket + strategy indicators
+Build JSON: OHLC + full indicator basket for the WORKING timeframe
+          + OHLC + full indicator basket for the HIGHER timeframe
         |
         v
-Ask Gemini -> { action, order_type, entry_price, stop_loss, take_profit, confidence, reason }
+Ask Gemini (instructed to cross-check both timeframes) ->
+  { action, order_type, entry_price, stop_loss, take_profit, confidence, reason }
         |
         v
 Validate against broker stop/freeze levels, size the lot, send the order
@@ -29,34 +37,45 @@ Position opens (market fill or pending order triggered)
         |
         v
 Momentum Gate watches profit-in-ATR-units; each time it crosses the next
-ratcheted threshold it asks Gemini again:
+ratcheted threshold it asks Gemini again (same multi-timeframe data):
 { action: HOLD | MOVE_SL | MOVE_TP | TRAIL_SL | CLOSE | CLOSE_PARTIAL, ... }
 ```
 
 The strategies never decide direction/entry/SL/TP themselves — they only
-decide **when** it's worth asking the AI. All trading decisions and all
-trade-management decisions come back from Gemini, constrained by a strict
-JSON response schema (`responseSchema` / `responseMimeType: application/json`)
-so replies are always machine-parseable.
+decide **when** it's worth asking the AI, using their own indicator(s) plus
+multi-timeframe confirmation. All trading decisions and all trade-management
+decisions come back from Gemini, constrained by a strict JSON response schema
+(`responseSchema` / `responseMimeType: application/json`) so replies are
+always machine-parseable.
 
 ## The 10 independent strategies
 
-| # | Name | Gate condition | Default timeframe |
-|---|------|-----------------|--------------------|
-| 1 | Trend EMA | EMA(fast)/EMA(slow) cross confirmed by ADX trend strength | H1 |
-| 2 | Bollinger + RSI | Price tags outer Bollinger band while RSI is overbought/oversold | M15 |
-| 3 | Donchian Breakout | Close breaks the N-bar high/low channel on above-average volume | H1 |
-| 4 | MACD Momentum | MACD/signal cross with histogram sign flip | M30 |
-| 5 | Stochastic Reversal | %K/%D cross inside overbought/oversold zone | M15 |
-| 6 | Ichimoku Cloud | Tenkan/Kijun cross with price outside the Kumo cloud | H1 |
-| 7 | ATR Volatility Breakout | Bar range expands beyond ATR × multiplier with a breakout close | M30 |
-| 8 | Parabolic SAR Flip | SAR dot flips to the opposite side of price | H1 |
-| 9 | CCI Extreme Reversal | CCI re-enters normal range from an extreme (±100) reading | M15 |
-| 10 | Multi-Timeframe RSI | RSI crosses 50 on the working TF, confirmed by RSI bias on a higher TF | H1 (confirmed by H4) |
+Every strategy checks its own-timeframe indicator condition **and** requires
+the higher-timeframe EMA(fast)/EMA(slow) trend filter to agree with the
+signal's direction before it fires (strategy 10 uses dual-timeframe RSI
+directly instead of the shared EMA filter, since its own gate already is a
+cross-timeframe check). The AI payload always contains OHLC + indicators for
+both timeframes regardless of which mechanism gated the call.
+
+| # | Name | Own-timeframe indicator condition | Working TF | Higher TF filter |
+|---|------|-----------------------------------|-------------|-------------------|
+| 1 | Trend EMA | EMA(fast)/EMA(slow) cross confirmed by ADX trend strength | H1 | H4 EMA50/200 |
+| 2 | Bollinger + RSI | Price tags outer Bollinger band while RSI is overbought/oversold | M15 | H1 EMA50/200 |
+| 3 | Donchian Breakout | Close breaks the N-bar high/low channel on above-average volume | H1 | H4 EMA50/200 |
+| 4 | MACD Momentum | MACD/signal cross with histogram sign flip | M30 | H4 EMA50/200 |
+| 5 | Stochastic Reversal | %K/%D cross inside overbought/oversold zone | M15 | H1 EMA50/200 |
+| 6 | Ichimoku Cloud | Tenkan/Kijun cross with price outside the Kumo cloud | H1 | H4 EMA50/200 |
+| 7 | ATR Volatility Breakout | Bar range expands beyond ATR × multiplier with a breakout close | M30 | H4 EMA50/200 |
+| 8 | Parabolic SAR Flip | SAR dot flips to the opposite side of price | H1 | H4 EMA50/200 |
+| 9 | CCI Extreme Reversal | CCI re-enters normal range from an extreme (±100) reading | M15 | H1 EMA50/200 |
+| 10 | Multi-Timeframe RSI | RSI crosses 50 on the working TF, confirmed by RSI bias on the higher TF | H1 | H4 RSI (own dual-TF gate) |
 
 Every strategy has its own magic number (`InpMagicBase + strategy id`), own
-cooldown, own indicator handles, and can be enabled/disabled independently
-via its `InpSx_Enable` input.
+cooldown, own indicator handles, own higher-timeframe input (`InpSx_HigherTF`),
+and can be enabled/disabled independently via its `InpSx_Enable` input. The
+higher-timeframe EMA filter periods (`InpHtfEmaFast`/`InpHtfEmaSlow`) and how
+many higher-TF candles are sent to the AI (`InpHtfBars`) are shared, global
+inputs under "Multi-Timeframe Filter".
 
 ## Project layout
 
