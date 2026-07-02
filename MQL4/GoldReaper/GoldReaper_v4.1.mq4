@@ -6666,11 +6666,11 @@ else
 {
 if(g_minBarsBetween==0)
 {
-errorStr="extremeconservative";
+errorStr="extreme conservative";
 }
 else
 {
-errorStr="manualstrategyselection";
+errorStr="manual strategy selection";
 }
 }
 }
