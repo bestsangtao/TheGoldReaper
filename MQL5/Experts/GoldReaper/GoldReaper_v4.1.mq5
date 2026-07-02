@@ -6327,12 +6327,21 @@ g_startLots_rw=StartLots;
  ObjectSetInteger(0,"linea" + IntegerToString(0,0,32),OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
  ObjectSetString(0,"linea" + IntegerToString(0,0,32),OBJPROP_TEXT,"Account Balance: -"); 
  ObjectSetInteger(0,"linea" + IntegerToString(0,0,32),OBJPROP_COLOR,总_329_ui_3104); 
- ObjectCreate(0,"linetp" + IntegerToString(0,0,32),OBJ_LABEL,0,0,0.0); 
- ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_CORNER,子_11_in); 
- ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_YDISTANCE,(long)(子_13_in + InfoPanelSizeAdjust * 108.0 + 子_8_in)); 
- ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
- ObjectSetString(0,"linetp" + IntegerToString(0,0,32),OBJPROP_TEXT,"Total P/L so far: -"); 
- ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_COLOR,总_329_ui_3104); 
+ ObjectCreate(0,"linetp" + IntegerToString(0,0,32),OBJ_LABEL,0,0,0.0);
+ ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_CORNER,子_11_in);
+ ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_YDISTANCE,(long)(子_13_in + InfoPanelSizeAdjust * 108.0 + 子_8_in));
+ ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_XDISTANCE,子_12_in + 子_7_in);
+ ObjectSetString(0,"linetp" + IntegerToString(0,0,32),OBJPROP_TEXT,"Total P/L so far: -");
+ ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_COLOR,总_329_ui_3104);
+ if ( EnableNFP_Filter )
+ {
+   ObjectCreate(0,"linenfp" + IntegerToString(0,0,32),OBJ_LABEL,0,0,0.0);
+   ObjectSetInteger(0,"linenfp" + IntegerToString(0,0,32),OBJPROP_CORNER,子_11_in);
+   ObjectSetInteger(0,"linenfp" + IntegerToString(0,0,32),OBJPROP_YDISTANCE,(long)(子_13_in + InfoPanelSizeAdjust * 124.0 + 子_8_in));
+   ObjectSetInteger(0,"linenfp" + IntegerToString(0,0,32),OBJPROP_XDISTANCE,子_12_in + 子_7_in);
+   ObjectSetString(0,"linenfp" + IntegerToString(0,0,32),OBJPROP_TEXT,"Next NFP: -");
+   ObjectSetInteger(0,"linenfp" + IntegerToString(0,0,32),OBJPROP_COLOR,总_329_ui_3104);
+ }
  子_18_in = 0 ;
  子_19_in = 0 ;
  子_20_in = 0 ;
@@ -6432,8 +6441,9 @@ g_startLots_rw=StartLots;
    ObjectDelete(0,"lineopl" + IntegerToString(子_1_in,0,32)); 
    ObjectDelete(0,"linea" + IntegerToString(子_1_in,0,32)); 
    ObjectDelete(0,"lineto" + IntegerToString(子_1_in,0,32)); 
-   ObjectDelete(0,"linetp" + IntegerToString(子_1_in,0,32)); 
-   ObjectDelete(0,"linetq" + IntegerToString(子_1_in,0,32)); 
+   ObjectDelete(0,"linetp" + IntegerToString(子_1_in,0,32));
+   ObjectDelete(0,"linetq" + IntegerToString(子_1_in,0,32));
+   ObjectDelete(0,"linenfp" + IntegerToString(子_1_in,0,32));
    for (子_2_in = 0 ; 子_2_in < 10 ; 子_2_in ++)
    {
      ObjectDelete(0,"tabel_info" + IntegerToString(子_1_in * 100 + 子_2_in,0,32)); 
@@ -6452,6 +6462,23 @@ g_startLots_rw=StartLots;
  }
  }
 //lizong_26 <<==--------   --------
+ string GetNextNFPText()
+ {
+  datetime  临_da_best = 0;
+  int       临_in_i;
+//----- -----
+ for (临_in_i = 0 ; 临_in_i < 300 ; 临_in_i ++)
+ {
+   if ( 总_391_da_5DFC_si300[临_in_i] <= 0 )   continue;
+   if ( 总_391_da_5DFC_si300[临_in_i] >= 总_390_da_5DC0 )
+   {
+     if ( 临_da_best == 0 || 总_391_da_5DFC_si300[临_in_i] < 临_da_best )   临_da_best = 总_391_da_5DFC_si300[临_in_i];
+   }
+ }
+ if ( 临_da_best == 0 )   return("Next NFP: -");
+ return("Next NFP: " + TimeToString(临_da_best + 总_395_in_6760 * 3600,TIME_DATE|TIME_SECONDS));
+ }
+//GetNextNFPText <<==--------   --------
  void lizong_27()
  {
   string    子_1_st;
@@ -6777,7 +6804,11 @@ g_startLots_rw=StartLots;
    总_326_do_300C_si30[总_328_in_3100] = 临_do_2;
    临_do_1 = 临_do_2;
  }
- ObjectSetString(0,"linetp" + IntegerToString(0,0,32),OBJPROP_TEXT,"Total P/L so far: " + DoubleToString(NormalizeDouble(临_do_1,2),2)); 
+ ObjectSetString(0,"linetp" + IntegerToString(0,0,32),OBJPROP_TEXT,"Total P/L so far: " + DoubleToString(NormalizeDouble(临_do_1,2),2));
+ if ( EnableNFP_Filter )
+ {
+   ObjectSetString(0,"linenfp" + IntegerToString(0,0,32),OBJPROP_TEXT,GetNextNFPText());
+ }
  }
 //lizong_29 <<==--------   --------
  int lizong_30( int 木_0_in,int 木_1_in)
