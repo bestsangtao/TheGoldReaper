@@ -9308,7 +9308,11 @@ g_startLots_rw=StartLots;
  }
  else
  {
-   临_st_2 = CharArrayToString(子_8_ch_ko,0,0,0);
+   // MQL4 dung WHOLE_ARRAY=0 (quy uoc cu cua MQL4) de lay "toan bo mang" khi
+   // count=0; nhung MQL5 dinh nghia lai WHOLE_ARRAY=-1, con count=0 trong MQL5
+   // co nghia den la "lay 0 ky tu" -> luon ra chuoi rong du HTTP tra ve 200 va
+   // co du du lieu (day chinh la nguyen nhan that su cua loi "GMT time = 0").
+   临_st_2 = CharArrayToString(子_8_ch_ko,0,-1,0);
  }
  子_2_st = 临_st_2 ;
  if ( 子_2_st == "999" )
