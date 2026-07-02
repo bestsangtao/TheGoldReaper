@@ -4598,7 +4598,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
              子_7_do = NormalizeDouble(MarketInfo(总_336_st_3130,MODE_BID) - 总_126_do_300 * 总_229_do_1E00,总_190_in_518) ;
              if ( 子_7_do<MarketInfo(总_336_st_3130,MODE_BID) - 总_221_do_1A80 )
              {
-               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               总_230_in_1E08 = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
                if ( 总_230_in_1E08 <= 0 )
                {
                  Print("TrailStop error: \'" + lizong_21(GetLastError()) + "\' when setting trailing Exit_TrailSL_after_X_Minutes_size loss.  Trying again!"); 
@@ -4611,7 +4611,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
              子_7_do = NormalizeDouble(MarketInfo(总_336_st_3130,MODE_BID) - 总_103_do_250 * 总_229_do_1E00,总_190_in_518) ;
              if ( 子_7_do<MarketInfo(总_336_st_3130,MODE_BID) - 总_221_do_1A80 )
              {
-               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               总_230_in_1E08 = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
                if ( 总_230_in_1E08 <= 0 )
                {
                  Print("TrailStop error: \'" + lizong_21(GetLastError()) + "\' when setting trailing Exit_stop loss.  Trying again!"); 
@@ -4633,7 +4633,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
              子_8_do = NormalizeDouble(MarketInfo(总_336_st_3130,MODE_BID) + 总_108_do_278 * 总_229_do_1E00,总_190_in_518) ;
              if ( 子_8_do>MarketInfo(总_336_st_3130,MODE_ASK) + 总_221_do_1A80 )
              {
-               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               总_230_in_1E08 = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
                if ( 总_230_in_1E08 <= 0 )
                {
                  Print("TrailStop error: \'" + lizong_21(GetLastError()) + "\' when setting trailing Exit_TP.  Trying again!"); 
@@ -4655,7 +4655,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
              子_7_do = NormalizeDouble(MarketInfo(总_336_st_3130,MODE_BID) - 总_41_do_D8 * 总_229_do_1E00,总_190_in_518) ;
              if ( 子_7_do<MarketInfo(总_336_st_3130,MODE_BID) - 总_221_do_1A80 )
              {
-               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               总_230_in_1E08 = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
                if ( 总_230_in_1E08 <= 0 )
                {
                  Print("TrailStop error: \'" + lizong_21(GetLastError()) + "\' when setting Slip TL.  Trying again!"); 
@@ -4672,7 +4672,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
              子_7_do = NormalizeDouble(总_242_do_21C4_si99[总_328_in_3100],总_190_in_518) ;
              if ( 子_7_do<MarketInfo(总_336_st_3130,MODE_BID) - 总_221_do_1A80 )
              {
-               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               总_230_in_1E08 = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
                if ( 总_230_in_1E08 <= 0 )
                {
                  Print("error: \'" + lizong_21(GetLastError()) + "\' when modifying stoploss"); 
@@ -4685,7 +4685,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
              子_7_do = NormalizeDouble(总_114_do_2B0 * 总_229_do_1E00 + 子_10_do,总_190_in_518) ;
              if ( 子_7_do<MarketInfo(总_336_st_3130,MODE_BID) - 总_221_do_1A80 )
              {
-               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               总_230_in_1E08 = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
                if ( 总_230_in_1E08 <= 0 )
                {
                  Print("error when setting breakeven: \'" + lizong_21(GetLastError()) + "\' ..\'Exit_BE_start\' to close to \'Exit_BE_extra_pips\' ..trying again!"); 
@@ -4814,7 +4814,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
            if ( 总_113_do_2A8>0.0 && 总_63_in_140 == 3 && MarketInfo(总_336_st_3130,MODE_BID)>总_113_do_2A8 * 总_229_do_1E00 + 子_10_do && 总_114_do_2B0 * 总_229_do_1E00 + 子_10_do>子_7_do + 总_337_do_3140 && MarketInfo(总_336_st_3130,MODE_BID)>总_114_do_2B0 * 总_229_do_1E00 + 子_10_do + 总_221_do_1A80 && MarketInfo(总_336_st_3130,MODE_BID)<子_8_do - 总_309_do_2898 && NormalizeDouble(总_114_do_2B0 * 总_229_do_1E00 + 子_10_do,总_190_in_518)>OrderStopLoss() )
            {
              总_191_do_520 = NormalizeDouble(总_114_do_2B0 * 总_229_do_1E00 + 子_10_do,总_190_in_518) ;
-             总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,总_191_do_520,子_8_do,0,0xFFFFFFFF) ;
+             总_230_in_1E08 = OrderModify((int)子_9_lo,子_10_do,总_191_do_520,子_8_do,0,0xFFFFFFFF) ;
              if ( 总_230_in_1E08 <= 0 )
              {
                Print("error when setting breakeven: \'" + lizong_21(GetLastError()) + "\' ..\'Exit_BE_start\' to close to \'Exit_BE_extra_pips\' ..trying again!"); 
@@ -5324,7 +5324,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
              子_7_do = NormalizeDouble(MarketInfo(总_336_st_3130,MODE_ASK) + 总_126_do_300 * 总_229_do_1E00,总_190_in_518) ;
              if ( 子_7_do>MarketInfo(总_336_st_3130,MODE_ASK) + 总_221_do_1A80 )
              {
-               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               总_230_in_1E08 = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
                if ( 总_230_in_1E08 <= 0 )
                {
                  Print("TrailStop error: \'" + lizong_21(GetLastError()) + "\' when setting trailing Exit_TrailSL_after_X_Minutes_size loss.  Trying again!"); 
@@ -5337,7 +5337,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
              子_7_do = NormalizeDouble(MarketInfo(总_336_st_3130,MODE_ASK) + 总_103_do_250 * 总_229_do_1E00,总_190_in_518) ;
              if ( 子_7_do>MarketInfo(总_336_st_3130,MODE_ASK) + 总_221_do_1A80 )
              {
-               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               总_230_in_1E08 = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
                if ( 总_230_in_1E08 <= 0 )
                {
                  Print("TrailStop error: \'" + lizong_21(GetLastError()) + "\' when setting trailing Exit_stop loss.  Trying again!"); 
@@ -5359,7 +5359,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
              子_8_do = NormalizeDouble(MarketInfo(总_336_st_3130,MODE_BID) - 总_108_do_278 * 总_229_do_1E00,总_190_in_518) ;
              if ( 子_8_do<MarketInfo(总_336_st_3130,MODE_BID) - 总_221_do_1A80 )
              {
-               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               总_230_in_1E08 = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
                if ( 总_230_in_1E08 <= 0 )
                {
                  Print("TrailStop error: \'" + lizong_21(GetLastError()) + "\' when setting trailing Exit_TP.  Trying again!"); 
@@ -5381,7 +5381,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
              子_7_do = NormalizeDouble(MarketInfo(总_336_st_3130,MODE_ASK) + 总_41_do_D8 * 总_229_do_1E00,总_190_in_518) ;
              if ( 子_7_do>MarketInfo(总_336_st_3130,MODE_ASK) + 总_221_do_1A80 )
              {
-               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               总_230_in_1E08 = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
                if ( 总_230_in_1E08 <= 0 )
                {
                  Print("TrailStop error: \'" + lizong_21(GetLastError()) + "\' when setting Slip TL.  Trying again!"); 
@@ -5398,7 +5398,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
              子_7_do = NormalizeDouble(总_241_do_1E78_si99[总_328_in_3100],总_190_in_518) ;
              if ( 子_7_do>MarketInfo(总_336_st_3130,MODE_ASK) + 总_221_do_1A80 )
              {
-               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               总_230_in_1E08 = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
                if ( 总_230_in_1E08 <= 0 )
                {
                  Print("error: \'" + lizong_21(GetLastError()) + "\' when modifying stoploss"); 
@@ -5411,7 +5411,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
              子_7_do = NormalizeDouble(子_10_do - 总_114_do_2B0 * 总_229_do_1E00,总_190_in_518) ;
              if ( 子_7_do>MarketInfo(总_336_st_3130,MODE_ASK) + 总_221_do_1A80 )
              {
-               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               总_230_in_1E08 = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
                if ( 总_230_in_1E08 <= 0 )
                {
                  Print("error when setting breakeven: \'" + lizong_21(GetLastError()) + "\' ..\'Exit_BE_start\' to close to \'Exit_BE_extra_pips\' ..trying again!"); 
@@ -5540,7 +5540,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
            if ( 总_113_do_2A8>0.0 && 总_63_in_140 == 3 && MarketInfo(总_336_st_3130,MODE_ASK)<子_10_do - 总_113_do_2A8 * 总_229_do_1E00 && 子_10_do - 总_114_do_2B0 * 总_229_do_1E00<子_7_do - 总_337_do_3140 && MarketInfo(总_336_st_3130,MODE_ASK)<子_10_do - 总_114_do_2B0 * 总_229_do_1E00 - 总_221_do_1A80 && MarketInfo(总_336_st_3130,MODE_ASK)>子_8_do + 总_309_do_2898 && NormalizeDouble(子_10_do - 总_114_do_2B0 * 总_229_do_1E00,总_190_in_518)<总_191_do_520 )
            {
              总_191_do_520 = NormalizeDouble(子_10_do - 总_114_do_2B0 * 总_229_do_1E00,总_190_in_518) ;
-             总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,总_191_do_520,子_8_do,0,0xFFFFFFFF) ;
+             总_230_in_1E08 = OrderModify((int)子_9_lo,子_10_do,总_191_do_520,子_8_do,0,0xFFFFFFFF) ;
              if ( 总_230_in_1E08 <= 0 )
              {
                Print("error when setting breakeven: \'" + lizong_21(GetLastError()) + "\' ..\'Exit_BE_start\' to close to \'Exit_BE_extra_pips\' ..trying again!"); 
@@ -6139,13 +6139,13 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
      子_8_da = OrderExpiration() ;
      子_9_st = OrderComment() ;
      g_discardResult = OrderDelete((int)子_5_lo,Red); 
-     子_10_in = OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_7_do,总_38_do_C0,子_4_do,子_6_do,子_9_st,总_93_in_1F0,子_8_da,Green) ;
+     子_10_in = OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_7_do,(int)总_38_do_C0,子_4_do,子_6_do,子_9_st,总_93_in_1F0,子_8_da,Green) ;
      临_lo_1 = 子_10_in;
      临_lo_2 = 子_5_lo;
      for (临_in_3 = 0 ; 临_in_3 < 100 ; 临_in_3=临_in_3 + 1)
      {
        if ( !(总_198_do_1070_si100si2[临_in_3][0]==临_lo_2) )   continue;
-       总_198_do_1070_si100si2[临_in_3][0] = 临_lo_1;
+       总_198_do_1070_si100si2[临_in_3][0] = (double)临_lo_1;
        break;
        
      }
@@ -6160,13 +6160,13 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
    子_15_da = OrderExpiration() ;
    子_16_st = OrderComment() ;
    g_discardResult = OrderDelete((int)子_12_lo,Red); 
-   子_17_in = OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_14_do,总_38_do_C0,子_11_do,子_13_do,子_16_st,总_93_in_1F0,子_15_da,Green) ;
+   子_17_in = OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_14_do,(int)总_38_do_C0,子_11_do,子_13_do,子_16_st,总_93_in_1F0,子_15_da,Green) ;
    临_lo_4 = 子_17_in;
    临_lo_5 = 子_12_lo;
    for (临_in_6 = 0 ; 临_in_6 < 100 ; 临_in_6=临_in_6 + 1)
    {
      if ( !(总_198_do_1070_si100si2[临_in_6][0]==临_lo_5) )   continue;
-     总_198_do_1070_si100si2[临_in_6][0] = 临_lo_4;
+     总_198_do_1070_si100si2[临_in_6][0] = (double)临_lo_4;
      break;
      
    }
@@ -6220,7 +6220,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  子_16_in = 0 ;
  if ( 总_17_bo_8C )
  {
-   子_16_in = (总_378_in_5D80 + 3) * 总_362_do_5CC8 ;
+   子_16_in = (int)((总_378_in_5D80 + 3) * 总_362_do_5CC8) ;
  }
  ObjectCreate(0,"infopanel_rectangle",OBJ_RECTANGLE_LABEL,0,0,0.0); 
  ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_XDISTANCE,子_12_in); 
@@ -6348,21 +6348,21 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  }
  ObjectCreate(0,"lineopl" + IntegerToString(0,0,32),OBJ_LABEL,0,0,0.0);
  ObjectSetInteger(0,"lineopl" + IntegerToString(0,0,32),OBJPROP_CORNER,子_11_in); 
- ObjectSetInteger(0,"lineopl" + IntegerToString(0,0,32),OBJPROP_YDISTANCE,子_13_in + InfoPanelSizeAdjust * 76.0 + 子_8_in); 
+ ObjectSetInteger(0,"lineopl" + IntegerToString(0,0,32),OBJPROP_YDISTANCE,(long)(子_13_in + InfoPanelSizeAdjust * 76.0 + 子_8_in)); 
  ObjectSetInteger(0,"lineopl" + IntegerToString(0,0,32),OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
  ObjectSetString(0,"lineopl" + IntegerToString(0,0,32),OBJPROP_TEXT,"Open P/L: -");
  ObjectSetInteger(0,"lineopl" + IntegerToString(0,0,32),OBJPROP_COLOR,总_329_ui_3104);
  ObjectSetInteger(0,"lineopl" + IntegerToString(0,0,32),OBJPROP_FONTSIZE,总_372_in_5CFC);
  ObjectCreate(0,"linea" + IntegerToString(0,0,32),OBJ_LABEL,0,0,0.0);
  ObjectSetInteger(0,"linea" + IntegerToString(0,0,32),OBJPROP_CORNER,子_11_in); 
- ObjectSetInteger(0,"linea" + IntegerToString(0,0,32),OBJPROP_YDISTANCE,子_13_in + InfoPanelSizeAdjust * 92.0 + 子_8_in); 
+ ObjectSetInteger(0,"linea" + IntegerToString(0,0,32),OBJPROP_YDISTANCE,(long)(子_13_in + InfoPanelSizeAdjust * 92.0 + 子_8_in)); 
  ObjectSetInteger(0,"linea" + IntegerToString(0,0,32),OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
  ObjectSetString(0,"linea" + IntegerToString(0,0,32),OBJPROP_TEXT,"Account Balance: -");
  ObjectSetInteger(0,"linea" + IntegerToString(0,0,32),OBJPROP_COLOR,总_329_ui_3104);
  ObjectSetInteger(0,"linea" + IntegerToString(0,0,32),OBJPROP_FONTSIZE,总_372_in_5CFC);
  ObjectCreate(0,"linetp" + IntegerToString(0,0,32),OBJ_LABEL,0,0,0.0);
  ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_CORNER,子_11_in); 
- ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_YDISTANCE,子_13_in + InfoPanelSizeAdjust * 108.0 + 子_8_in); 
+ ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_YDISTANCE,(long)(子_13_in + InfoPanelSizeAdjust * 108.0 + 子_8_in)); 
  ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
  ObjectSetString(0,"linetp" + IntegerToString(0,0,32),OBJPROP_TEXT,"Total P/L so far: -");
  ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_COLOR,总_329_ui_3104);
@@ -6371,7 +6371,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  子_19_in = 0 ;
  子_20_in = 0 ;
  子_22_in = 子_12_in + 子_7_in ;
- 子_23_in = 子_13_in + InfoPanelSizeAdjust * 160.0 + 子_8_in ;
+ 子_23_in = (int)(子_13_in + InfoPanelSizeAdjust * 160.0 + 子_8_in) ;
  子_21_st = "Strategy" ;
  lizong_25(子_22_in,子_23_in,0,"Strategy",0,0,1,0,1.0); 
  子_18_in = 1 ;
@@ -6423,18 +6423,18 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  void lizong_25( int 木_0_in,int 木_1_in,int 木_2_in,string 木_3_st,int 木_4_in,int 木_5_in,int 木_6_in,uint 木_7_ui,double 木_8_do)
  {
  ObjectCreate(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJ_EDIT,0,0,0.0); 
- ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_XDISTANCE,木_0_in + 木_5_in * 总_361_do_5CC0); 
- ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_YDISTANCE,木_1_in + 木_4_in * 总_362_do_5CC8); 
+ ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_XDISTANCE,(long)(木_0_in + 木_5_in * 总_361_do_5CC0)); 
+ ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_YDISTANCE,(long)(木_1_in + 木_4_in * 总_362_do_5CC8)); 
  ObjectSetString(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_TEXT,木_3_st); 
  ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_BACK,0); 
  ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_COLOR,木_7_ui); 
  ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_BGCOLOR,总_364_ui_5CD4); 
  ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_BORDER_COLOR,0); 
- ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_FONTSIZE,总_372_in_5CFC * 木_8_do); 
+ ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_FONTSIZE,(long)(总_372_in_5CFC * 木_8_do)); 
  ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_READONLY,0x1); 
- ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_YSIZE,总_362_do_5CC8); 
- ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_XSIZE,总_361_do_5CC0); 
- ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_YSIZE,总_362_do_5CC8); 
+ ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_YSIZE,(long)总_362_do_5CC8); 
+ ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_XSIZE,(long)总_361_do_5CC0); 
+ ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_YSIZE,(long)总_362_do_5CC8); 
  if ( 木_6_in == 0 )
  {
    ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_ALIGN,0x1); 
@@ -7089,8 +7089,8 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  void lizong_32()
  {
   int       子_1_in = 0;
-  double    子_2_do_si99[99];
-  double    子_3_do_si99[99];
+  double    子_2_do_si99[99]={0.0};
+  double    子_3_do_si99[99]={0.0};
   int       子_4_in;
   int       子_5_in;
   bool      子_6_bo;
@@ -9350,7 +9350,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  }
  子_3_in = StringFind(子_2_st,"\"serverTimeStamp\" value=",0) ;
  子_4_st = StringSubstr(子_2_st,子_3_in + 25,10) ;
- 子_5_lo = ulong(子_4_st) ;
+ 子_5_lo = (long)ulong(子_4_st) ;
  Print("GMT time = ",子_5_lo); 
  Print("Broker time = ",TimeCurrent()); 
  子_6_in=TimeHour(TimeCurrent()) - TimeHour(子_5_lo);
@@ -9397,8 +9397,8 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  子_6_in = 0 ;
  if ( 子_2_in >= 1987 && 子_2_in <= 2006 )
  {
-   子_5_in = MathMod(子_2_in * 6 + 2 - 子_2_in / 4,7.0) + 1.0 ;
-   子_6_in = 31.0 - (MathMod(子_2_in * 5 / 4 + 1,7.0)) ;
+   子_5_in = (int)(MathMod(子_2_in * 6 + 2 - 子_2_in / 4,7.0) + 1.0) ;
+   子_6_in = (int)(31.0 - (MathMod(子_2_in * 5 / 4 + 1,7.0))) ;
    子_3_da=StringToTime(StringConcatenate(子_2_in,".04.01")) + (子_5_in - 1) * 86400 + 0x1C20;
    子_4_da=StringToTime(StringConcatenate(子_2_in,".10.01")) + (子_6_in - 1) * 86400 + 0x1C20;
  }
@@ -9406,8 +9406,8 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  {
    if ( 子_2_in >= 2007 )
    {
-     子_5_in = 14.0 - (MathMod(子_2_in * 5 / 4 + 1,7.0)) ;
-     子_6_in = 7.0 - (MathMod(子_2_in * 5 / 4 + 1,7.0)) ;
+     子_5_in = (int)(14.0 - (MathMod(子_2_in * 5 / 4 + 1,7.0))) ;
+     子_6_in = (int)(7.0 - (MathMod(子_2_in * 5 / 4 + 1,7.0))) ;
      子_3_da=StringToTime(StringConcatenate(子_2_in,".03.01")) + (子_5_in - 1) * 86400 + 0x1C20;
      子_4_da=StringToTime(StringConcatenate(子_2_in,".11.01")) + (子_6_in - 1) * 86400 + 0x1C20;
    }
