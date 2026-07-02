@@ -9365,39 +9365,19 @@ g_prevEquity=0.0;
 // CalcPerformanceStats<<==-------- --------
 int GetGMT_Offset()
 {
-string lv_s2;
-int lv_i3;
-string lv_s4;
-long lv_l5;
-int lv_i6;
-char lv_httpReqBuf[];
-char lv_httpRespBuf[];
-//----------
-string tmp_s1;
-string tmp_s2;
-
-ResetLastError();
-if(WebRequest("GET","https://www.worldtimeserver.com/time-zones/utc/",NULL,NULL,10000,lv_httpReqBuf,0,lv_httpRespBuf,tmp_s1)==-1)
+// Ban cu dung WebRequest() scrape HTML tu worldtimeserver.com de lay gio GMT - de vo
+// hieu khi trang web doi cau truc (khong tim thay chuoi can tim nua). Thay bang ham
+// TimeGMT() co san cua MQL5: lay truc tiep gio GMT tu terminal, khong can mang, khong
+// bao gio bi loi kieu "Error in detecting GMT time with URL" nua.
+datetime lv_gmt=TimeGMT();
+if(lv_gmt<=0)
 {
-Print("Error when reading GMT URL. Error code  =",GetLastError());
-MessageBox("Add the address 'https://www.worldtimeserver.com/' in the list of allowed URLs on tab 'Expert Advisors'","Error",64);
-tmp_s2="999";
-}
-else
-{
-tmp_s2=CharArrayToString(lv_httpRespBuf,0,0,0);
-}
-lv_s2=tmp_s2;
-if(lv_s2=="999")
-{
+Print("Error in detecting GMT time (TimeGMT khong kha dung)");
 return(999);
 }
-lv_i3=StringFind(lv_s2,"\"serverTimeStamp\"value=",0);
-lv_s4=StringSubstr(lv_s2,lv_i3+25,10);
-lv_l5 = (long)ulong(lv_s4);
-Print("GMT time = ",lv_l5);
+Print("GMT time = ",lv_gmt);
 Print("Broker time = ",TimeCurrent());
-lv_i6=TimeHour(TimeCurrent())-TimeHour(lv_l5);
+int lv_i6=(int)MathRound((TimeCurrent()-lv_gmt)/3600.0);
 if(lv_i6< -12)
 {
 lv_i6+=24;
@@ -9407,16 +9387,6 @@ if(lv_i6> 12)
 lv_i6-=24;
 }
 Print("GMT_Offset detected: "+string(lv_i6));
-if((lv_i6<-12||lv_i6> 12))
-{
-Print("Error in detecting GMT offset with URL");
-return(999);
-}
-if(lv_l5< TimeCurrent()-86400/*=1 ngay*/)
-{
-Print("Error in detecting GMT time with URL");
-return(999);
-}
 return(lv_i6);
 }
 // GetGMT_Offset<<==-------- --------
