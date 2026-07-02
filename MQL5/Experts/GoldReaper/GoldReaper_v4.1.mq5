@@ -534,65 +534,7 @@ datetime g_ddResetTime=0;
 double g_stratScores[99];
 double g_balForLots=0.0;
 double g_balSnapshot=0.0;
-bool     g_nfpFromCalendar=false; // true neu lay duoc ngay NFP tu Economic Calendar (khong dung mang hardcode)
-datetime g_nfpCalendarBuiltDay=0; // ngay (00:00) lan gan nhat da lam moi du lieu calendar
 
-//+------------------------------------------------------------------+
-//| Lay ngay NFP (Non-Farm Payrolls) tu Economic Calendar cua MQL5   |
-//| thay vi mang g_nfpDates[] hardcode. Neu khong tim/lay duoc (vi   |
-//| du calendar khong kha dung trong Strategy Tester cua broker nay),|
-//| GIU NGUYEN mang hardcode da co san (khong xoa du lieu cu).       |
-//+------------------------------------------------------------------+
-void BuildNFPDatesFromCalendar()
-{
-   g_nfpCalendarBuiltDay=TimeCurrent()-TimeCurrent()%86400; // chi thu lai 1 lan/ngay du thanh cong hay khong
-   MqlCalendarEvent lv_events[];
-   int lv_evTotal=CalendarEventByCountry("US",lv_events);
-   if(lv_evTotal<=0) return;
-
-   long lv_nfpId=-1;
-   int  lv_i;
-   for(lv_i=0;lv_i<lv_evTotal;lv_i++)
-   {
-      if(StringFind(lv_events[lv_i].name,"Nonfarm Payrolls")>=0 ||
-         StringFind(lv_events[lv_i].name,"Non-Farm Payrolls")>=0 ||
-         StringFind(lv_events[lv_i].name,"Non Farm Payrolls")>=0)
-      {
-         lv_nfpId=(long)lv_events[lv_i].id;
-         break;
-      }
-   }
-   if(lv_nfpId<0) return; // khong tim thay event NFP trong calendar cua broker nay
-
-   MqlCalendarValue lv_values[];
-   datetime lv_from=D'2007.01.01 00:00';
-   datetime lv_to=TimeCurrent()+400*24*60*60; // ~13 thang ke tu hien tai
-   int lv_n=CalendarValueHistoryByEvent((ulong)lv_nfpId,lv_values,lv_from,lv_to);
-   if(lv_n<=0) return;
-
-   // MqlCalendarValue.time tra ve theo GIO SERVER (theo tai lieu MQL5), trong khi
-   // g_nfpDates[] va toan bo logic loc NFP con lai (g_autoResetTime, GetNextNFPText)
-   // dang quy uoc luu GIO GMT (giong mang hardcode cu) roi moi quy doi sang gio server
-   // luc so sanh/hien thi. Vi vay phai TRU offset o day truoc khi luu, de khong bi quy
-   // doi 2 lan. Dung dung "TimeCurrent()-g_autoResetTime" (chinh la offset GMT ma toan
-   // bo bo loc NFP dang dung tai thoi diem nay) thay vi input Broker_GMT_OFFSET_xxx, de
-   // luon khop 100% voi bo loc du AutoGMT/WebRequest thanh cong hay phai roi ve TimeGMT().
-   long lv_offsetSeconds=(long)(TimeCurrent()-g_autoResetTime);
-
-   int lv_count=0;
-   for(lv_i=0;lv_i<lv_n && lv_count<300;lv_i++)
-   {
-      if(lv_values[lv_i].time<=0) continue;
-      g_nfpDates[lv_count]=lv_values[lv_i].time-lv_offsetSeconds;
-      lv_count++;
-   }
-   if(lv_count<=0) return;
-   for(lv_i=lv_count;lv_i<300;lv_i++) g_nfpDates[lv_i]=0; // xoa phan con lai cua mang hardcode
-
-   g_nfpFromCalendar=true;
-   Print("NFP: da lay ",lv_count," ngay tu Economic Calendar (thay cho mang hardcode).");
-}
-// BuildNFPDatesFromCalendar<<==-------- --------
 
 int OnInit()
 {
@@ -860,8 +802,6 @@ g_nfpDates[236]=D'2007.04.06 12:30';
 g_nfpDates[237]=D'2007.03.09 12:30';
 g_nfpDates[238]=D'2007.02.02 12:30';
 g_nfpDates[239]=D'2007.01.05 12:30';
-// Khong goi BuildNFPDatesFromCalendar() o day: can g_autoResetTime da duoc tinh
-// (chi co sau khi OnTick() chay lan dau) de quy doi dung gio - xem trong OnTick().
 if(Risk==1234)
 {
 g_startLots=MarketInfo(g_tradeSymbol,MODE_MINLOT);
@@ -1480,10 +1420,6 @@ g_autoResetTime=TimeGMT();
 else
 {
 g_autoResetTime=TimeCurrent()-g_nfpGMTOfs*3600;
-}
-if(TimeCurrent()-TimeCurrent()%86400>g_nfpCalendarBuiltDay)
-{
-BuildNFPDatesFromCalendar(); // lam moi 1 lan/ngay; goi o day (sau khi g_autoResetTime da tinh xong) de dung dung offset GMT hien tai
 }
 if(TradeFrequency==5&&Risk==1234)
 {
@@ -2325,7 +2261,7 @@ return(0);
 }
 if(EnableNFP_Filter)
 {
-if(Year()<=2026||g_nfpFromCalendar) // neu da lay duoc tu calendar thi khong bi gioi han nam nua
+if(Year()<=2026)
 {
 lv_dt3=0;
 for(lv_i4=0;lv_i4<300;lv_i4++)
@@ -6449,15 +6385,6 @@ ObjectSetInteger(0,"linetp"+IntegerToString(0,0,32),OBJPROP_YDISTANCE,(int)(lv_i
 ObjectSetInteger(0,"linetp"+IntegerToString(0,0,32),OBJPROP_XDISTANCE,lv_i12+lv_i7);
 ObjectSetString(0,"linetp"+IntegerToString(0,0,32),OBJPROP_TEXT,"Total P/L so far: -");
 ObjectSetInteger(0,"linetp"+IntegerToString(0,0,32),OBJPROP_COLOR,g_panelFgColor);
-if(EnableNFP_Filter)
-{
-ObjectCreate(0,"linenfp"+IntegerToString(0,0,32),OBJ_LABEL,0,0,0.0);
-ObjectSetInteger(0,"linenfp"+IntegerToString(0,0,32),OBJPROP_CORNER,lv_i11);
-ObjectSetInteger(0,"linenfp"+IntegerToString(0,0,32),OBJPROP_YDISTANCE,(int)(lv_i13+InfoPanelSizeAdjust*124.0+lv_i8));
-ObjectSetInteger(0,"linenfp"+IntegerToString(0,0,32),OBJPROP_XDISTANCE,lv_i12+lv_i7);
-ObjectSetString(0,"linenfp"+IntegerToString(0,0,32),OBJPROP_TEXT,"Next NFP: -");
-ObjectSetInteger(0,"linenfp"+IntegerToString(0,0,32),OBJPROP_COLOR,g_panelFgColor);
-}
 lv_i18=0;
 lv_i19=0;
 lv_i20=0;
@@ -6559,7 +6486,6 @@ ObjectDelete(0,"linea"+IntegerToString(lv_i1,0,32));
 ObjectDelete(0,"lineto"+IntegerToString(lv_i1,0,32));
 ObjectDelete(0,"linetp"+IntegerToString(lv_i1,0,32));
 ObjectDelete(0,"linetq"+IntegerToString(lv_i1,0,32));
-ObjectDelete(0,"linenfp"+IntegerToString(lv_i1,0,32));
 for(lv_i2=0;lv_i2<10;lv_i2++)
 {
 ObjectDelete(0,"tabel_info"+IntegerToString(lv_i1*100+lv_i2,0,32));
@@ -6578,22 +6504,6 @@ ObjectDelete(0,"info_ea"+IntegerToString(lv_i4,0,32));
 }
 }
 // DeleteChartObjects<<==-------- --------
-string GetNextNFPText()
-{
-datetime lv_best=0;
-int lv_i;
-for(lv_i=0;lv_i<240;lv_i++)
-{
-if(g_nfpDates[lv_i]<=0) continue;
-if(g_nfpDates[lv_i]>=g_autoResetTime)
-{
-if(lv_best==0||g_nfpDates[lv_i]<lv_best) lv_best=g_nfpDates[lv_i];
-}
-}
-if(lv_best==0) return("Next NFP: -");
-return("Next NFP: "+TimeToString(lv_best+g_nfpGMTOfs*3600,TIME_DATE|TIME_SECONDS));
-}
-// GetNextNFPText<<==-------- --------
 void DrawPanelBackground()
 {
 string errorStr;
@@ -6716,10 +6626,6 @@ tmp_d1=tmp_d2;
 }
 ObjectSetString(0,"lineopl"+IntegerToString(0,0,32),OBJPROP_TEXT,"Open P/L: "+DoubleToString(tmp_d1,2));
 ObjectSetString(0,"linea"+IntegerToString(0,0,32),OBJPROP_TEXT,"Account Balance: "+DoubleToString(AccountBalance(),2));
-if(EnableNFP_Filter)
-{
-ObjectSetString(0,"linenfp"+IntegerToString(0,0,32),OBJPROP_TEXT,GetNextNFPText());
-}
 if(g_minBarsBetween==1)
 {
 errorStr="conservative";
@@ -9429,19 +9335,39 @@ g_prevEquity=0.0;
 // CalcPerformanceStats<<==-------- --------
 int GetGMT_Offset()
 {
-// Ban cu dung WebRequest() scrape HTML tu worldtimeserver.com de lay gio GMT - de vo
-// hieu khi trang web doi cau truc (khong tim thay chuoi can tim nua). Thay bang ham
-// TimeGMT() co san cua MQL5: lay truc tiep gio GMT tu terminal, khong can mang, khong
-// bao gio bi loi kieu "Error in detecting GMT time with URL" nua.
-datetime lv_gmt=TimeGMT();
-if(lv_gmt<=0)
+string lv_s2;
+int lv_i3;
+string lv_s4;
+long lv_l5;
+int lv_i6;
+char lv_httpReqBuf[];
+char lv_httpRespBuf[];
+//----------
+string tmp_s1;
+string tmp_s2;
+
+ResetLastError();
+if(WebRequest("GET","https://www.worldtimeserver.com/time-zones/utc/",NULL,NULL,10000,lv_httpReqBuf,0,lv_httpRespBuf,tmp_s1)==-1)
 {
-Print("Error in detecting GMT time (TimeGMT khong kha dung)");
+Print("Error when reading GMT URL. Error code  =",GetLastError());
+MessageBox("Add the address 'https://www.worldtimeserver.com/' in the list of allowed URLs on tab 'Expert Advisors'","Error",64);
+tmp_s2="999";
+}
+else
+{
+tmp_s2=CharArrayToString(lv_httpRespBuf,0,0,0);
+}
+lv_s2=tmp_s2;
+if(lv_s2=="999")
+{
 return(999);
 }
-Print("GMT time = ",lv_gmt);
+lv_i3=StringFind(lv_s2,"\"serverTimeStamp\"value=",0);
+lv_s4=StringSubstr(lv_s2,lv_i3+25,10);
+lv_l5 = (long)ulong(lv_s4);
+Print("GMT time = ",lv_l5);
 Print("Broker time = ",TimeCurrent());
-int lv_i6=(int)MathRound((TimeCurrent()-lv_gmt)/3600.0);
+lv_i6=TimeHour(TimeCurrent())-TimeHour(lv_l5);
 if(lv_i6< -12)
 {
 lv_i6+=24;
@@ -9451,6 +9377,16 @@ if(lv_i6> 12)
 lv_i6-=24;
 }
 Print("GMT_Offset detected: "+string(lv_i6));
+if((lv_i6<-12||lv_i6> 12))
+{
+Print("Error in detecting GMT offset with URL");
+return(999);
+}
+if(lv_l5< TimeCurrent()-86400/*=1 ngay*/)
+{
+Print("Error in detecting GMT time with URL");
+return(999);
+}
 return(lv_i6);
 }
 // GetGMT_Offset<<==-------- --------
