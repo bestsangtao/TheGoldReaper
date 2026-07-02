@@ -581,8 +581,14 @@ g_startLots_rw=StartLots;
  // OnlyUp cai tien: doc lai muc so du cao nhat da luu trong GlobalVariable
  // cua terminal (ton tai xuyen suot restart EA/MT5), thay vi luon reset ve
  // so du hien tai moi lan khoi dong nhu truoc - tranh mat muc dinh cao da
- // dat duoc truoc do.
- if ( OnlyUp && GlobalVariableCheck(OnlyUpPeakGVName()) )
+ // dat duoc truoc do. CHI ap dung khi chay live/demo that (MQLInfoInteger(
+ // MQL_TESTER)==0): GlobalVariable la bien cua terminal, dung chung ten
+ // theo Symbol()+MagicNumber giua moi lan chay - neu ap dung trong Strategy
+ // Tester, chay lai chinh xac 1 backtest lan thu 2 se doc phai dinh con sot
+ // tu lan chay truoc thay vi reset ve so du ban dau, lam mat tinh lap lai
+ // (reproducibility) cua ket qua backtest. Trong Tester, giu nguyen hanh vi
+ // goc: dinh luon = so du hien tai luc OnInit.
+ if ( MQLInfoInteger(MQL_TESTER) != 1 && OnlyUp && GlobalVariableCheck(OnlyUpPeakGVName()) )
  {
    总_402_do_6AD8 = GlobalVariableGet(OnlyUpPeakGVName()) ;
    if ( 总_401_do_6AD0>总_402_do_6AD8 )   总_402_do_6AD8 = 总_401_do_6AD0 ;
@@ -591,7 +597,7 @@ g_startLots_rw=StartLots;
  {
    总_402_do_6AD8 = 总_401_do_6AD0 ;
  }
- GlobalVariableSet(OnlyUpPeakGVName(),总_402_do_6AD8) ;
+ if ( MQLInfoInteger(MQL_TESTER) != 1 )   GlobalVariableSet(OnlyUpPeakGVName(),总_402_do_6AD8) ;
  总_392_bo_675C = false ;
  总_393_bo_675D = false ;
  总_391_da_5DFC_si300[0] = D'2026.12.04 12:30';
@@ -1305,7 +1311,7 @@ g_startLots_rw=StartLots;
  if ( 总_401_do_6AD0>总_402_do_6AD8 )
  {
    总_402_do_6AD8 = 总_401_do_6AD0 ;
-   if ( OnlyUp )   GlobalVariableSet(OnlyUpPeakGVName(),总_402_do_6AD8) ;
+   if ( OnlyUp && MQLInfoInteger(MQL_TESTER) != 1 )   GlobalVariableSet(OnlyUpPeakGVName(),总_402_do_6AD8) ;
  }
  if ( FakeOutFilter == 0 )
  {
@@ -3245,7 +3251,7 @@ g_startLots_rw=StartLots;
  if ( 总_401_do_6AD0>总_402_do_6AD8 )
  {
    总_402_do_6AD8 = 总_401_do_6AD0 ;
-   if ( OnlyUp )   GlobalVariableSet(OnlyUpPeakGVName(),总_402_do_6AD8) ;
+   if ( OnlyUp && MQLInfoInteger(MQL_TESTER) != 1 )   GlobalVariableSet(OnlyUpPeakGVName(),总_402_do_6AD8) ;
  }
  子_3_do = 木_0_do ;
  if ( ( 总_190_in_518 == 2 || 总_190_in_518 == 4 ) )
