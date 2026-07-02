@@ -9309,9 +9309,15 @@ g_startLots_rw=StartLots;
  子_2_st = 临_st_2 ;
  if ( 子_2_st == "999" )
  {
-   return(999); 
+   return(999);
  }
+ // Debug tam thoi de xac dinh MT5 thuc su nhan duoc noi dung gi tu server -
+ // giup phan biet loi "khong ket noi duoc" voi loi "ket noi duoc nhung
+ // trang tra ve khong con chua serverTimeStamp nhu truoc".
+ Print("DEBUG do dai phan hoi = ",StringLen(子_2_st));
+ Print("DEBUG 300 ky tu dau = ",StringSubstr(子_2_st,0,300));
  子_3_in = StringFind(子_2_st,"\"serverTimeStamp\" value=",0) ;
+ Print("DEBUG vi tri tim thay serverTimeStamp = ",子_3_in);
  子_4_st = StringSubstr(子_2_st,子_3_in + 25,10) ;
  子_5_lo = ulong(子_4_st) ;
  Print("GMT time = ",子_5_lo); 
