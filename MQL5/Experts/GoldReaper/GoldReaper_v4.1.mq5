@@ -534,7 +534,56 @@ datetime g_ddResetTime=0;
 double g_stratScores[99];
 double g_balForLots=0.0;
 double g_balSnapshot=0.0;
+bool     g_nfpFromCalendar=false; // true neu lay duoc ngay NFP tu Economic Calendar (khong dung mang hardcode)
+datetime g_nfpCalendarBuiltDay=0; // ngay (00:00) lan gan nhat da lam moi du lieu calendar
 
+//+------------------------------------------------------------------+
+//| Lay ngay NFP (Non-Farm Payrolls) tu Economic Calendar cua MQL5   |
+//| thay vi mang g_nfpDates[] hardcode. Neu khong tim/lay duoc (vi   |
+//| du calendar khong kha dung trong Strategy Tester cua broker nay),|
+//| GIU NGUYEN mang hardcode da co san (khong xoa du lieu cu).       |
+//+------------------------------------------------------------------+
+void BuildNFPDatesFromCalendar()
+{
+   g_nfpCalendarBuiltDay=TimeCurrent()-TimeCurrent()%86400; // chi thu lai 1 lan/ngay du thanh cong hay khong
+   MqlCalendarEvent lv_events[];
+   int lv_evTotal=CalendarEventByCountry("US",lv_events);
+   if(lv_evTotal<=0) return;
+
+   long lv_nfpId=-1;
+   int  lv_i;
+   for(lv_i=0;lv_i<lv_evTotal;lv_i++)
+   {
+      if(StringFind(lv_events[lv_i].name,"Nonfarm Payrolls")>=0 ||
+         StringFind(lv_events[lv_i].name,"Non-Farm Payrolls")>=0 ||
+         StringFind(lv_events[lv_i].name,"Non Farm Payrolls")>=0)
+      {
+         lv_nfpId=(long)lv_events[lv_i].id;
+         break;
+      }
+   }
+   if(lv_nfpId<0) return; // khong tim thay event NFP trong calendar cua broker nay
+
+   MqlCalendarValue lv_values[];
+   datetime lv_from=D'2007.01.01 00:00';
+   datetime lv_to=TimeCurrent()+400*24*60*60; // ~13 thang ke tu hien tai
+   int lv_n=CalendarValueHistoryByEvent((ulong)lv_nfpId,lv_values,lv_from,lv_to);
+   if(lv_n<=0) return;
+
+   int lv_count=0;
+   for(lv_i=0;lv_i<lv_n && lv_count<300;lv_i++)
+   {
+      if(lv_values[lv_i].time<=0) continue;
+      g_nfpDates[lv_count]=lv_values[lv_i].time;
+      lv_count++;
+   }
+   if(lv_count<=0) return;
+   for(lv_i=lv_count;lv_i<300;lv_i++) g_nfpDates[lv_i]=0; // xoa phan con lai cua mang hardcode
+
+   g_nfpFromCalendar=true;
+   Print("NFP: da lay ",lv_count," ngay tu Economic Calendar (thay cho mang hardcode).");
+}
+// BuildNFPDatesFromCalendar<<==-------- --------
 
 int OnInit()
 {
@@ -802,6 +851,7 @@ g_nfpDates[236]=D'2007.04.06 12:30';
 g_nfpDates[237]=D'2007.03.09 12:30';
 g_nfpDates[238]=D'2007.02.02 12:30';
 g_nfpDates[239]=D'2007.01.05 12:30';
+BuildNFPDatesFromCalendar(); // thu lay ngay NFP tu Economic Calendar, neu duoc se ghi de mang hardcode o tren
 if(Risk==1234)
 {
 g_startLots=MarketInfo(g_tradeSymbol,MODE_MINLOT);
@@ -1257,6 +1307,10 @@ double tmp_d26;
 double tmp_d27;
 int tmp_i28;
 
+if(TimeCurrent()-TimeCurrent()%86400>g_nfpCalendarBuiltDay)
+{
+BuildNFPDatesFromCalendar(); // lam moi 1 lan/ngay, phong khi calendar co du lieu moi (VD: BLS cong bo lich nam sau)
+}
 g_balForLots=AccountInfoDouble(ACCOUNT_BALANCE);
 if(UseEquity)
 {
@@ -2261,7 +2315,7 @@ return(0);
 }
 if(EnableNFP_Filter)
 {
-if(Year()<=2026)
+if(Year()<=2026||g_nfpFromCalendar) // neu da lay duoc tu calendar thi khong bi gioi han nam nua
 {
 lv_dt3=0;
 for(lv_i4=0;lv_i4<300;lv_i4++)
