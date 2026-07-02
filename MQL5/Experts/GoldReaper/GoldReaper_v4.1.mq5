@@ -512,7 +512,10 @@ g_startLots_rw=StartLots;
   int       子_8_in;
   int       子_9_in;
 //----- -----
- bool       临_bo_1;
+ // MQL4 tu dong khoi tao bool local ve false; MQL5 thi khong, nen phai gan
+ // ro rang de giu dung hanh vi ban goc (bien nay khong duoc gan truoc khi
+ // dung o duoi, IsDemo() ket qua bi bo qua trong ca ban mq4 goc).
+ bool       临_bo_1 = false;
 
  总_401_do_6AD0 = AccountInfoDouble(ACCOUNT_BALANCE) ;
  if ( UseEquity )
@@ -922,7 +925,7 @@ g_startLots_rw=StartLots;
  {
    总_229_do_1E00 = 总_337_do_3140 / 10.0 ;
  }
- 总_190_in_518 = MarketInfo(总_336_st_3130,MODE_DIGITS) ;
+ 总_190_in_518 = (int)MarketInfo(总_336_st_3130,MODE_DIGITS) ;
  if ( FridayStopHour <  0 )
  {
    总_45_bo_FC = false ;
@@ -931,7 +934,7 @@ g_startLots_rw=StartLots;
  {
    总_45_bo_FC = true ;
  }
- 总_251_do_2520 = TimeCurrent() ;
+ 总_251_do_2520 = (double)TimeCurrent() ;
  总_1_do_0 = MarketInfo(总_336_st_3130,MODE_ASK) - MarketInfo(总_336_st_3130,MODE_BID) ;
  总_223_do_1AC4_si99[总_328_in_3100] = NormalizeDouble(MathFloor(g_startLots_rw * 100.0) / 100.0,2);
  if ( MarketInfo(总_336_st_3130,MODE_LOTSTEP)==0.1 )
@@ -994,7 +997,7 @@ g_startLots_rw=StartLots;
  }
  if ( 总_36_in_B0<总_309_do_2898 / 总_229_do_1E00 )
  {
-   总_36_in_B0 = 总_309_do_2898 / 总_229_do_1E00 ;
+   总_36_in_B0 = (int)(总_309_do_2898 / 总_229_do_1E00) ;
  }
  if ( 总_103_do_250!=0.0 && 总_103_do_250<总_309_do_2898 / 总_229_do_1E00 )
  {
@@ -1069,7 +1072,7 @@ g_startLots_rw=StartLots;
  总_189_do_510 = NormalizeDouble(总_261_do_2578,总_190_in_518) ;
  总_250_in_2518 = 0 ;
  总_256_bo_2564 = false ;
- 总_304_in_287C = 总_125_do_2F8 * 60.0 ;
+ 总_304_in_287C = (int)(总_125_do_2F8 * 60.0) ;
  总_139_bo_3EC = false ;
  总_303_bo_2878 = true ;
  总_309_do_2898 = MarketInfo(总_336_st_3130,MODE_FREEZELEVEL) * 总_337_do_3140 ;
@@ -1155,7 +1158,7 @@ g_startLots_rw=StartLots;
  {
    总_64_do_148 = 0.0 ;
  }
- 总_190_in_518 = MarketInfo(总_336_st_3130,MODE_DIGITS) ;
+ 总_190_in_518 = (int)MarketInfo(总_336_st_3130,MODE_DIGITS) ;
  总_312_bo_28B0 = false ;
  IsDemo(); 
 
@@ -1867,7 +1870,7 @@ g_startLots_rw=StartLots;
  {
    总_229_do_1E00 = 总_337_do_3140 / 10.0 ;
  }
- 总_190_in_518 = MarketInfo(总_336_st_3130,MODE_DIGITS) ;
+ 总_190_in_518 = (int)MarketInfo(总_336_st_3130,MODE_DIGITS) ;
  总_1_do_0 = MarketInfo(总_336_st_3130,MODE_ASK) - MarketInfo(总_336_st_3130,MODE_BID) ;
  总_221_do_1A80 = MarketInfo(总_336_st_3130,MODE_STOPLEVEL) * 总_337_do_3140 ;
  总_309_do_2898 = MarketInfo(总_336_st_3130,MODE_FREEZELEVEL) * 总_337_do_3140 ;
@@ -2690,11 +2693,11 @@ g_startLots_rw=StartLots;
        }
        if ( OrderType() == 0 )
        {
-         OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,Red); 
+         OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
        }
        if ( OrderType() == 1 )
        {
-         OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),总_38_do_C0,Red); 
+         OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
        }
        if ( ( OrderType() != 4 && OrderType() != 5 ) )   continue;
        OrderDelete(OrderTicket(),Red); 
@@ -2865,7 +2868,7 @@ g_startLots_rw=StartLots;
      临_bo_109 = false;
      for (临_in_110 = 0 ; 临_in_110 < 100 ; 临_in_110=临_in_110 + 1)
      {
-       临_lo_111 = 总_198_do_1070_si100si2[临_in_110][0];
+       临_lo_111 = (long)总_198_do_1070_si100si2[临_in_110][0];
        临_bo_109 = false;
        for (临_in_112 = MT4OrdersTotal() ; 临_in_112 >= 0 ; 临_in_112=临_in_112 - 1)
        {
@@ -2939,7 +2942,7 @@ g_startLots_rw=StartLots;
      for (临_in_3 = 0 ; 临_in_3 < 100 ; 临_in_3=临_in_3 + 1)
      {
        if ( !(总_198_do_1070_si100si2[临_in_3][0]==0.0) )   continue;
-       总_198_do_1070_si100si2[临_in_3][0] = 临_lo_2;
+       总_198_do_1070_si100si2[临_in_3][0] = (double)临_lo_2;
        总_198_do_1070_si100si2[临_in_3][1] = 临_do_1;
        break;
        
@@ -2961,7 +2964,7 @@ g_startLots_rw=StartLots;
              for (临_in_6 = 0 ; 临_in_6 < 100 ; 临_in_6=临_in_6 + 1)
              {
                if ( !(总_198_do_1070_si100si2[临_in_6][0]==0.0) )   continue;
-               总_198_do_1070_si100si2[临_in_6][0] = 临_lo_5;
+               总_198_do_1070_si100si2[临_in_6][0] = (double)临_lo_5;
                总_198_do_1070_si100si2[临_in_6][1] = 临_do_4;
                break;
                
@@ -2983,7 +2986,7 @@ g_startLots_rw=StartLots;
    for (临_in_9 = 0 ; 临_in_9 < 100 ; 临_in_9=临_in_9 + 1)
    {
      if ( !(总_198_do_1070_si100si2[临_in_9][0]==0.0) )   continue;
-     总_198_do_1070_si100si2[临_in_9][0] = 临_lo_8;
+     总_198_do_1070_si100si2[临_in_9][0] = (double)临_lo_8;
      总_198_do_1070_si100si2[临_in_9][1] = 临_do_7;
      break;
      
@@ -3005,7 +3008,7 @@ g_startLots_rw=StartLots;
          for (临_in_12 = 0 ; 临_in_12 < 100 ; 临_in_12=临_in_12 + 1)
          {
            if ( !(总_198_do_1070_si100si2[临_in_12][0]==0.0) )   continue;
-           总_198_do_1070_si100si2[临_in_12][0] = 临_lo_11;
+           总_198_do_1070_si100si2[临_in_12][0] = (double)临_lo_11;
            总_198_do_1070_si100si2[临_in_12][1] = 临_do_10;
            break;
            
@@ -3248,23 +3251,23 @@ g_startLots_rw=StartLots;
      子_7_do = lizong_36(总_401_do_6AD0) ;
      if ( 总_19_in_9C == 0 )
      {
-       总_145_in_40C = 总_385_in_5DA8 / (MaxAllowedDD / 100.0) ;
+       总_145_in_40C = (int)(总_385_in_5DA8 / (MaxAllowedDD / 100.0)) ;
      }
      if ( 总_19_in_9C == 1 )
      {
-       总_145_in_40C = 总_386_in_5DAC / (MaxAllowedDD / 100.0) ;
+       总_145_in_40C = (int)(总_386_in_5DAC / (MaxAllowedDD / 100.0)) ;
      }
      if ( 总_19_in_9C == 2 )
      {
-       总_145_in_40C = 总_387_in_5DB0 / (MaxAllowedDD / 100.0) ;
+       总_145_in_40C = (int)(总_387_in_5DB0 / (MaxAllowedDD / 100.0)) ;
      }
      if ( 总_19_in_9C == 3 )
      {
-       总_145_in_40C = 总_388_in_5DB4 / (MaxAllowedDD / 100.0) ;
+       总_145_in_40C = (int)(总_388_in_5DB4 / (MaxAllowedDD / 100.0)) ;
      }
      if ( 总_19_in_9C == 4 )
      {
-       总_145_in_40C = 总_389_in_5DB8 / (MaxAllowedDD / 100.0) ;
+       总_145_in_40C = (int)(总_389_in_5DB8 / (MaxAllowedDD / 100.0)) ;
      }
      if ( SymbolInfoDouble(总_336_st_3130,36)==0.1 )
      {
@@ -3825,7 +3828,7 @@ g_startLots_rw=StartLots;
          }
        }
 
-       临_in_14 = AccountInfoInteger(ACCOUNT_LIMIT_ORDERS);
+       临_in_14 = (int)AccountInfoInteger(ACCOUNT_LIMIT_ORDERS);
        if ( 临_in_14 == 0 )
        {
          临_bo_15 = true;
@@ -3862,7 +3865,7 @@ g_startLots_rw=StartLots;
                  Sleep(2500); 
                  if ( !(setSL_TP_After_Entry) )
                  {
-                   临_in_16 = 总_38_do_C0 * 总_229_do_1E00;
+                   临_in_16 = (int)(总_38_do_C0 * 总_229_do_1E00);
                    总_230_in_1E08 = (int)OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,临_in_16,子_5_do,子_6_do,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Green) ;
                  }
                  else
@@ -3884,7 +3887,7 @@ g_startLots_rw=StartLots;
            for (临_in_19 = 0 ; 临_in_19 < 100 ; 临_in_19=临_in_19 + 1)
            {
              if ( !(总_198_do_1070_si100si2[临_in_19][0]==0.0) )   continue;
-             总_198_do_1070_si100si2[临_in_19][0] = 临_lo_18;
+             总_198_do_1070_si100si2[临_in_19][0] = (double)临_lo_18;
              总_198_do_1070_si100si2[临_in_19][1] = 临_do_17;
              break;
              
@@ -4051,7 +4054,7 @@ g_startLots_rw=StartLots;
          }
        }
 
-       临_in_14 = AccountInfoInteger(ACCOUNT_LIMIT_ORDERS);
+       临_in_14 = (int)AccountInfoInteger(ACCOUNT_LIMIT_ORDERS);
        if ( 临_in_14 == 0 )
        {
          临_bo_15 = true;
@@ -4088,7 +4091,7 @@ g_startLots_rw=StartLots;
                  Sleep(2500); 
                  if ( !(setSL_TP_After_Entry) )
                  {
-                   临_in_16 = 总_38_do_C0 * 总_229_do_1E00;
+                   临_in_16 = (int)(总_38_do_C0 * 总_229_do_1E00);
                    总_230_in_1E08 = (int)OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,临_in_16,子_5_do,子_6_do,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Red) ;
                  }
                  else
@@ -4110,7 +4113,7 @@ g_startLots_rw=StartLots;
            for (临_in_19 = 0 ; 临_in_19 < 100 ; 临_in_19=临_in_19 + 1)
            {
              if ( !(总_198_do_1070_si100si2[临_in_19][0]==0.0) )   continue;
-             总_198_do_1070_si100si2[临_in_19][0] = 临_lo_18;
+             总_198_do_1070_si100si2[临_in_19][0] = (double)临_lo_18;
              总_198_do_1070_si100si2[临_in_19][1] = 临_do_17;
              break;
              
@@ -4289,7 +4292,7 @@ g_startLots_rw=StartLots;
          for (临_in_7 = 0 ; 临_in_7 < 100 ; 临_in_7=临_in_7 + 1)
          {
            if ( !(总_198_do_1070_si100si2[临_in_7][0]==0.0) )   continue;
-           总_198_do_1070_si100si2[临_in_7][0] = 临_lo_6;
+           总_198_do_1070_si100si2[临_in_7][0] = (double)临_lo_6;
            总_198_do_1070_si100si2[临_in_7][1] = 临_do_5;
            break;
            
@@ -4327,7 +4330,7 @@ g_startLots_rw=StartLots;
        if ( MarketInfo(总_336_st_3130,MODE_BID)<子_10_do - (总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 - 总_1_do_0 )
        {
          RefreshRates(); 
-         OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),总_1_do_0,Red); 
+         OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_1_do_0,Red); 
          return(true); 
        }
        子_20_bo = false ;
@@ -4377,10 +4380,10 @@ g_startLots_rw=StartLots;
                  
                  if ( OrderType() == 0 )
                  {
-                   OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,Red); 
+                   OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                  }
                  if ( OrderType() != 1 )   continue;
-                 OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),总_38_do_C0,Red); 
+                 OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
                  
                }
              }
@@ -4419,10 +4422,10 @@ g_startLots_rw=StartLots;
                  
                  if ( OrderType() == 0 )
                  {
-                   OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,Red); 
+                   OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                  }
                  if ( OrderType() != 1 )   continue;
-                 OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),总_38_do_C0,Red); 
+                 OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
                  
                }
                总_194_bo_530 = false ;
@@ -4465,16 +4468,16 @@ g_startLots_rw=StartLots;
                      
                      if ( OrderType() == 0 )
                      {
-                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,Red); 
+                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                      }
                      if ( OrderType() != 1 )   continue;
-                     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),总_38_do_C0,Red); 
+                     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
                      
                    }
                  }
                  else
                  {
-                   OrderSend(总_336_st_3130,1,子_23_do,MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,0.0,0.0,IntegerToString(子_9_lo,0,32),总_168_in_4A8,0,Green); 
+                   OrderSend(总_336_st_3130,1,子_23_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,0.0,0.0,IntegerToString(子_9_lo,0,32),总_168_in_4A8,0,Green); 
                    总_192_in_528 = 1 ;
                    子_22_bo = true ;
                  }
@@ -4501,16 +4504,16 @@ g_startLots_rw=StartLots;
                      
                      if ( OrderType() == 0 )
                      {
-                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,Red); 
+                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                      }
                      if ( OrderType() != 1 )   continue;
-                     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),总_38_do_C0,Red); 
+                     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
                      
                    }
                  }
                  else
                  {
-                   OrderSend(总_336_st_3130,0,子_23_do,MarketInfo(总_336_st_3130,MODE_ASK),总_38_do_C0,0.0,0.0,IntegerToString(子_9_lo,0,32),总_168_in_4A8,0,Green); 
+                   OrderSend(总_336_st_3130,0,子_23_do,MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,0.0,0.0,IntegerToString(子_9_lo,0,32),总_168_in_4A8,0,Green); 
                    总_192_in_528 = 0 ;
                    子_22_bo = true ;
                  }
@@ -4556,7 +4559,7 @@ g_startLots_rw=StartLots;
              {
                if ( 总_196_do_568_si20si2[临_in_30][0]==0.0 )
                {
-                 总_196_do_568_si20si2[临_in_30][0] = 临_lo_23;
+                 总_196_do_568_si20si2[临_in_30][0] = (double)临_lo_23;
                  总_196_do_568_si20si2[临_in_30][1] = 临_do_27;
                  break;
                }
@@ -4568,7 +4571,7 @@ g_startLots_rw=StartLots;
            {
              Print("Closing with virtual SL"); 
              RefreshRates(); 
-             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),总_1_do_0,0xFFFFFFFF); 
+             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_1_do_0,0xFFFFFFFF); 
              return(true); 
            }
            if ( 总_125_do_2F8>0.0 && TimeCurrent() >= 子_13_da + 总_304_in_287C && MarketInfo(总_336_st_3130,MODE_BID)>NormalizeDouble(总_126_do_300 * 总_229_do_1E00 + (子_7_do + 总_337_do_3140),总_190_in_518) && MarketInfo(总_336_st_3130,MODE_BID)<子_8_do - 总_309_do_2898 )
@@ -4599,7 +4602,7 @@ g_startLots_rw=StartLots;
                  子_26_do = NormalizeDouble(总_107_do_270 / 100.0 * 总_223_do_1AC4_si99[总_328_in_3100],2) ;
                  if ( 子_26_do<子_12_do && 子_26_do>=MarketInfo(总_336_st_3130,MODE_LOTSTEP) )
                  {
-                   OrderClose(子_9_lo,子_26_do,MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,Red); 
+                   OrderClose(子_9_lo,子_26_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                    return(true); 
                  }
                }
@@ -4621,7 +4624,7 @@ g_startLots_rw=StartLots;
                  子_27_do = NormalizeDouble(总_107_do_270 / 100.0 * 总_223_do_1AC4_si99[总_328_in_3100],2) ;
                  if ( 子_27_do<子_12_do && 子_27_do>=SymbolInfoDouble(总_336_st_3130,34) )
                  {
-                   OrderClose(子_9_lo,子_27_do,MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,Red); 
+                   OrderClose(子_9_lo,子_27_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                    return(true); 
                  }
                }
@@ -4687,7 +4690,7 @@ g_startLots_rw=StartLots;
            {
              Print("Closing with virtual SL"); 
              RefreshRates(); 
-             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),总_1_do_0,0xFFFFFFFF); 
+             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_1_do_0,0xFFFFFFFF); 
              return(true); 
            }
            if ( NormalizeDouble(子_4_do,总_190_in_518)!=NormalizeDouble(总_191_do_520,总_190_in_518) )
@@ -4739,7 +4742,7 @@ g_startLots_rw=StartLots;
              {
                if ( 总_196_do_568_si20si2[临_in_41][0]==0.0 )
                {
-                 总_196_do_568_si20si2[临_in_41][0] = 临_lo_34;
+                 总_196_do_568_si20si2[临_in_41][0] = (double)临_lo_34;
                  总_196_do_568_si20si2[临_in_41][1] = 临_do_38;
                  break;
                }
@@ -4750,10 +4753,10 @@ g_startLots_rw=StartLots;
            if ( MarketInfo(总_336_st_3130,MODE_BID)<=子_4_do )
            {
              RefreshRates(); 
-             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),总_1_do_0,0xFFFFFFFF); 
+             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_1_do_0,0xFFFFFFFF); 
              return(true); 
            }
-           子_28_in = TimeCurrent() - 总_319_da_28E0 ;
+           子_28_in = (int)(TimeCurrent() - 总_319_da_28E0) ;
            if ( 子_28_in >= 总_65_in_150 )
            {
              if ( NormalizeDouble(总_191_do_520,总_190_in_518)>子_7_do + 总_337_do_3140 )
@@ -4774,7 +4777,7 @@ g_startLots_rw=StartLots;
              子_29_do = NormalizeDouble(总_107_do_270 / 100.0 * 总_223_do_1AC4_si99[总_328_in_3100],2) ;
              if ( 子_29_do<子_12_do && 子_29_do>=MarketInfo(总_336_st_3130,MODE_LOTSTEP) )
              {
-               OrderClose(子_9_lo,子_29_do,MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,Red); 
+               OrderClose(子_9_lo,子_29_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                return(true); 
              }
            }
@@ -4817,7 +4820,7 @@ g_startLots_rw=StartLots;
            if ( MarketInfo(总_336_st_3130,MODE_BID)<=总_191_do_520 )
            {
              RefreshRates(); 
-             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),总_1_do_0,0xFFFFFFFF); 
+             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_1_do_0,0xFFFFFFFF); 
              return(true); 
            }
            if ( NormalizeDouble(子_4_do,总_190_in_518)!=NormalizeDouble(总_191_do_520,总_190_in_518) )
@@ -5015,7 +5018,7 @@ g_startLots_rw=StartLots;
          for (临_in_7 = 0 ; 临_in_7 < 100 ; 临_in_7=临_in_7 + 1)
          {
            if ( !(总_198_do_1070_si100si2[临_in_7][0]==0.0) )   continue;
-           总_198_do_1070_si100si2[临_in_7][0] = 临_lo_6;
+           总_198_do_1070_si100si2[临_in_7][0] = (double)临_lo_6;
            总_198_do_1070_si100si2[临_in_7][1] = 临_do_5;
            break;
            
@@ -5053,7 +5056,7 @@ g_startLots_rw=StartLots;
        if ( MarketInfo(总_336_st_3130,MODE_ASK)>(总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 + 子_10_do + 总_1_do_0 )
        {
          RefreshRates(); 
-         OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),总_1_do_0,Red); 
+         OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_1_do_0,Red); 
          return(true); 
        }
        子_20_bo = false ;
@@ -5103,10 +5106,10 @@ g_startLots_rw=StartLots;
                  
                  if ( OrderType() == 0 )
                  {
-                   OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,Red); 
+                   OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                  }
                  if ( OrderType() != 1 )   continue;
-                 OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),总_38_do_C0,Red); 
+                 OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
                  
                }
              }
@@ -5145,10 +5148,10 @@ g_startLots_rw=StartLots;
                  
                  if ( OrderType() == 0 )
                  {
-                   OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,Red); 
+                   OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                  }
                  if ( OrderType() != 1 )   continue;
-                 OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),总_38_do_C0,Red); 
+                 OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
                  
                }
                总_195_bo_531 = false ;
@@ -5187,16 +5190,16 @@ g_startLots_rw=StartLots;
                      
                      if ( OrderType() == 0 )
                      {
-                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,Red); 
+                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                      }
                      if ( OrderType() != 1 )   continue;
-                     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),总_38_do_C0,Red); 
+                     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
                      
                    }
                  }
                  else
                  {
-                   OrderSend(总_336_st_3130,1,子_23_do,MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,0.0,0.0,IntegerToString(子_9_lo,0,32),总_169_in_4AC,0,Green); 
+                   OrderSend(总_336_st_3130,1,子_23_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,0.0,0.0,IntegerToString(子_9_lo,0,32),总_169_in_4AC,0,Green); 
                    总_193_in_52C = 1 ;
                    子_22_bo = true ;
                  }
@@ -5227,16 +5230,16 @@ g_startLots_rw=StartLots;
                      
                      if ( OrderType() == 0 )
                      {
-                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,Red); 
+                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                      }
                      if ( OrderType() != 1 )   continue;
-                     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),总_38_do_C0,Red); 
+                     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
                      
                    }
                  }
                  else
                  {
-                   OrderSend(总_336_st_3130,0,子_23_do,MarketInfo(总_336_st_3130,MODE_ASK),总_38_do_C0,0.0,0.0,IntegerToString(子_9_lo,0,32),总_169_in_4AC,0,Green); 
+                   OrderSend(总_336_st_3130,0,子_23_do,MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,0.0,0.0,IntegerToString(子_9_lo,0,32),总_169_in_4AC,0,Green); 
                    总_193_in_52C = 0 ;
                    子_22_bo = true ;
                  }
@@ -5282,7 +5285,7 @@ g_startLots_rw=StartLots;
              {
                if ( 总_196_do_568_si20si2[临_in_30][0]==0.0 )
                {
-                 总_196_do_568_si20si2[临_in_30][0] = 临_lo_23;
+                 总_196_do_568_si20si2[临_in_30][0] = (double)临_lo_23;
                  总_196_do_568_si20si2[临_in_30][1] = 临_do_27;
                  break;
                }
@@ -5294,7 +5297,7 @@ g_startLots_rw=StartLots;
            {
              Print("Closing with virtual SL"); 
              RefreshRates(); 
-             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),总_1_do_0,0xFFFFFFFF); 
+             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),(int)总_1_do_0,0xFFFFFFFF); 
              return(true); 
            }
            if ( 总_125_do_2F8>0.0 && TimeCurrent() >= 子_13_da + 总_304_in_287C && MarketInfo(总_336_st_3130,MODE_ASK)<子_7_do - 总_337_do_3140 - 总_126_do_300 * 总_229_do_1E00 && MarketInfo(总_336_st_3130,MODE_ASK)>子_8_do + 总_309_do_2898 && NormalizeDouble(MarketInfo(总_336_st_3130,MODE_ASK) + 总_126_do_300 * 总_229_do_1E00,总_190_in_518)<子_7_do )
@@ -5325,7 +5328,7 @@ g_startLots_rw=StartLots;
                  子_26_do = NormalizeDouble(总_107_do_270 / 100.0 * 总_223_do_1AC4_si99[总_328_in_3100],2) ;
                  if ( 子_26_do<子_12_do && 子_26_do>=MarketInfo(总_336_st_3130,MODE_LOTSTEP) )
                  {
-                   OrderClose(子_9_lo,子_26_do,MarketInfo(总_336_st_3130,MODE_ASK),总_38_do_C0,Red); 
+                   OrderClose(子_9_lo,子_26_do,MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
                    return(true); 
                  }
                }
@@ -5347,7 +5350,7 @@ g_startLots_rw=StartLots;
                  子_27_do = NormalizeDouble(总_107_do_270 / 100.0 * 总_223_do_1AC4_si99[总_328_in_3100],2) ;
                  if ( 子_27_do<子_12_do && 子_27_do>=SymbolInfoDouble(总_336_st_3130,34) )
                  {
-                   OrderClose(子_9_lo,子_27_do,MarketInfo(总_336_st_3130,MODE_ASK),总_38_do_C0,Red); 
+                   OrderClose(子_9_lo,子_27_do,MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
                    return(true); 
                  }
                }
@@ -5413,7 +5416,7 @@ g_startLots_rw=StartLots;
            {
              Print("Closing with virtual SL"); 
              RefreshRates(); 
-             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),总_1_do_0,0xFFFFFFFF); 
+             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),(int)总_1_do_0,0xFFFFFFFF); 
              return(true); 
            }
            if ( NormalizeDouble(子_4_do,总_190_in_518)!=NormalizeDouble(总_191_do_520,总_190_in_518) )
@@ -5465,7 +5468,7 @@ g_startLots_rw=StartLots;
              {
                if ( 总_196_do_568_si20si2[临_in_41][0]==0.0 )
                {
-                 总_196_do_568_si20si2[临_in_41][0] = 临_lo_34;
+                 总_196_do_568_si20si2[临_in_41][0] = (double)临_lo_34;
                  总_196_do_568_si20si2[临_in_41][1] = 临_do_38;
                  break;
                }
@@ -5476,10 +5479,10 @@ g_startLots_rw=StartLots;
            if ( MarketInfo(总_336_st_3130,MODE_ASK)>=子_4_do )
            {
              RefreshRates(); 
-             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),总_1_do_0,0xFFFFFFFF); 
+             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),(int)总_1_do_0,0xFFFFFFFF); 
              return(true); 
            }
-           子_28_in = TimeCurrent() - 总_319_da_28E0 ;
+           子_28_in = (int)(TimeCurrent() - 总_319_da_28E0) ;
            if ( 子_28_in >= 总_65_in_150 )
            {
              if ( NormalizeDouble(总_191_do_520,总_190_in_518)<子_7_do - 总_337_do_3140 )
@@ -5499,7 +5502,7 @@ g_startLots_rw=StartLots;
              子_29_do = NormalizeDouble(总_107_do_270 / 100.0 * 总_223_do_1AC4_si99[总_328_in_3100],2) ;
              if ( 子_29_do<子_12_do && 子_29_do>=MarketInfo(总_336_st_3130,MODE_LOTSTEP) )
              {
-               OrderClose(子_9_lo,子_29_do,MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,Red); 
+               OrderClose(子_9_lo,子_29_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                return(true); 
              }
              子_2_bo = true ;
@@ -5543,7 +5546,7 @@ g_startLots_rw=StartLots;
            if ( MarketInfo(总_336_st_3130,MODE_ASK)>=总_191_do_520 )
            {
              RefreshRates(); 
-             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),总_1_do_0,0xFFFFFFFF); 
+             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),(int)总_1_do_0,0xFFFFFFFF); 
              return(true); 
            }
            if ( NormalizeDouble(子_4_do,总_190_in_518)!=NormalizeDouble(总_191_do_520,总_190_in_518) )
@@ -6117,13 +6120,13 @@ g_startLots_rw=StartLots;
      子_8_da = OrderExpiration() ;
      子_9_st = OrderComment() ;
      OrderDelete(子_5_lo,Red); 
-     子_10_in = (int)OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_7_do,总_38_do_C0,子_4_do,子_6_do,子_9_st,总_93_in_1F0,子_8_da,Green) ;
+     子_10_in = (int)OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_7_do,(int)总_38_do_C0,子_4_do,子_6_do,子_9_st,总_93_in_1F0,子_8_da,Green) ;
      临_lo_1 = 子_10_in;
      临_lo_2 = 子_5_lo;
      for (临_in_3 = 0 ; 临_in_3 < 100 ; 临_in_3=临_in_3 + 1)
      {
        if ( !(总_198_do_1070_si100si2[临_in_3][0]==临_lo_2) )   continue;
-       总_198_do_1070_si100si2[临_in_3][0] = 临_lo_1;
+       总_198_do_1070_si100si2[临_in_3][0] = (double)临_lo_1;
        break;
        
      }
@@ -6138,13 +6141,13 @@ g_startLots_rw=StartLots;
    子_15_da = OrderExpiration() ;
    子_16_st = OrderComment() ;
    OrderDelete(子_12_lo,Red); 
-   子_17_in = (int)OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_14_do,总_38_do_C0,子_11_do,子_13_do,子_16_st,总_93_in_1F0,子_15_da,Green) ;
+   子_17_in = (int)OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_14_do,(int)总_38_do_C0,子_11_do,子_13_do,子_16_st,总_93_in_1F0,子_15_da,Green) ;
    临_lo_4 = 子_17_in;
    临_lo_5 = 子_12_lo;
    for (临_in_6 = 0 ; 临_in_6 < 100 ; 临_in_6=临_in_6 + 1)
    {
      if ( !(总_198_do_1070_si100si2[临_in_6][0]==临_lo_5) )   continue;
-     总_198_do_1070_si100si2[临_in_6][0] = 临_lo_4;
+     总_198_do_1070_si100si2[临_in_6][0] = (double)临_lo_4;
      break;
      
    }
@@ -6198,7 +6201,7 @@ g_startLots_rw=StartLots;
  子_16_in = 0 ;
  if ( 总_17_bo_8C )
  {
-   子_16_in = (总_378_in_5D80 + 3) * 总_362_do_5CC8 ;
+   子_16_in = (int)((总_378_in_5D80 + 3) * 总_362_do_5CC8) ;
  }
  ObjectCreate(0,"infopanel_rectangle",OBJ_RECTANGLE_LABEL,0,0,0.0); 
  ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_XDISTANCE,子_12_in); 
@@ -6314,19 +6317,19 @@ g_startLots_rw=StartLots;
  }
  ObjectCreate(0,"lineopl" + IntegerToString(0,0,32),OBJ_LABEL,0,0,0.0); 
  ObjectSetInteger(0,"lineopl" + IntegerToString(0,0,32),OBJPROP_CORNER,子_11_in); 
- ObjectSetInteger(0,"lineopl" + IntegerToString(0,0,32),OBJPROP_YDISTANCE,子_13_in + InfoPanelSizeAdjust * 76.0 + 子_8_in); 
+ ObjectSetInteger(0,"lineopl" + IntegerToString(0,0,32),OBJPROP_YDISTANCE,(long)(子_13_in + InfoPanelSizeAdjust * 76.0 + 子_8_in)); 
  ObjectSetInteger(0,"lineopl" + IntegerToString(0,0,32),OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
  ObjectSetString(0,"lineopl" + IntegerToString(0,0,32),OBJPROP_TEXT,"Open P/L: -"); 
  ObjectSetInteger(0,"lineopl" + IntegerToString(0,0,32),OBJPROP_COLOR,总_329_ui_3104); 
  ObjectCreate(0,"linea" + IntegerToString(0,0,32),OBJ_LABEL,0,0,0.0); 
  ObjectSetInteger(0,"linea" + IntegerToString(0,0,32),OBJPROP_CORNER,子_11_in); 
- ObjectSetInteger(0,"linea" + IntegerToString(0,0,32),OBJPROP_YDISTANCE,子_13_in + InfoPanelSizeAdjust * 92.0 + 子_8_in); 
+ ObjectSetInteger(0,"linea" + IntegerToString(0,0,32),OBJPROP_YDISTANCE,(long)(子_13_in + InfoPanelSizeAdjust * 92.0 + 子_8_in)); 
  ObjectSetInteger(0,"linea" + IntegerToString(0,0,32),OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
  ObjectSetString(0,"linea" + IntegerToString(0,0,32),OBJPROP_TEXT,"Account Balance: -"); 
  ObjectSetInteger(0,"linea" + IntegerToString(0,0,32),OBJPROP_COLOR,总_329_ui_3104); 
  ObjectCreate(0,"linetp" + IntegerToString(0,0,32),OBJ_LABEL,0,0,0.0); 
  ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_CORNER,子_11_in); 
- ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_YDISTANCE,子_13_in + InfoPanelSizeAdjust * 108.0 + 子_8_in); 
+ ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_YDISTANCE,(long)(子_13_in + InfoPanelSizeAdjust * 108.0 + 子_8_in)); 
  ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
  ObjectSetString(0,"linetp" + IntegerToString(0,0,32),OBJPROP_TEXT,"Total P/L so far: -"); 
  ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_COLOR,总_329_ui_3104); 
@@ -6334,7 +6337,7 @@ g_startLots_rw=StartLots;
  子_19_in = 0 ;
  子_20_in = 0 ;
  子_22_in = 子_12_in + 子_7_in ;
- 子_23_in = 子_13_in + InfoPanelSizeAdjust * 160.0 + 子_8_in ;
+ 子_23_in = (int)(子_13_in + InfoPanelSizeAdjust * 160.0 + 子_8_in) ;
  子_21_st = "Strategy" ;
  lizong_25(子_22_in,子_23_in,0,"Strategy",0,0,1,0,1.0); 
  子_18_in = 1 ;
@@ -6386,18 +6389,18 @@ g_startLots_rw=StartLots;
  void lizong_25( int 木_0_in,int 木_1_in,int 木_2_in,string 木_3_st,int 木_4_in,int 木_5_in,int 木_6_in,uint 木_7_ui,double 木_8_do)
  {
  ObjectCreate(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJ_EDIT,0,0,0.0); 
- ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_XDISTANCE,木_0_in + 木_5_in * 总_361_do_5CC0); 
- ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_YDISTANCE,木_1_in + 木_4_in * 总_362_do_5CC8); 
+ ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_XDISTANCE,(long)(木_0_in + 木_5_in * 总_361_do_5CC0)); 
+ ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_YDISTANCE,(long)(木_1_in + 木_4_in * 总_362_do_5CC8)); 
  ObjectSetString(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_TEXT,木_3_st); 
  ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_BACK,0); 
  ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_COLOR,木_7_ui); 
  ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_BGCOLOR,总_364_ui_5CD4); 
  ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_BORDER_COLOR,0); 
- ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_FONTSIZE,总_372_in_5CFC * 木_8_do); 
+ ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_FONTSIZE,(long)(总_372_in_5CFC * 木_8_do)); 
  ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_READONLY,0x1); 
- ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_YSIZE,总_362_do_5CC8); 
- ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_XSIZE,总_361_do_5CC0); 
- ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_YSIZE,总_362_do_5CC8); 
+ ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_YSIZE,(long)总_362_do_5CC8); 
+ ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_XSIZE,(long)总_361_do_5CC0); 
+ ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_YSIZE,(long)总_362_do_5CC8); 
  if ( 木_6_in == 0 )
  {
    ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_ALIGN,0x1); 
@@ -9263,11 +9266,11 @@ g_startLots_rw=StartLots;
    }
    if ( OrderType() == 0 )
    {
-     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,Red); 
+     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
    }
    if ( OrderType() == 1 )
    {
-     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),总_38_do_C0,Red); 
+     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
    }
    if ( ( OrderType() != 4 && OrderType() != 5 ) )   continue;
    OrderDelete(OrderTicket(),Red); 
@@ -9312,7 +9315,7 @@ g_startLots_rw=StartLots;
  }
  子_3_in = StringFind(子_2_st,"\"serverTimeStamp\" value=",0) ;
  子_4_st = StringSubstr(子_2_st,子_3_in + 25,10) ;
- 子_5_lo = ulong(子_4_st) ;
+ 子_5_lo = (long)ulong(子_4_st) ;
  Print("GMT time = ",子_5_lo); 
  Print("Broker time = ",TimeCurrent()); 
  子_6_in=TimeHour(TimeCurrent()) - TimeHour(子_5_lo);
@@ -9359,8 +9362,8 @@ g_startLots_rw=StartLots;
  子_6_in = 0 ;
  if ( 子_2_in >= 1987 && 子_2_in <= 2006 )
  {
-   子_5_in = MathMod(子_2_in * 6 + 2 - 子_2_in / 4,7.0) + 1.0 ;
-   子_6_in = 31.0 - (MathMod(子_2_in * 5 / 4 + 1,7.0)) ;
+   子_5_in = (int)(MathMod(子_2_in * 6 + 2 - 子_2_in / 4,7.0) + 1.0) ;
+   子_6_in = (int)(31.0 - (MathMod(子_2_in * 5 / 4 + 1,7.0))) ;
    子_3_da=StringToTime(((string)子_2_in+".04.01")) + (子_5_in - 1) * 86400 + 0x1C20;
    子_4_da=StringToTime(((string)子_2_in+".10.01")) + (子_6_in - 1) * 86400 + 0x1C20;
  }
@@ -9368,8 +9371,8 @@ g_startLots_rw=StartLots;
  {
    if ( 子_2_in >= 2007 )
    {
-     子_5_in = 14.0 - (MathMod(子_2_in * 5 / 4 + 1,7.0)) ;
-     子_6_in = 7.0 - (MathMod(子_2_in * 5 / 4 + 1,7.0)) ;
+     子_5_in = (int)(14.0 - (MathMod(子_2_in * 5 / 4 + 1,7.0))) ;
+     子_6_in = (int)(7.0 - (MathMod(子_2_in * 5 / 4 + 1,7.0))) ;
      子_3_da=StringToTime(((string)子_2_in+".03.01")) + (子_5_in - 1) * 86400 + 0x1C20;
      子_4_da=StringToTime(((string)子_2_in+".11.01")) + (子_6_in - 1) * 86400 + 0x1C20;
    }
