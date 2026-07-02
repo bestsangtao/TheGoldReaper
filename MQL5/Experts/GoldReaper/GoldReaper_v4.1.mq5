@@ -573,15 +573,17 @@ void BuildNFPDatesFromCalendar()
    // MqlCalendarValue.time tra ve theo GIO SERVER (theo tai lieu MQL5), trong khi
    // g_nfpDates[] va toan bo logic loc NFP con lai (g_autoResetTime, GetNextNFPText)
    // dang quy uoc luu GIO GMT (giong mang hardcode cu) roi moi quy doi sang gio server
-   // luc so sanh/hien thi bang g_nfpGMTOfs. Vi vay phai TRU offset o day truoc khi luu,
-   // de khong bi quy doi 2 lan (sai lech dung bang so gio offset).
-   int lv_offsetNow=IsAmericanDST()?Broker_GMT_OFFSET_Summer:Broker_GMT_OFFSET_Winter;
+   // luc so sanh/hien thi. Vi vay phai TRU offset o day truoc khi luu, de khong bi quy
+   // doi 2 lan. Dung dung "TimeCurrent()-g_autoResetTime" (chinh la offset GMT ma toan
+   // bo bo loc NFP dang dung tai thoi diem nay) thay vi input Broker_GMT_OFFSET_xxx, de
+   // luon khop 100% voi bo loc du AutoGMT/WebRequest thanh cong hay phai roi ve TimeGMT().
+   long lv_offsetSeconds=(long)(TimeCurrent()-g_autoResetTime);
 
    int lv_count=0;
    for(lv_i=0;lv_i<lv_n && lv_count<300;lv_i++)
    {
       if(lv_values[lv_i].time<=0) continue;
-      g_nfpDates[lv_count]=lv_values[lv_i].time-lv_offsetNow*3600;
+      g_nfpDates[lv_count]=lv_values[lv_i].time-lv_offsetSeconds;
       lv_count++;
    }
    if(lv_count<=0) return;
@@ -858,7 +860,8 @@ g_nfpDates[236]=D'2007.04.06 12:30';
 g_nfpDates[237]=D'2007.03.09 12:30';
 g_nfpDates[238]=D'2007.02.02 12:30';
 g_nfpDates[239]=D'2007.01.05 12:30';
-BuildNFPDatesFromCalendar(); // thu lay ngay NFP tu Economic Calendar, neu duoc se ghi de mang hardcode o tren
+// Khong goi BuildNFPDatesFromCalendar() o day: can g_autoResetTime da duoc tinh
+// (chi co sau khi OnTick() chay lan dau) de quy doi dung gio - xem trong OnTick().
 if(Risk==1234)
 {
 g_startLots=MarketInfo(g_tradeSymbol,MODE_MINLOT);
@@ -1314,10 +1317,6 @@ double tmp_d26;
 double tmp_d27;
 int tmp_i28;
 
-if(TimeCurrent()-TimeCurrent()%86400>g_nfpCalendarBuiltDay)
-{
-BuildNFPDatesFromCalendar(); // lam moi 1 lan/ngay, phong khi calendar co du lieu moi (VD: BLS cong bo lich nam sau)
-}
 g_balForLots=AccountInfoDouble(ACCOUNT_BALANCE);
 if(UseEquity)
 {
@@ -1481,6 +1480,10 @@ g_autoResetTime=TimeGMT();
 else
 {
 g_autoResetTime=TimeCurrent()-g_nfpGMTOfs*3600;
+}
+if(TimeCurrent()-TimeCurrent()%86400>g_nfpCalendarBuiltDay)
+{
+BuildNFPDatesFromCalendar(); // lam moi 1 lan/ngay; goi o day (sau khi g_autoResetTime da tinh xong) de dung dung offset GMT hien tai
 }
 if(TradeFrequency==5&&Risk==1234)
 {
