@@ -9363,7 +9363,7 @@ string tmp_s2;
 ResetLastError();
 if(WebRequest("GET","https://www.worldtimeserver.com/time-zones/utc/",NULL,NULL,10000,lv_httpReqBuf,0,lv_httpRespBuf,tmp_s1)==-1)
 {
-Print("Error when reading GMT URL. Error code  =",GetLastError());
+Print("Error when reading GMT URL. Error code =",GetLastError());
 MessageBox("Add the address 'https://www.worldtimeserver.com/' in the list of allowed URLs on tab 'Expert Advisors'","Error",64);
 tmp_s2="999";
 }
@@ -9378,7 +9378,7 @@ return(999);
 }
 lv_i3=StringFind(lv_s2,"\"serverTimeStamp\" value=",0);
 lv_s4=StringSubstr(lv_s2,lv_i3+25,10);
-lv_l5 = (long)ulong(lv_s4);
+lv_l5 = ulong(lv_s4);
 Print("GMT time = ",lv_l5);
 Print("Broker time = ",TimeCurrent());
 lv_i6=TimeHour(TimeCurrent())-TimeHour(lv_l5);
