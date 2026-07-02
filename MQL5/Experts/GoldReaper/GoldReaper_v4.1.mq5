@@ -6306,20 +6306,28 @@ g_startLots_rw=StartLots;
  {
    ObjectSetString(0,"line1",OBJPROP_TEXT,"The Gold Reaper V4.1 - OneChartSetup"); 
  }
- ObjectSetInteger(0,"line1",OBJPROP_COLOR,总_329_ui_3104); 
- ObjectCreate(0,"linec",OBJ_LABEL,0,0,0.0); 
+ ObjectSetInteger(0,"line1",OBJPROP_COLOR,总_329_ui_3104);
+ // Ban decompile goc thieu set co chu rieng cho cac dong tieu de/tom tat panel
+ // (chi co bang chien luoc phia duoi duoc set), trong khi kich thuoc khung panel
+ // lai duoc tinh dua tren dung hang so co chu nay -> khien cac dong nay hien thi
+ // to hon binh thuong (dung co mac dinh cua nen tang) so voi thiet ke that su cua
+ // khung panel. Set khop voi co chu cua bang chien luoc de dong bo.
+ ObjectSetInteger(0,"line1",OBJPROP_FONTSIZE,总_372_in_5CFC);
+ ObjectCreate(0,"linec",OBJ_LABEL,0,0,0.0);
  ObjectSetInteger(0,"linec",OBJPROP_CORNER,子_11_in); 
  ObjectSetInteger(0,"linec",OBJPROP_YDISTANCE,long(子_13_in + InfoPanelSizeAdjust * 20.0 + 子_8_in)); 
  ObjectSetInteger(0,"linec",OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
  ObjectSetString(0,"linec",OBJPROP_TEXT,"EA Developed by Wim Schrynemakers - 2024"); 
- ObjectSetInteger(0,"linec",OBJPROP_COLOR,总_329_ui_3104); 
- ObjectCreate(0,"line2",OBJ_LABEL,0,0,0.0); 
+ ObjectSetInteger(0,"linec",OBJPROP_COLOR,总_329_ui_3104);
+ ObjectSetInteger(0,"linec",OBJPROP_FONTSIZE,总_372_in_5CFC);
+ ObjectCreate(0,"line2",OBJ_LABEL,0,0,0.0);
  ObjectSetInteger(0,"line2",OBJPROP_CORNER,子_11_in); 
  ObjectSetInteger(0,"line2",OBJPROP_YDISTANCE,long(子_13_in + InfoPanelSizeAdjust * 32.0 + 子_8_in)); 
  ObjectSetInteger(0,"line2",OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
  ObjectSetString(0,"line2",OBJPROP_TEXT,"------------------------------------------------------"); 
- ObjectSetInteger(0,"line2",OBJPROP_COLOR,总_329_ui_3104); 
- ObjectCreate(0,"lines",OBJ_LABEL,0,0,0.0); 
+ ObjectSetInteger(0,"line2",OBJPROP_COLOR,总_329_ui_3104);
+ ObjectSetInteger(0,"line2",OBJPROP_FONTSIZE,总_372_in_5CFC);
+ ObjectCreate(0,"lines",OBJ_LABEL,0,0,0.0);
  ObjectSetInteger(0,"lines",OBJPROP_CORNER,子_11_in); 
  ObjectSetInteger(0,"lines",OBJPROP_YDISTANCE,long(子_13_in + InfoPanelSizeAdjust * 44.0 + 子_8_in)); 
  ObjectSetInteger(0,"lines",OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
@@ -6359,16 +6367,18 @@ g_startLots_rw=StartLots;
      }
    }
  }
- ObjectSetString(0,"lines",OBJPROP_TEXT,"Trade Frequency: " + 子_17_st); 
- ObjectSetInteger(0,"lines",OBJPROP_COLOR,总_329_ui_3104); 
+ ObjectSetString(0,"lines",OBJPROP_TEXT,"Trade Frequency: " + 子_17_st);
+ ObjectSetInteger(0,"lines",OBJPROP_COLOR,总_329_ui_3104);
+ ObjectSetInteger(0,"lines",OBJPROP_FONTSIZE,总_372_in_5CFC);
  if ( Risk == 1234 )
  {
    ObjectCreate(0,"linet",OBJ_LABEL,0,0,0.0); 
    ObjectSetInteger(0,"linet",OBJPROP_CORNER,子_11_in); 
    ObjectSetInteger(0,"linet",OBJPROP_YDISTANCE,long(子_13_in + InfoPanelSizeAdjust * 60.0 + 子_8_in)); 
    ObjectSetInteger(0,"linet",OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
-   ObjectSetString(0,"linet",OBJPROP_TEXT,"Max allowed DD: " + string(MaxAllowedDD) + "%"); 
-   ObjectSetInteger(0,"linet",OBJPROP_COLOR,总_329_ui_3104); 
+   ObjectSetString(0,"linet",OBJPROP_TEXT,"Max allowed DD: " + string(MaxAllowedDD) + "%");
+   ObjectSetInteger(0,"linet",OBJPROP_COLOR,总_329_ui_3104);
+   ObjectSetInteger(0,"linet",OBJPROP_FONTSIZE,总_372_in_5CFC);
  }
  else
  {
@@ -6378,37 +6388,42 @@ g_startLots_rw=StartLots;
      ObjectSetInteger(0,"linet",OBJPROP_CORNER,子_11_in); 
      ObjectSetInteger(0,"linet",OBJPROP_YDISTANCE,long(子_13_in + InfoPanelSizeAdjust * 60.0 + 子_8_in)); 
      ObjectSetInteger(0,"linet",OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
-     ObjectSetString(0,"linet",OBJPROP_TEXT,"Max risk per strategy: " + string(MaxRiskPerStrategy_) + "%"); 
-     ObjectSetInteger(0,"linet",OBJPROP_COLOR,总_329_ui_3104); 
+     ObjectSetString(0,"linet",OBJPROP_TEXT,"Max risk per strategy: " + string(MaxRiskPerStrategy_) + "%");
+     ObjectSetInteger(0,"linet",OBJPROP_COLOR,总_329_ui_3104);
+     ObjectSetInteger(0,"linet",OBJPROP_FONTSIZE,总_372_in_5CFC);
    }
    else
    {
-     ObjectCreate(0,"linet",OBJ_LABEL,0,0,0.0); 
+     ObjectCreate(0,"linet",OBJ_LABEL,0,0,0.0);
      ObjectSetInteger(0,"linet",OBJPROP_CORNER,子_11_in); 
      ObjectSetInteger(0,"linet",OBJPROP_YDISTANCE,long(子_13_in + InfoPanelSizeAdjust * 60.0 + 子_8_in)); 
      ObjectSetInteger(0,"linet",OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
-     ObjectSetString(0,"linet",OBJPROP_TEXT,"Manual lotsize: " + string(g_startLots_rw) + "lots"); 
-     ObjectSetInteger(0,"linet",OBJPROP_COLOR,总_329_ui_3104); 
+     ObjectSetString(0,"linet",OBJPROP_TEXT,"Manual lotsize: " + string(g_startLots_rw) + "lots");
+     ObjectSetInteger(0,"linet",OBJPROP_COLOR,总_329_ui_3104);
+     ObjectSetInteger(0,"linet",OBJPROP_FONTSIZE,总_372_in_5CFC);
    }
  }
- ObjectCreate(0,"lineopl" + IntegerToString(0,0,32),OBJ_LABEL,0,0,0.0); 
+ ObjectCreate(0,"lineopl" + IntegerToString(0,0,32),OBJ_LABEL,0,0,0.0);
  ObjectSetInteger(0,"lineopl" + IntegerToString(0,0,32),OBJPROP_CORNER,子_11_in); 
  ObjectSetInteger(0,"lineopl" + IntegerToString(0,0,32),OBJPROP_YDISTANCE,(long)(子_13_in + InfoPanelSizeAdjust * 76.0 + 子_8_in)); 
  ObjectSetInteger(0,"lineopl" + IntegerToString(0,0,32),OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
- ObjectSetString(0,"lineopl" + IntegerToString(0,0,32),OBJPROP_TEXT,"Open P/L: -"); 
- ObjectSetInteger(0,"lineopl" + IntegerToString(0,0,32),OBJPROP_COLOR,总_329_ui_3104); 
- ObjectCreate(0,"linea" + IntegerToString(0,0,32),OBJ_LABEL,0,0,0.0); 
+ ObjectSetString(0,"lineopl" + IntegerToString(0,0,32),OBJPROP_TEXT,"Open P/L: -");
+ ObjectSetInteger(0,"lineopl" + IntegerToString(0,0,32),OBJPROP_COLOR,总_329_ui_3104);
+ ObjectSetInteger(0,"lineopl" + IntegerToString(0,0,32),OBJPROP_FONTSIZE,总_372_in_5CFC);
+ ObjectCreate(0,"linea" + IntegerToString(0,0,32),OBJ_LABEL,0,0,0.0);
  ObjectSetInteger(0,"linea" + IntegerToString(0,0,32),OBJPROP_CORNER,子_11_in); 
  ObjectSetInteger(0,"linea" + IntegerToString(0,0,32),OBJPROP_YDISTANCE,(long)(子_13_in + InfoPanelSizeAdjust * 92.0 + 子_8_in)); 
  ObjectSetInteger(0,"linea" + IntegerToString(0,0,32),OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
- ObjectSetString(0,"linea" + IntegerToString(0,0,32),OBJPROP_TEXT,"Account Balance: -"); 
- ObjectSetInteger(0,"linea" + IntegerToString(0,0,32),OBJPROP_COLOR,总_329_ui_3104); 
+ ObjectSetString(0,"linea" + IntegerToString(0,0,32),OBJPROP_TEXT,"Account Balance: -");
+ ObjectSetInteger(0,"linea" + IntegerToString(0,0,32),OBJPROP_COLOR,总_329_ui_3104);
+ ObjectSetInteger(0,"linea" + IntegerToString(0,0,32),OBJPROP_FONTSIZE,总_372_in_5CFC);
  ObjectCreate(0,"linetp" + IntegerToString(0,0,32),OBJ_LABEL,0,0,0.0);
  ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_CORNER,子_11_in);
  ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_YDISTANCE,(long)(子_13_in + InfoPanelSizeAdjust * 108.0 + 子_8_in));
  ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_XDISTANCE,子_12_in + 子_7_in);
  ObjectSetString(0,"linetp" + IntegerToString(0,0,32),OBJPROP_TEXT,"Total P/L so far: -");
  ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_COLOR,总_329_ui_3104);
+ ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_FONTSIZE,总_372_in_5CFC);
  if ( EnableNFP_Filter )
  {
    ObjectCreate(0,"linenfp" + IntegerToString(0,0,32),OBJ_LABEL,0,0,0.0);
@@ -6417,6 +6432,7 @@ g_startLots_rw=StartLots;
    ObjectSetInteger(0,"linenfp" + IntegerToString(0,0,32),OBJPROP_XDISTANCE,子_12_in + 子_7_in);
    ObjectSetString(0,"linenfp" + IntegerToString(0,0,32),OBJPROP_TEXT,"Next NFP: -");
    ObjectSetInteger(0,"linenfp" + IntegerToString(0,0,32),OBJPROP_COLOR,总_329_ui_3104);
+   ObjectSetInteger(0,"linenfp" + IntegerToString(0,0,32),OBJPROP_FONTSIZE,总_372_in_5CFC);
  }
  子_18_in = 0 ;
  子_19_in = 0 ;
