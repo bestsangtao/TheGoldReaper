@@ -1,9450 +1,9378 @@
-//+------------------------------------------------------------------+
-//|  The_Gold_Reaper.mq4  -  BAN CHU GIAI (annotated)               |
-//|  Tu dong chuyen doi tu ban decompile, GIU NGUYEN LOGIC.         |
-//|  Da thay doi (chi de DE DOC, khong doi hanh vi):                |
-//|   - Hex thoi gian -> giay thap phan + ghi chu:                  |
-//|       0x2A300=172800(2 ngay) 0x1C20=7200(2h) 0x15180=86400(1ngay)|
-//|   - 0xFFFFFFFF (tham so mau OrderDelete) -> clrNONE             |
-//|   - 0xFF0000 (OBJPROP_COLOR, BGR) -> C(0,0,255) = mau xanh duong|
-//|   - OrderSend type so -> OP_BUY/OP_SELL/OP_BUYSTOP/OP_SELLSTOP   |
-//|       (0=OP_BUY 1=OP_SELL 4=OP_BUYSTOP 5=OP_SELLSTOP)            |
-//|   - SymbolInfoDouble(...,N) -> hang ten:                         |
-//|       16=SYMBOL_TRADE_TICK_SIZE 34=SYMBOL_VOLUME_MIN             |
-//|       35=SYMBOL_VOLUME_MAX 36=SYMBOL_VOLUME_STEP                 |
-//|  KHONG sua: ten bien tu sinh (lv_*, tmp_*) - da mat khi decompile|
-//+------------------------------------------------------------------+
-// ============================================================
-// The Gold Reaper v4.1 - Decompiled & Renamed
-// EA by: Wim Schrynemakers (2024)
-// Decompiled: variable/function names restored for readability
-// Original logic preserved 100%
-// ============================================================
-
-#property copyright ""
-#property version "4.1"
+#property copyright  ""
+#property version    "4.1"
 #property strict
 
-enum enum_TradeFrequency {Extreme_cons_Frequency=0,// extreme conservative
-Conservative_Frequency=1,// conservative
-Moderate_Frequency=2,// moderate
-Intens_Frequency=3,// Intense
-Extreme_Frequency=4,// Extreme (high risk!)
-Auto_Frequency=5,// Auto (based on balance and risk)
-Manual_Strategy_Selection=6// Manual strategy selection
-};
-enum e_SlippageControlMode {SCT_1=1,SCT_2=2 };
-enum FakeoutFilters {Filter_Off=0,// OFF
-Filter_Low=1,// Low
-Filter_Medium=2,// Medium
-Filter_High=3// High
-};
-enum e_VirtualStopMode {VSL_OFF=1,VSL_BASIC=2,VSL_ADV=3 };
-enum Select_Entry_Strategy {Strategy_ONE=1,Strategy_TWO=2 };
-enum e_TimeFrame_St_ONE {ST1_M1=1,ST1_M5=5,ST1_M15=15,ST1_M30=30,ST1_H1=60,ST1_H4=240,ST1_Daily=1440,ST1_Chart=0 };
-enum e_TimeFrame_Entry_Timing {Entry_T_Tick=0,Entry_T_M1=1,Entry_T_M5=5,Entry_T_M15=15,Entry_T_M30=30,Entry_T_H1=60,Entry_T_H4=240 };
-enum e_UseOfCompound {no_compound=0,one_trade=1,Multi_trades=2 };
-enum e_MonitorTradesFilter {MT_all=0,MT_PairOfChart=1 };
-enum e_TimeFrame_Exit_Timing {ET_Tick=0,ET_M1=1,ET_M5=5,ET_M15=15,ET_M30=30,ET_H1=60 };
-enum e_Exit_HL_trailingSL_timeframe {HLT_Chart=0,HLT_M1=1,HLT_M5=5,HLT_M15=15,HLT_M30=30,HLT_H1=60,HLT_H4=240,HLT_D1=1440 };
-enum ST1_e_MagicTrail_Mode {ST1_MT_M_O=0,ST1_MT_M_F=1,ST1_MT_M_B=2 };
-enum e_Risk {Manual_Lotsize=0,// use StartLots
-MaxHistoricalDD=1234,// Max Allowed Total Drawdown
-MaxRiskStrat=3// Max Risk Per Strategy
-};
-enum Performance_options {NormalizedProfit=2,RealProfit=1 };
-enum RankingOptions {ranking_profit=1,ranking_pertrade=2 };
-enum Reduction_choices {Red_10=10,Red_20=20,Red_30=30,Red_40=40,Red_50=50,Red_60=60,Red_70=70,Red_80=80,Red_90=90 };
-enum e_factortype {factor_type_1=1,factor_type_2=2,factor_type_3=3 };
-enum e_TimeSource {TZ_GMT=0,TZ_PC=1,TZ_Broker=2 };
+  enum enum_TradeFrequency      {Extreme_cons_Frequency = 0,//extreme conservative
+                   Conservative_Frequency = 1,//conservative
+                   Moderate_Frequency = 2,//moderate
+                   Intens_Frequency = 3,//Intense
+                   Extreme_Frequency = 4,//Extreme (high risk!)
+                   Auto_Frequency = 5,//Auto (based on balance and risk)
+                   Manual_Strategy_Selection = 6//Manual strategy selection
+                     };
+  enum e_SlippageControlMode      {SCT_1 = 1,SCT_2 = 2  };
+  enum FakeoutFilters      {Filter_Off = 0,//OFF
+                   Filter_Low = 1,//Low
+                   Filter_Medium = 2,//Medium
+                   Filter_High = 3//High
+                     };
+  enum e_VirtualStopMode      {VSL_OFF = 1,VSL_BASIC = 2,VSL_ADV = 3  };
+  enum Select_Entry_Strategy      {Strategy_ONE = 1,Strategy_TWO = 2  };
+  enum e_TimeFrame_St_ONE      {ST1_M1 = 1,ST1_M5 = 5,ST1_M15 = 15,ST1_M30 = 30,ST1_H1 = 60,ST1_H4 = 240,ST1_Daily = 1440,ST1_Chart = 0  };
+  enum e_TimeFrame_Entry_Timing      {Entry_T_Tick = 0,Entry_T_M1 = 1,Entry_T_M5 = 5,Entry_T_M15 = 15,Entry_T_M30 = 30,Entry_T_H1 = 60,Entry_T_H4 = 240  };
+  enum e_UseOfCompound      {no_compound = 0,one_trade = 1,Multi_trades = 2  };
+  enum e_MonitorTradesFilter      {MT_all = 0,MT_PairOfChart = 1  };
+  enum e_TimeFrame_Exit_Timing      {ET_Tick = 0,ET_M1 = 1,ET_M5 = 5,ET_M15 = 15,ET_M30 = 30,ET_H1 = 60  };
+  enum e_Exit_HL_trailingSL_timeframe      {HLT_Chart = 0,HLT_M1 = 1,HLT_M5 = 5,HLT_M15 = 15,HLT_M30 = 30,HLT_H1 = 60,HLT_H4 = 240,HLT_D1 = 1440  };
+  enum ST1_e_MagicTrail_Mode      {ST1_MT_M_O = 0,ST1_MT_M_F = 1,ST1_MT_M_B = 2  };
+  enum e_Risk      {Manual_Lotsize = 0,//use StartLots
+                   MaxHistoricalDD = 1234,//Max Allowed Total Drawdown
+                   MaxRiskStrat = 3//Max Risk Per Strategy
+                     };
+  enum Performance_options      {NormalizedProfit = 2,RealProfit = 1  };
+  enum RankingOptions      {ranking_profit = 1,ranking_pertrade = 2  };
+  enum Reduction_choices      {Red_10 = 10,Red_20 = 20,Red_30 = 30,Red_40 = 40,Red_50 = 50,Red_60 = 60,Red_70 = 70,Red_80 = 80,Red_90 = 90  };
+  enum e_factortype      {factor_type_1 = 1,factor_type_2 = 2,factor_type_3 = 3  };
+  enum e_TimeSource      {TZ_GMT = 0,TZ_PC = 1,TZ_Broker = 2  };
 
 
 //------------------
-extern bool UseVariableValues=true ; // Use Variable Values
-extern bool AdjustLotsizeToVariableValues=true ; // Adjust Lotsize To Variable Values
-extern bool ShowInfoPanel=true ; // Show Info Panel
-extern double InfoPanelSizeAdjust=1 ; // Adjustment for Infopanel size
-extern bool UpdateInfoTesting=false; // update infopanel during testing
-extern string spreadfilter="------------------------------Settings------------------------------" ; //---
-extern bool AllowBuyTrades=true ; // Allow Buy Trades
-extern bool AllowSellTrades=true ; // Allow Sell Trades
-extern enum_TradeFrequency TradeFrequency=5 ; // Trade Frequency
-extern double MaxSpread=500 ; // Maximum allowed spread
-extern bool UseHL_TrailingSL=true ; // Use HL Trailing SL
-extern int FridayStopHour=25 ; // Friday stop hour (brokertime; close all trades)
-extern bool setSL_TP_After_Entry=false; // Set SL/TP After Entry
-extern bool Virtual_expiration=true ; // Use Virtual Expiration
-extern double Randomization=0 ; // Randomization (entries and exit) in pips
-extern FakeoutFilters FakeOutFilter=2 ; // Fake Breakout Filter
-extern int ST1_MagicNumber=8000 ; // Base Magicnumber
-extern string ST1_Comment="The Gold Reaper" ; // Comment for trades
-extern bool RemoveCommentSuffix=false; // Remove Comment Suffix
-extern string NFP_FILTER="----------------------- NFP Filter -----------------------" ;
-extern bool EnableNFP_Filter=true ; // Enable NFP Filter
-extern bool AutoGMT=true ; // Auto GMT Detect
-extern int Broker_GMT_OFFSET_Winter=2 ; // GMT_OFFSET_Winter (AutoGMT=false or backtesting)
-extern int Broker_GMT_OFFSET_Summer=3 ; // MT_OFFSET_Summer (AutoGMT=false or backtesting)
-extern bool NFP_CloseOpenTrades=true ; // NFP Close Open Trades
-extern bool NFP_ClosePendingOrders=true ; // NFP Close Pending Orders
-extern int NFP_MinutesBefore=100 ; // NFP Minutes Before
-extern int NFP_MinutesAfter=60 ; // NFP Minutes After
-extern string propfirmsettings="----------------------- Propfirm unique trades settings -----------------------" ; //---
-extern double AdjustEntry=0 ; // Adjust Entry (pips)
-extern double AdjustSL=0 ; // Adjust SL (pips)
-extern double AdjustTP=0 ; // Adjust TP (pips)
-extern double AdjustTrailSL=0 ; // Adjust Trail SL (pips)
-extern double AdjustTrailTP=0 ; // Adjust Trail TP (pips)
-extern double AdjustBreakEven=0 ; // Adjust Break Even (pips)
-extern string LotSizeSettings="----------------------- LotSize Settings -----------------------" ; //---
-extern double ForceBalanceToUse=0 ; // manually set balance to use (if > 0)
-extern e_Risk Risk=1234 ; // Lotsize Calculation method
-extern double StartLots=0.01 ; // Start Lots
-extern double MaxAllowedDD=30 ; // Max Allowed TOTAL Drawdown
-extern bool UseWeightedLots=true ; // Weighted Lotsize
-extern double MaxRiskPerStrategy_=1 ; // Max Risk Per Strat
-extern double PropFirmMaxDailyDD=0 ; // Set Max DAILY Drawdown (Prop Firms)
-extern bool UseEquity=false; // Use Equity Instead of Balance
-extern bool OnlyUp=true ; // OnlyUp
-extern bool CheckMargin=true ; // check for free margin before setting trades
-extern string ManualStratSelect="------------------------- Manual Strategy Selection -------------------------" ; //---
-extern string ManStratWarn="!! DO NOT RUN MANUAL STRATEGIES WHILE USING 'MAX ALLOWED TOTAL DD' OPTION !!" ; //---
-extern bool RunStrat1=true ; // Run Strategy 1 (low risk)
-extern bool RunStrat2=true ; // Run Strategy 2 (low risk)
-extern bool RunStrat3=true ; // Run Strategy 3 (low risk)
-extern bool RunStrat4=true ; // Run Strategy 4 (med risk)
-extern bool RunStrat5=true ; // Run Strategy 5 (med risk)
-extern bool RunStrat6=true ; // Run Strategy 6 (med risk)
-extern bool RunStrat7=true ; // Run Strategy 7 (med risk)
-extern bool RunStrat8=true ; // Run Strategy 8 (high risk)
-extern bool RunStrat9=true ; // Run Strategy 9 (high risk)
-double g_spread=0.0;
-double g_prevSpread=0.0;
-int g_maxRetries=30;
-int g_dailyTF=1440;
-int g_slippage=0;
-double g_tempBuffer[];
-double g_totalProfit=0.0;
-double g_totalLoss=0.0;
-double g_netProfit=0.0;
-bool g_newBar=false;
-int g_maxPendingBuy=3;
-int g_maxPendingSell=2;
-bool g_buyAllowed=false;
-bool g_sellAllowed=false;
-int g_tradeCount=0;
-string g_sep_tradingFilters="------------------------------trading filters------------------------------";
-bool g_useSymbolFilter=false;
-string g_allowedSymbols="EURUSD;GBPUSD;USDJPY;AUDJPY;AUDUSD;EURAUD;EURCAD;EURGBP;EURJPY;GBPJPY;USDCAD;USDCHF;";
-int g_minBarsBetween=5;
-bool g_strat1_enabled=true;
-bool g_strat2_enabled=false;
-bool g_strat3_enabled=false;
-bool g_strat4_enabled=true;
-bool g_strat5_enabled=false;
-bool g_strat6_enabled=false;
-bool g_strat7_enabled=true;
-bool g_strat8_enabled=false;
-bool g_strat9_enabled=false;
-bool g_strat10_enabled=false;
-bool g_strat11_enabled=false;
-bool g_strat12_enabled=false;
-bool g_strat13_enabled=false;
-bool g_strat14_enabled=false;
-bool g_strat15_enabled=false;
-bool g_strat16_enabled=true;
-int g_fakeoutStrength=2;
-double g_minVolatility=0.0;
-double g_maxVolatility=5000.0;
-int g_volPeriod=1;
-double g_entryRange=400.0;
-double g_exitRange=100.0;
-double g_filterRange=300.0;
-bool g_useVirtualSL=true;
-string g_sep_timeFilters="------------------------------time filters------------------------------";
-bool g_useMonFilter=false;
-bool g_useTueFilter=false;
-bool g_useWedFilter=false;
-int g_tradeStartHour=14;
-int g_tradeEndHour=17;
-string g_sep_otherFilters="------------------------------other filters------------------------------";
-int g_maxTradesPerDir=1;
-int g_maxTotalTrades=1;
-bool g_use5minFilter=false;
-int g_filter5minPeriod=5;
-bool g_use15minFilter=false;
-int g_filter15minPeriod=15;
-bool g_use30minFilter=false;
-int g_filter30minPeriod=30;
-bool g_use1hrFilter=false;
-int g_filter1hrPeriod=60;
-bool g_useNewsFilter=false;
-bool g_closeDuringNews=false;
-int g_newsFilterMode=1;
-double g_newsImpactLevel=0.0;
-int g_maxSpreadFilter=99;
-int g_spreadFilterPeriod=5;
-bool g_useSpreadFilter=false;
-int g_spreadFilterBars=5;
-int g_entryMode=1;
-string g_sep_tradeEntry="------------------------------Trade Entry management------------------------------";
-int g_entryTF=0;
-int g_entryPeriod=60;
-int g_entryBars=10;
-int g_entryRetries=3;
-bool g_useEntryDelay=false;
-bool g_usePartialClose=false;
-int g_entryDelaySeconds=120;
-int g_partialClosePercent=0;
-int g_partialCloseTrigger=0;
-double g_takeProfitPips=30.0;
-double g_tpOffset=0.0;
-double g_stopLossPips=25.0;
-double g_slOffset=0.5;
-double g_breakEvenPips=0.0;
-double g_breakEvenOffset=0.0;
-int g_maxConcurrent=1;  // (cu: g_tradeDir) - NGUONG so lenh dong thoi, KHONG phai huong lenh
-int g_maxOrdersTotal=99;
-double g_lotMultiplier=1.0;
-int g_expiryHours=24;
-double g_slippagePips=3.0;
-int g_magicOffset=0;
-int g_strategyMask=100;
-int g_magicMain=0;
-string g_sep_strat2Manual="------------------------------Strategy2 - Manual Trade settings------------------------------";
-int g_strat2_type=1;
-int g_magicStrat2=1991199118;
-string g_strat2_comment="";
-string g_sep_tradeExit="------------------------------Trade Exit management------------------------------";
-int g_exitMode=0;
-double g_minProfitClose=20.0;
-double g_maxLossClose=100.0;
-string g_sep_trailingSL="------------------------------Trailing SL settings------------------------------";
-double g_trailStep=10.0;
-double g_trailStart=10.0;
-double g_trailStop=100.0;
-double g_trailOffset=0.1;
-double g_trailMin=0.0;
-double g_trailMax=0.0;
-double g_trailFactor=0.0;
-double g_trailAccel=0.0;
-double g_trailAccelMax=0.0;
-string g_sep_breakEven="------------------------------Break-even SL management------------------------------";
-double g_beProfitTrigger=0.0;
-double g_beOffset=0.0;
-string g_sep_hlTrail="------------------------------HIGH/LOW Trailing SL settings------------------------------";
-bool g_useHLTrail=false;
-int g_hlTrailTF=0;
-int g_hlTrailPeriod=0;
-int g_hlTrailShift=0;
-int g_hlTrailMode=0;
-int g_hlTrailBars=0;
-int g_hlTrailOffset=0;
-double g_hlTrailMult=2.0;
-string g_sep_recoveryTrail="------------------------------recovery Trailing SL based on time------------------------------";
-double g_recovTrailStart=0.0;
-double g_recovTrailStep=0.0;
-string g_sep_magicTrail="------------------------------MagicTrail SL settings------------------------------";
-int g_magicTrailMode=0;
-double g_magicTrailStep=0.1;
-int g_magicTrailPeriod=1;
-double g_magicTrailFast=0.1;
-double g_magicTrailSlow=1.0;
-int g_magicTrailShift=0;
-double g_magicTrailOffset=0.0;
-bool g_useCompound=false;
-bool g_compoundMulti=false;
-int g_startYear=2024;
-datetime g_scheduleDates[13];
-bool g_useZoneRecovery=false;
-double g_zrMinDist=5.0;
-double g_zrMaxLoss=99.0;
-int g_zrMagic1=999;
-int g_zrMagic2=9999;
-int g_zrMagic3=99999;
-int g_zrLotStep=600;
-double g_zrLotFactor=1.0;
-double g_zrMaxLots=10.0;
-double g_zrProfitTarget=2.0;
-string g_sep_performance="==== Performance numbers overview ====";
-bool g_showPerformance=true;
-int g_perfRankMode=1;
-int g_perfSortMode=1;
-int g_perfReduction1=90;
-int g_perfReduction2=30;
-int g_perfMinTrades=10;
-int g_perfLookback=50;
-bool g_useWeightedPerf=true;
-string g_sep_zoneRecovery="------------------------------zone_recovery_settings------------------------------";
-bool g_zrEnabled=false;
-double g_zrZoneSize=50.0;
-double g_zrStep=10.0;
-double g_zrMinStep=5.0;
-double g_zrMaxStep=0.0;
-int g_zrMaxOrders=1;
-double g_zrLotMultiplier=2.0;
-int g_zrMaxMagic=999;
-double g_zrMaxDD=100.0;
-int g_zrBuyMagic=900010;
-int g_zrSellMagic=900011;
-string g_sep_tradingHours="------------------------- Trading hours ST1 -------------------------";
-bool g_useTradingHours=false;
-int g_tradingHoursMode=2;
-bool g_useGMTOffset=false;
-int g_monStart=0;
-int g_monEnd=24;
-int g_tueStart=0;
-int g_tueEnd=24;
-int g_wedStart=0;
-int g_wedEnd=24;
-int g_thuStart=0;
-int g_thuEnd=24;
-int g_friStart=0;
-int g_friEnd=24;
-int g_satStart=0;
-int g_satEnd=24;
-string g_sep_backtestOnly="------------------------- use for backtesting only! -------------------------";
-int g_backtestYear=0;
-double g_backtestLot=0.0;
-double g_backtestBalance=0.0;
-int g_digits=0;
-double g_ask=0.0;
-int g_openBuyCount=0;
-int g_openSellCount=0;
-bool g_hasBuyOrder=false;
-bool g_hasSellOrder=false;
-double g_perfMatrix[20][2];
-double g_tradeHistory[100][3];
-double g_tradeStats[100][2];
-int g_panelX=20;
-int g_panelY=100;
-double g_totalBuyLots=0.0;
-double g_totalSellLots=0.0;
-double g_totalOpenProfit=0.0;
-double g_totalBuyProfit=0.0;
-double g_totalSellProfit=0.0;
-double g_totalPendingLots=0.0;
-bool g_hasOpenTrades=false;
-int g_totalOpenOrders=10;
-double g_closedBuyProfit=0.0;
-double g_closedSellProfit=0.0;
-double g_closedTotalProfit=0.0;
-double g_equityDrawdown=0.0;
-bool g_virtualSLActive=false;
-int g_virtualSLMode=1;
-datetime g_pairLastBar[99];
-long g_chartID=0;
-int g_panelWidth=370;
-bool g_panelVisible=true;
-bool g_panelMinimized=false;
-int g_panelRows=0;
-double g_minStopLevel=4.0;
-double g_freezeLevel=0.0;
-double g_pairStratLots[99];
-double g_currentBid=0.0;
-int g_barCount=0;
-int g_prevBarCount=0;
-double g_prevClose=0.0;
-double g_prevOpen=0.0;
-double g_pointSize=0.0;
-int g_lastError=0;
-bool g_isFirstTick=false;
-double g_highPrice=0.0;
-double g_lowPrice=0.0;
-int g_expirySeconds=0;
-double g_entryPrice=0.0;
-double g_stopLossPrice=0.0;
-double g_takeProfitPrice=0.0;
-bool g_fridayClose=false;
-bool g_nfpActive=false;
-bool g_dailySwitchDone=false;
-double g_pairOpenProfit[99];
-double g_pairClosedProfit[99];
-double g_st1_entryHigh=0.0;
-double g_st1_entryLow=0.0;
-double g_st1_SL=0.0;
-double g_st1_TP=0.0;
-double g_st2_entryHigh=0.0;
-double g_st2_entryLow=0.0;
-double g_st2_SL=0.0;
-int g_st2_TP=0;
-double g_st2_lots=0.0;
-string g_orderComment1;
-string g_orderComment2;
-string g_orderComment3;
-string g_orderComment4;
-bool g_pendBuyExists=false;
-bool g_pendSellExists=false;
-int g_pendBuyTicket=0;
-int g_pendSellTicket=0;
-double g_pendBuyPrice=0.0;
-double g_pendSellPrice=0.0;
-double g_pendBuySL=0.0;
-double g_pendSellSL=0.0;
-double g_pendBuyTP=0.0;
-int g_openBuyTicket=0;
-int g_openSellTicket=0;
-int g_errorCount=0;
-double g_openBuyPrice=0.0;
-double g_openSellPrice=0.0;
-double g_openBuySL=0.0;
-double g_openSellSL=0.0;
-double g_openBuyTP=0.0;
-double g_openSellTP=0.0;
-int g_tradeErrCount=0;
-double g_openBuyLots=0.0;
-double g_openSellLots=0.0;
-double g_openBuyProfit=0.0;
-bool g_sl_hitBuy=false;
-bool g_sl_hitSell=false;
-bool g_tp_hitBuy=false;
-bool g_tp_hitSell=false;
-bool g_trail_activeBuy=false;
-bool g_trail_activeSell=false;
-double g_trail_highWater=0.0;
-double g_trail_lowWater=0.0;
-bool g_be_activeBuy=false;
-double g_be_buyLevel=0.0;
-double g_be_sellLevel=0.0;
-int g_hlTrail_barBuy=0;
-int g_hlTrail_barSell=0;
-double g_recentHighs[10];
-double g_recentLows[10];
-double g_recentBuyEntry[10];
-double g_recentSellEntry[10];
-int g_pendBuyCount=0;
-int g_pendSellCount=0;
-int g_openBuyTotal=0;
-int g_openSellTotal=0;
-string g_symbolSuffix;
-double g_accountBalance=0.0;
-double g_prevBalance=0.0;
-datetime g_lastTradeTime=0;
-bool g_isInitialized=false;
-int g_initRetries=0;
-bool g_symbolReady=false;
-int g_strategyIndex=0;
-double g_balance=0.0;
-double g_equity=0.0;
-double g_stopLevelPts=0.0;
-double g_ddStartBalance=0.0;
-double g_maxDDBalance=0.0;
-bool g_ddLimitReached=false;
-datetime g_dayStartTime=0;
-datetime g_weekStartTime=0;
-datetime g_lastBarTime=0;
-bool g_newDayFlag=false;
-bool g_newWeekFlag=false;
-double g_dailyStartBal=0.0;
-datetime g_dailyResetTime=0;
-bool g_dailyDDHit=false;
-int g_pairBuyTickets[99];
-int g_pairSellTickets[99];
-double g_hlBuyBuffer[30];
-double g_hlSellBuffer[30];
-double g_magicBuyBuffer[30];
-double g_magicSellBuffer[30];
-int g_pairCount=1;
-int g_pairIdx=0;
-uint g_panelFgColor=DarkBlue;
-bool g_slipMode2=false;
-long g_prevVolume=0;
-int g_slipRetries=5;
-bool g_orderModified=false;
-string g_currentSymbol;
-bool g_orderPending=false;
-string g_tradeSymbol;
-double g_point=0.0;
-double g_lotStep=0.0;
-int g_stratMagics[99];
-int g_labelIdx=0;
-double g_pairLots[99];
-bool g_pairActive[99];
-int g_pairBuyOpen[99];
-int g_pairSellOpen[99];
-double g_pairBuyPrice[99];
-double g_pairSellPrice[99];
-string g_pairNames[99]={};
-bool g_pairHasOrder[99];
-double g_pairBuySL[99];
-double g_pairSellSL[99];
-double g_pairBuyTP[99];
-double g_pairSellTP[99];
-double g_pairBuyLots[99];
-double g_pairSellLots[99];
-bool g_pairNewBar[99];
-int g_pairBarCount[99];
-bool g_showPanel=false;
-double g_panelFontSize=5.0;
-double g_panelRowH=10.0;
-int g_panelCols=0;
-double g_panelColW=0.0;
-double g_panelRowPx=0.0;
-int g_panelLabels=0;
-uint g_panelBgColor=LightSteelBlue;
-bool g_panelBorder=true;
-double g_panelBorderW=12.0;
-int g_panelPosX=230;
-int g_panelPosY=320;
-int g_panelW=500;
-int g_panelH=350;
-int g_panelAlign=2;
-int g_panelFont=7;
-int g_panelMaxRows=10;
-int g_panelMaxCols=30;
-string g_stratLabels[4]={};
-double g_panelScaleSmall=0.45;
-double g_panelScaleLarge=0.6;
-int g_activePairs=0;
-datetime g_lastInitTime=0;
-bool g_pairInitOK=false;
-int g_labelCount=0;
-bool g_panelCreated=false;
-int g_panelUpdateCnt=0;
-double g_prevEquity=0.0;
-int g_panelCol1X=200;
-int g_panelCol2X=330;
-int g_panelCol3X=560;
-int g_autoMaxTrades=810;
-int g_autoCount=1150;
-datetime g_autoResetTime=0;
-datetime g_nfpDates[300];
-bool g_nfpChecked=false;
-bool g_nfpToday=false;
-bool g_nfpWindowOpen=false;
-int g_nfpGMTOfs=0;
-int g_gmtOffset=0;
-double g_gmtOffsetFloat=0.0;
-double g_maxEquityDD=0.0;
-datetime g_ddResetTime=0;
-double g_stratScores[99];
-double g_balForLots=0.0;
-double g_balSnapshot=0.0;
-
-
-int init()
-{
-double lv_d2;
-double lv_d3;
-int lv_i4;
-int lv_i5;
-int lv_i6;
-int lv_i7;
-int lv_i8;
-int lv_i9;
-//----------
-bool tmp_b1 = false;
-
-g_balForLots=AccountInfoDouble(ACCOUNT_BALANCE);
-if(UseEquity)
-{
-g_balForLots=AccountInfoDouble(ACCOUNT_EQUITY);
-}
-if(ForceBalanceToUse>0.0)
-{
-g_balForLots=ForceBalanceToUse;
-}
-g_balSnapshot=g_balForLots;
-g_nfpChecked=false;
-g_nfpToday=false;
-g_nfpDates[0]=D'2026.12.04 12:30';
-g_nfpDates[1]=D'2026.11.06 12:30';
-g_nfpDates[2]=D'2026.10.02 12:30';
-g_nfpDates[3]=D'2026.09.04 12:30';
-g_nfpDates[4]=D'2026.08.07 12:30';
-g_nfpDates[5]=D'2026.07.02 12:30';
-g_nfpDates[6]=D'2026.06.05 12:30';
-g_nfpDates[7]=D'2026.05.08 12:30';
-g_nfpDates[8]=D'2026.04.03 12:30';
-g_nfpDates[9]=D'2026.03.06 12:30';
-g_nfpDates[10]=D'2026.02.11 12:30';
-g_nfpDates[11]=D'2026.01.09 12:30';
-g_nfpDates[12]=D'2025.12.16 12:30';
-g_nfpDates[13]=D'2025.11.07 12:30';
-g_nfpDates[14]=D'2025.10.03 12:30';
-g_nfpDates[15]=D'2025.09.05 12:30';
-g_nfpDates[16]=D'2025.08.01 12:30';
-g_nfpDates[17]=D'2025.07.03 12:30';
-g_nfpDates[18]=D'2025.06.06 12:30';
-g_nfpDates[19]=D'2025.05.02 12:30';
-g_nfpDates[20]=D'2025.04.04 12:30';
-g_nfpDates[21]=D'2025.03.07 12:30';
-g_nfpDates[22]=D'2025.02.07 12:30';
-g_nfpDates[23]=D'2025.01.10 12:30';
-g_nfpDates[24]=D'2024.12.06 12:30';
-g_nfpDates[25]=D'2024.11.01 12:30';
-g_nfpDates[26]=D'2024.10.04 12:30';
-g_nfpDates[27]=D'2024.09.06 12:30';
-g_nfpDates[28]=D'2024.08.02 12:30';
-g_nfpDates[29]=D'2024.07.05 12:30';
-g_nfpDates[30]=D'2024.06.07 12:30';
-g_nfpDates[31]=D'2024.05.03 12:30';
-g_nfpDates[32]=D'2024.04.05 12:30';
-g_nfpDates[33]=D'2024.03.08 12:30';
-g_nfpDates[34]=D'2024.02.02 12:30';
-g_nfpDates[35]=D'2024.01.05 12:30';
-g_nfpDates[36]=D'2023.12.08 12:30';
-g_nfpDates[37]=D'2023.11.03 12:30';
-g_nfpDates[38]=D'2023.10.06 12:30';
-g_nfpDates[39]=D'2023.09.01 12:30';
-g_nfpDates[40]=D'2023.08.04 12:30';
-g_nfpDates[41]=D'2023.07.07 12:30';
-g_nfpDates[42]=D'2023.06.02 12:30';
-g_nfpDates[43]=D'2023.05.05 12:30';
-g_nfpDates[44]=D'2023.04.07 12:30';
-g_nfpDates[45]=D'2023.03.10 12:30';
-g_nfpDates[46]=D'2023.02.03 12:30';
-g_nfpDates[47]=D'2023.01.06 12:30';
-g_nfpDates[48]=D'2022.12.02 12:30';
-g_nfpDates[49]=D'2022.11.04 12:30';
-g_nfpDates[50]=D'2022.10.07 12:30';
-g_nfpDates[51]=D'2022.09.02 12:30';
-g_nfpDates[52]=D'2022.08.05 12:30';
-g_nfpDates[53]=D'2022.07.08 12:30';
-g_nfpDates[54]=D'2022.06.03 12:30';
-g_nfpDates[55]=D'2022.05.06 12:30';
-g_nfpDates[56]=D'2022.04.01 12:30';
-g_nfpDates[57]=D'2022.03.04 12:30';
-g_nfpDates[58]=D'2022.02.04 12:30';
-g_nfpDates[59]=D'2022.01.07 12:30';
-g_nfpDates[60]=D'2021.12.03 12:30';
-g_nfpDates[61]=D'2021.11.05 12:30';
-g_nfpDates[62]=D'2021.10.08 12:30';
-g_nfpDates[63]=D'2021.09.03 12:30';
-g_nfpDates[64]=D'2021.08.06 12:30';
-g_nfpDates[65]=D'2021.07.02 12:30';
-g_nfpDates[66]=D'2021.06.04 12:30';
-g_nfpDates[67]=D'2021.05.07 12:30';
-g_nfpDates[68]=D'2021.04.02 12:30';
-g_nfpDates[69]=D'2021.03.05 12:30';
-g_nfpDates[70]=D'2021.02.05 12:30';
-g_nfpDates[71]=D'2021.01.08 12:30';
-g_nfpDates[72]=D'2020.12.04 12:30';
-g_nfpDates[73]=D'2020.11.06 12:30';
-g_nfpDates[74]=D'2020.10.02 12:30';
-g_nfpDates[75]=D'2020.09.04 12:30';
-g_nfpDates[76]=D'2020.08.07 12:30';
-g_nfpDates[77]=D'2020.07.02 12:30';
-g_nfpDates[78]=D'2020.06.05 12:30';
-g_nfpDates[79]=D'2020.05.08 12:30';
-g_nfpDates[80]=D'2020.04.03 12:30';
-g_nfpDates[81]=D'2020.03.06 12:30';
-g_nfpDates[82]=D'2020.02.07 12:30';
-g_nfpDates[83]=D'2020.01.10 12:30';
-g_nfpDates[84]=D'2019.12.06 12:30';
-g_nfpDates[85]=D'2019.11.01 12:30';
-g_nfpDates[86]=D'2019.10.04 12:30';
-g_nfpDates[87]=D'2019.09.06 12:30';
-g_nfpDates[88]=D'2019.08.02 12:30';
-g_nfpDates[89]=D'2019.07.05 12:30';
-g_nfpDates[90]=D'2019.06.07 12:30';
-g_nfpDates[91]=D'2019.05.03 12:30';
-g_nfpDates[92]=D'2019.04.05 12:30';
-g_nfpDates[93]=D'2019.03.08 12:30';
-g_nfpDates[94]=D'2019.02.01 12:30';
-g_nfpDates[95]=D'2019.01.04 12:30';
-g_nfpDates[96]=D'2018.12.07 12:30';
-g_nfpDates[97]=D'2018.11.02 12:30';
-g_nfpDates[98]=D'2018.10.05 12:30';
-g_nfpDates[99]=D'2018.09.07 12:30';
-g_nfpDates[100]=D'2018.08.03 12:30';
-g_nfpDates[101]=D'2018.07.06 12:30';
-g_nfpDates[102]=D'2018.06.01 12:30';
-g_nfpDates[103]=D'2018.05.04 12:30';
-g_nfpDates[104]=D'2018.04.06 12:30';
-g_nfpDates[105]=D'2018.03.09 12:30';
-g_nfpDates[106]=D'2018.02.02 12:30';
-g_nfpDates[107]=D'2018.01.05 12:30';
-g_nfpDates[108]=D'2017.12.08 12:30';
-g_nfpDates[109]=D'2017.11.03 12:30';
-g_nfpDates[110]=D'2017.10.06 12:30';
-g_nfpDates[111]=D'2017.09.01 12:30';
-g_nfpDates[112]=D'2017.08.04 12:30';
-g_nfpDates[113]=D'2017.07.07 12:30';
-g_nfpDates[114]=D'2017.06.02 12:30';
-g_nfpDates[115]=D'2017.05.05 12:30';
-g_nfpDates[116]=D'2017.04.07 12:30';
-g_nfpDates[117]=D'2017.03.10 12:30';
-g_nfpDates[118]=D'2017.02.03 12:30';
-g_nfpDates[119]=D'2017.01.06 12:30';
-g_nfpDates[120]=D'2016.12.02 12:30';
-g_nfpDates[121]=D'2016.11.04 12:30';
-g_nfpDates[122]=D'2016.10.07 12:30';
-g_nfpDates[123]=D'2016.09.02 12:30';
-g_nfpDates[124]=D'2016.08.05 12:30';
-g_nfpDates[125]=D'2016.07.08 12:30';
-g_nfpDates[126]=D'2016.06.03 12:30';
-g_nfpDates[127]=D'2016.05.06 12:30';
-g_nfpDates[128]=D'2016.04.01 12:30';
-g_nfpDates[129]=D'2016.03.04 12:30';
-g_nfpDates[130]=D'2016.02.05 12:30';
-g_nfpDates[131]=D'2016.01.08 12:30';
-g_nfpDates[132]=D'2015.12.04 12:30';
-g_nfpDates[133]=D'2015.11.06 12:30';
-g_nfpDates[134]=D'2015.10.02 12:30';
-g_nfpDates[135]=D'2015.09.04 12:30';
-g_nfpDates[136]=D'2015.08.07 12:30';
-g_nfpDates[137]=D'2015.07.02 12:30';
-g_nfpDates[138]=D'2015.06.05 12:30';
-g_nfpDates[139]=D'2015.05.08 12:30';
-g_nfpDates[140]=D'2015.04.03 12:30';
-g_nfpDates[141]=D'2015.03.06 12:30';
-g_nfpDates[142]=D'2015.02.06 12:30';
-g_nfpDates[143]=D'2015.01.09 12:30';
-g_nfpDates[144]=D'2014.12.05 12:30';
-g_nfpDates[145]=D'2014.11.07 12:30';
-g_nfpDates[146]=D'2014.10.03 12:30';
-g_nfpDates[147]=D'2014.09.05 12:30';
-g_nfpDates[148]=D'2014.08.01 12:30';
-g_nfpDates[149]=D'2014.07.03 12:30';
-g_nfpDates[150]=D'2014.06.06 12:30';
-g_nfpDates[151]=D'2014.05.02 12:30';
-g_nfpDates[152]=D'2014.04.04 12:30';
-g_nfpDates[153]=D'2014.03.07 12:30';
-g_nfpDates[154]=D'2014.02.07 12:30';
-g_nfpDates[155]=D'2014.01.10 12:30';
-g_nfpDates[156]=D'2013.12.06 12:30';
-g_nfpDates[157]=D'2013.11.08 12:30';
-g_nfpDates[158]=D'2013.10.22 12:30';
-g_nfpDates[159]=D'2013.09.06 12:30';
-g_nfpDates[160]=D'2013.08.02 12:30';
-g_nfpDates[161]=D'2013.07.05 12:30';
-g_nfpDates[162]=D'2013.06.07 12:30';
-g_nfpDates[163]=D'2013.05.03 12:30';
-g_nfpDates[164]=D'2013.04.05 12:30';
-g_nfpDates[165]=D'2013.03.08 12:30';
-g_nfpDates[166]=D'2013.02.01 12:30';
-g_nfpDates[167]=D'2013.01.04 12:30';
-g_nfpDates[168]=D'2012.12.07 12:30';
-g_nfpDates[169]=D'2012.11.02 12:30';
-g_nfpDates[170]=D'2012.10.05 12:30';
-g_nfpDates[171]=D'2012.09.07 12:30';
-g_nfpDates[172]=D'2012.08.03 12:30';
-g_nfpDates[173]=D'2012.07.06 12:30';
-g_nfpDates[174]=D'2012.06.01 12:30';
-g_nfpDates[175]=D'2012.05.04 12:30';
-g_nfpDates[176]=D'2012.04.06 12:30';
-g_nfpDates[177]=D'2012.03.09 12:30';
-g_nfpDates[178]=D'2012.02.03 12:30';
-g_nfpDates[179]=D'2012.01.06 12:30';
-g_nfpDates[180]=D'2011.12.02 12:30';
-g_nfpDates[181]=D'2011.11.04 12:30';
-g_nfpDates[182]=D'2011.10.07 12:30';
-g_nfpDates[183]=D'2011.09.02 12:30';
-g_nfpDates[184]=D'2011.08.05 12:30';
-g_nfpDates[185]=D'2011.07.08 12:30';
-g_nfpDates[186]=D'2011.06.03 12:30';
-g_nfpDates[187]=D'2011.05.06 12:30';
-g_nfpDates[188]=D'2011.04.01 12:30';
-g_nfpDates[189]=D'2011.03.04 12:30';
-g_nfpDates[190]=D'2011.02.04 12:30';
-g_nfpDates[191]=D'2011.01.07 12:30';
-g_nfpDates[192]=D'2010.12.03 12:30';
-g_nfpDates[193]=D'2010.11.05 12:30';
-g_nfpDates[194]=D'2010.10.08 12:30';
-g_nfpDates[195]=D'2010.09.03 12:30';
-g_nfpDates[196]=D'2010.08.06 12:30';
-g_nfpDates[197]=D'2010.07.02 12:30';
-g_nfpDates[198]=D'2010.06.04 12:30';
-g_nfpDates[199]=D'2010.05.07 12:30';
-g_nfpDates[200]=D'2010.04.02 12:30';
-g_nfpDates[201]=D'2010.03.05 12:30';
-g_nfpDates[202]=D'2010.02.05 12:30';
-g_nfpDates[203]=D'2010.01.08 12:30';
-g_nfpDates[204]=D'2009.12.04 12:30';
-g_nfpDates[205]=D'2009.11.06 12:30';
-g_nfpDates[206]=D'2009.10.02 12:30';
-g_nfpDates[207]=D'2009.09.04 12:30';
-g_nfpDates[208]=D'2009.08.07 12:30';
-g_nfpDates[209]=D'2009.07.02 12:30';
-g_nfpDates[210]=D'2009.06.05 12:30';
-g_nfpDates[211]=D'2009.05.08 12:30';
-g_nfpDates[212]=D'2009.04.03 12:30';
-g_nfpDates[213]=D'2009.03.06 12:30';
-g_nfpDates[214]=D'2009.02.06 12:30';
-g_nfpDates[215]=D'2009.01.09 12:30';
-g_nfpDates[216]=D'2008.12.05 12:30';
-g_nfpDates[217]=D'2008.11.07 12:30';
-g_nfpDates[218]=D'2008.10.03 12:30';
-g_nfpDates[219]=D'2008.09.05 12:30';
-g_nfpDates[220]=D'2008.08.01 12:30';
-g_nfpDates[221]=D'2008.07.03 12:30';
-g_nfpDates[222]=D'2008.06.06 12:30';
-g_nfpDates[223]=D'2008.05.02 12:30';
-g_nfpDates[224]=D'2008.04.04 12:30';
-g_nfpDates[225]=D'2008.03.07 12:30';
-g_nfpDates[226]=D'2008.02.01 12:30';
-g_nfpDates[227]=D'2008.01.04 12:30';
-g_nfpDates[228]=D'2007.12.07 12:30';
-g_nfpDates[229]=D'2007.11.02 12:30';
-g_nfpDates[230]=D'2007.10.05 12:30';
-g_nfpDates[231]=D'2007.09.07 12:30';
-g_nfpDates[232]=D'2007.08.03 12:30';
-g_nfpDates[233]=D'2007.07.06 12:30';
-g_nfpDates[234]=D'2007.06.01 12:30';
-g_nfpDates[235]=D'2007.05.04 12:30';
-g_nfpDates[236]=D'2007.04.06 12:30';
-g_nfpDates[237]=D'2007.03.09 12:30';
-g_nfpDates[238]=D'2007.02.02 12:30';
-g_nfpDates[239]=D'2007.01.05 12:30';
-if(Risk==1234)
-{
-StartLots=MarketInfo(g_tradeSymbol,MODE_MINLOT);
-}
-if(TradeFrequency==5&&Risk==1234)
-{
-lv_d2=ConvertToUSD(AccountInfoDouble(ACCOUNT_BALANCE));
-lv_d3=MaxAllowedDD/100.0*lv_d2;
-if(lv_d3>g_autoMaxTrades)
-{
-g_minBarsBetween=3;
-}
-else
-{
-if(lv_d3>g_panelCol3X)
-{
-g_minBarsBetween=2;
-}
-else
-{
-if(lv_d3>g_panelCol2X)
-{
-g_minBarsBetween=1;
-}
-else
-{
-g_minBarsBetween=0;
-}
-}
-}
-}
-else
-{
-g_minBarsBetween=TradeFrequency;
-}
-if(g_minBarsBetween==0)
-{
-g_strat8_enabled=false;
-g_strat12_enabled=false;
-g_strat9_enabled=false;
-g_strat14_enabled=false;
-g_strat15_enabled=false;
-g_strat13_enabled=false;
-g_maxEquityDD=2.4;
-if(UseVariableValues)
-{
-g_maxEquityDD=3.0;
-}
-}
-else
-{
-if(g_minBarsBetween==1)
-{
-g_strat8_enabled=true;
-g_strat12_enabled=true;
-g_strat9_enabled=false;
-g_strat14_enabled=false;
-g_strat15_enabled=false;
-g_strat13_enabled=false;
-g_maxEquityDD=3.4;
-if(UseVariableValues)
-{
-g_maxEquityDD=4.0;
-}
-}
-else
-{
-if(g_minBarsBetween==2)
-{
-g_strat8_enabled=true;
-g_strat12_enabled=true;
-g_strat9_enabled=true;
-g_strat14_enabled=true;
-g_strat15_enabled=false;
-g_strat13_enabled=false;
-g_maxEquityDD=4.1;
-if(UseVariableValues)
-{
-g_maxEquityDD=5.0;
-}
-}
-else
-{
-if(g_minBarsBetween==3)
-{
-g_strat8_enabled=true;
-g_strat12_enabled=true;
-g_strat9_enabled=true;
-g_strat14_enabled=true;
-g_strat15_enabled=true;
-g_strat13_enabled=false;
-g_maxEquityDD=4.8;
-if(UseVariableValues)
-{
-g_maxEquityDD=5.6;
-}
-}
-else
-{
-if(g_minBarsBetween==4)
-{
-g_strat8_enabled=true;
-g_strat12_enabled=true;
-g_strat9_enabled=true;
-g_strat14_enabled=true;
-g_strat15_enabled=true;
-g_strat13_enabled=true;
-g_maxEquityDD=5.1;
-if(UseVariableValues)
-{
-g_maxEquityDD=6.0;
-}
-}
-else
-{
-if(g_minBarsBetween==6)
-{
-g_strat1_enabled=RunStrat1;
-g_strat4_enabled=RunStrat2;
-g_strat7_enabled=RunStrat3;
-g_strat8_enabled=RunStrat4;
-g_strat12_enabled=RunStrat5;
-g_strat9_enabled=RunStrat6;
-g_strat14_enabled=RunStrat7;
-g_strat15_enabled=RunStrat8;
-g_strat13_enabled=RunStrat9;
-}
-}
-}
-}
-}
-}
-g_currentSymbol=ST1_Comment;
-g_prevEquity=0.0;
-g_panelCreated=false;
-g_lastInitTime=0;
-g_pairInitOK=true;
-g_panelFontSize=5.0;
-g_panelRowH=10.0;
-g_magicMain=ST1_MagicNumber;
-g_panelCols=300;
-g_panelColW=g_panelFont*25*g_panelScaleSmall*InfoPanelSizeAdjust;
-g_panelRowPx=g_panelFont*3.5*g_panelScaleLarge*InfoPanelSizeAdjust;
-g_panelLabels=7;
-g_pairIdx=0;
-g_tradeSymbol=Symbol();
-g_point=SymbolInfoDouble(g_tradeSymbol,SYMBOL_TRADE_TICK_SIZE);
-g_pointSize=g_point;
-if((MarketInfo(g_tradeSymbol,MODE_DIGITS)==3.0||MarketInfo(g_tradeSymbol,MODE_DIGITS)==5.0))
-{
-g_pointSize=g_point*10.0;
-}
-if(SymbolInfoInteger(g_tradeSymbol,17)==0x1)
-{
-g_pointSize=g_point/10.0;
-}
-g_digits = (int)MarketInfo(g_tradeSymbol,MODE_DIGITS);
-if(FridayStopHour< 0)
-{
-g_useMonFilter=false;
-}
-else
-{
-g_useMonFilter=true;
-}
-g_st2_lots=(double)TimeCurrent();
-g_spread=MarketInfo(g_tradeSymbol,MODE_ASK)-MarketInfo(g_tradeSymbol,MODE_BID);
-g_pairStratLots[g_pairIdx]=NormalizeDouble(MathFloor(StartLots*100.0)/100.0,2);
-if(MarketInfo(g_tradeSymbol,MODE_LOTSTEP)==0.1)
-{
-g_pairStratLots[g_pairIdx]=NormalizeDouble((MathFloor(StartLots*10.0))/10.0,1);
-if(g_pairStratLots[g_pairIdx]<0.1)
-{
-g_pairStratLots[g_pairIdx]=0.1;
-}
-}
-if(g_pairStratLots[g_pairIdx]<MarketInfo(g_tradeSymbol,MODE_MINLOT))
-{
-g_pairStratLots[g_pairIdx]=MarketInfo(g_tradeSymbol,MODE_MINLOT);
-}
-if(g_pairStratLots[g_pairIdx]>MarketInfo(g_tradeSymbol,MODE_MAXLOT))
-{
-g_pairStratLots[g_pairIdx]=MarketInfo(g_tradeSymbol,MODE_MAXLOT);
-}
-g_strategyIndex=Bars;
-if(g_magicTrailFast*g_pointSize<g_point)
-{
-g_magicTrailFast=g_point/g_pointSize;
-}
-g_balance=AccountBalance();
-g_minStopLevel=MarketInfo(g_tradeSymbol,MODE_STOPLEVEL)*g_point;
-g_stopLevelPts=MarketInfo(g_tradeSymbol,MODE_FREEZELEVEL)*g_point;
-g_symbolSuffix=StringSubstr(Symbol(),6,10);
-if(g_symbolSuffix!="")
-{
-Print("Suffix detected: "+g_symbolSuffix);
-}
-if((StringFind(Symbol(),"XAUUSD",0)>=0||StringFind(Symbol(),"xauusd",0)>=0||StringFind(Symbol(),"GOLD",0)>=0||StringFind(Symbol(),"gold",0)>=0||StringFind(Symbol(),"Gold",0)>=0||StringFind(Symbol(),"GLD",0)>=0))
-{
-g_tradeSymbol=Symbol();
-g_pairNames[g_activePairs]=Symbol();
-LoadStrategy1Params();
-InitSymbolData(0);
-g_activePairs++;
-}
-else
-{
-g_tradeSymbol=Symbol();
-InitSymbolData(0);
-}
-if(!(g_pairInitOK))
-{
-Print("Initialisation of pairs failed!");
-}
-if(g_minProfitClose<=0.0)
-{
-g_minProfitClose=1.0;
-}
-if(g_maxLossClose<=0.0)
-{
-g_maxLossClose=1.0;
-}
-if(g_beOffset>g_beProfitTrigger)
-{
-g_beOffset=g_beProfitTrigger+0.1;
-}
-if(g_fakeoutStrength<g_stopLevelPts/g_pointSize)
-{
-g_fakeoutStrength = (int)(g_stopLevelPts/g_pointSize);
-}
-if(g_trailStep!=0.0&&g_trailStep<g_stopLevelPts/g_pointSize)
-{
-g_trailStep=g_stopLevelPts/g_pointSize;
-}
-if(g_trailStep!=0.0&&g_trailStep<g_minStopLevel/g_pointSize)
-{
-g_trailStep=g_minStopLevel/g_pointSize;
-}
-if(g_recovTrailStart>0.0&&g_recovTrailStep<g_stopLevelPts/g_pointSize)
-{
-g_recovTrailStep=g_stopLevelPts/g_pointSize;
-}
-if(g_recovTrailStart>0.0&&g_recovTrailStep<g_minStopLevel/g_pointSize)
-{
-g_recovTrailStep=g_minStopLevel/g_pointSize;
-}
-if(g_minProfitClose<g_minStopLevel*2.0/g_pointSize)
-{
-g_minProfitClose=g_minStopLevel*2.0/g_pointSize;
-}
-if(g_maxLossClose<g_minStopLevel*2.0/g_pointSize)
-{
-g_maxLossClose=g_minStopLevel*2.0/g_pointSize;
-}
-if(g_takeProfitPips<g_minStopLevel*2.0/g_pointSize)
-{
-g_takeProfitPips=g_minStopLevel*2.0/g_pointSize;
-}
-if(g_entryBars< 1)
-{
-g_entryBars=1;
-}
-if(g_entryRetries< 1)
-{
-g_entryRetries=1;
-}
-if(g_takeProfitPips<0.1)
-{
-g_takeProfitPips=0.1;
-}
-g_expirySeconds=g_expiryHours*60*60;
-if(g_expiryHours> 0)
-{
-g_lastTradeTime=TimeCurrent()+g_expirySeconds;
-}
-else
-{
-g_lastTradeTime=0;
-}
-if(Virtual_expiration)
-{
-g_lastTradeTime=0;
-}
-g_dailyDDHit=false;
-g_pendBuyPrice=Seconds();
-g_dailyResetTime=TimeCurrent();
-g_hasBuyOrder=false;
-g_hasSellOrder=false;
-g_pendBuyTicket=Month();
-g_dayStartTime=iTime(g_tradeSymbol,PERIOD_W1,1);
-g_weekStartTime=iTime(g_tradeSymbol,PERIOD_M1,1);
-g_lastBarTime=iTime(g_tradeSymbol,PERIOD_M1,1);
-if(g_minVolatility>MaxSpread)
-{
-g_minVolatility=MaxSpread;
-}
-g_pendSellExists=false;
-GetBuyEntryPrice(g_entryTF);
-GetSellEntryPrice(g_entryTF);
-g_backtestLot=NormalizeDouble(g_pendBuySL,g_digits);
-g_backtestBalance=NormalizeDouble(g_pendSellPrice,g_digits);
-g_st2_TP=0;
-g_pendBuyExists=false;
-g_initRetries = (int)(g_recovTrailStart*60.0);
-g_useZoneRecovery=false;
-g_isInitialized=true;
-g_stopLevelPts=MarketInfo(g_tradeSymbol,MODE_FREEZELEVEL)*g_point;
-if(!(g_useTradingHours))
-{
-g_isInitialized=false;
-}
-g_ask=0.0;
-g_totalBuyLots=0.0;
-g_totalSellLots=0.0;
-g_dailySwitchDone=false;
-g_symbolSuffix=StringSubstr(g_tradeSymbol,6,0);
-if(Risk> 0)
-{
-g_useZoneRecovery=true;
-}
-if(StartLots<0.0)
-{
-StartLots=0.01;
-}
-if(g_zrMaxLoss>MarketInfo(g_tradeSymbol,MODE_MAXLOT))
-{
-g_zrMaxLoss=MarketInfo(g_tradeSymbol,MODE_MAXLOT);
-}
-for(lv_i4=0;lv_i4<g_panelX;lv_i4++)
-{
-for(lv_i5=0;lv_i5<2;lv_i5++)
-{
-g_perfMatrix[lv_i4][lv_i5]=0.0;
-}
-}
-for(lv_i6=0;lv_i6<g_panelY;lv_i6++)
-{
-for(lv_i7=0;lv_i7<3;lv_i7++)
-{
-g_tradeHistory[lv_i6][lv_i7]=0.0;
-}
-}
-for(lv_i8=0;lv_i8<100;lv_i8++)
-{
-g_tradeHistory[lv_i8][0]=0.0;
-g_tradeHistory[lv_i8][1]=0.0;
-}
-g_symbolReady=false;
-g_openBuyTP=iFractals(g_tradeSymbol,0,1,1);
-g_openSellTP=iFractals(g_tradeSymbol,0,2,1);
-g_openBuySL=g_openBuyTP;
-g_openSellSL=g_openSellTP;
-g_openBuyLots=0.0;
-g_isFirstTick=false;
-g_hlTrail_barSell=Hour();
-g_hlTrail_barBuy=0;
-g_orderComment1=ST1_Comment+"B1";
-g_orderComment2=ST1_Comment+"B2";
-g_orderComment3=ST1_Comment+"S1";
-g_orderComment4=ST1_Comment+"S2";
-g_openBuyTotal=0;
-g_openSellTotal=0;
-g_errorCount=Hour();
-if(g_useSpreadFilter)
-{
-g_maxConcurrent=1;
-g_sl_hitBuy=true;
-g_sl_hitSell=true;
-}
-g_closedBuyProfit=999.0;
-g_closedSellProfit=0.0;
-g_accountBalance=0.0;
-g_prevBalance=0.0;
-for(lv_i9=0;lv_i9<99;lv_i9++)
-{
-g_pairSellTickets[lv_i9]=0;
-g_pairBuyTickets[lv_i9]=0;
-g_pairLastBar[lv_i9]=iTime(g_tradeSymbol,g_entryTF,1);
-if(!(g_pairStratLots[lv_i9]<StartLots)) continue;
-g_pairStratLots[lv_i9]=StartLots;
-
-}
-g_chartID=0;
-g_fridayClose=false;
-g_nfpActive=false;
-if(g_newsFilterMode==1)
-{
-g_newsImpactLevel=0.0;
-}
-g_digits = (int)MarketInfo(g_tradeSymbol,MODE_DIGITS);
-g_ddLimitReached=false;
-IsDemo();
-
-if(tmp_b1==true)
-{
-g_ddLimitReached=true;
-}
-if(ShowInfoPanel)
-{
-if(g_perfSortMode==1)
-{
-ProcessBuyStrategies();
-}
-else
-{
-if(g_perfSortMode==2)
-{
-ProcessSellStrategies();
-}
-}
-UpdateInfoPanel();
-DrawPanelBackground();
-DrawPanelDetails();
-}
-return(0);
-}
-// init<<==-------- --------
-void OnTick()
-{
-bool lv_b1;
-double lv_d2;
-double lv_d3;
-bool lv_b4;
-MqlDateTime lv_mqlDst1;
-MqlDateTime lv_mqlDst2;
-//----------
-bool tmp_b1 = false;
-double tmp_d2;
-double tmp_d3;
-int tmp_i4;
-double tmp_d5;
-double tmp_d6;
-int tmp_i7;
-double tmp_d8;
-double tmp_d9;
-int tmp_i10;
-double tmp_d11;
-double tmp_d12;
-int tmp_i13;
-double tmp_d14;
-double tmp_d15;
-int tmp_i16;
-double tmp_d17;
-double tmp_d18;
-int tmp_i19;
-double tmp_d20;
-double tmp_d21;
-int tmp_i22;
-double tmp_d23;
-double tmp_d24;
-int tmp_i25;
-double tmp_d26;
-double tmp_d27;
-int tmp_i28;
-
-g_balForLots=AccountInfoDouble(ACCOUNT_BALANCE);
-if(UseEquity)
-{
-g_balForLots=AccountInfoDouble(ACCOUNT_EQUITY);
-}
-if(ForceBalanceToUse>0.0)
-{
-g_balForLots=ForceBalanceToUse;
-}
-if(OnlyUp&&g_balSnapshot>g_balForLots)
-{
-g_balForLots=g_balSnapshot;
-}
-if(g_balForLots>g_balSnapshot)
-{
-g_balSnapshot=g_balForLots;
-}
-if(FakeOutFilter==0)
-{
-g_use5minFilter=false;
-g_use30minFilter=false;
-g_useNewsFilter=false;
-}
-else
-{
-if(FakeOutFilter==1)
-{
-g_use5minFilter=true;
-g_use30minFilter=false;
-g_useNewsFilter=false;
-}
-else
-{
-if(FakeOutFilter==2)
-{
-g_use5minFilter=true;
-g_use30minFilter=true;
-g_useNewsFilter=false;
-}
-else
-{
-if(FakeOutFilter==3)
-{
-g_use5minFilter=true;
-g_use30minFilter=true;
-g_useNewsFilter=true;
-}
-}
-}
-}
-lv_b1=false;
-if(IsAmericanDST())
-{
-g_nfpGMTOfs=Broker_GMT_OFFSET_Summer;
-if((!(g_nfpChecked)||!(g_nfpWindowOpen))&&AutoGMT&&!(lv_b1))
-{
-g_nfpChecked=true;
-g_nfpToday=true;
-g_gmtOffset=GetGMT_Offset();
-if(g_gmtOffset==999)
-{
-Print("GMT_Offsetwronglydetected. Tryingagaing!");
-Sleep(2000);
-g_gmtOffset=GetGMT_Offset();
-}
-if(g_gmtOffset==999)
-{
-Print("GMT_Offsetstillwrong. UsingVPStimeforGMTdetection!");
-}
-g_nfpWindowOpen=true;
-lv_b1=true;
-Print("DST_USon");
-}
-}
-else
-{
-g_nfpGMTOfs=Broker_GMT_OFFSET_Winter;
-if((g_nfpChecked||!(g_nfpWindowOpen))&&AutoGMT&&!(lv_b1))
-{
-g_nfpChecked=false;
-g_nfpToday=false;
-g_gmtOffset=GetGMT_Offset();
-if(g_gmtOffset==999)
-{
-Print("GMT_Offsetwronglydetected. Tryingagaing!");
-Sleep(2000);
-g_gmtOffset=GetGMT_Offset();
-}
-if(g_gmtOffset==999)
-{
-Print("GMT_Offsetstillwrong. UsingVPStimeforGMTdetection!");
-}
-g_nfpWindowOpen=true;
-lv_b1=true;
-Print("DST_US off");
-}
-}
-TimeToStruct(StringToTime(string(TimeYear(TimeCurrent()))+".03.31 01:00"),lv_mqlDst1);
-TimeToStruct(StringToTime(string(TimeYear(TimeCurrent()))+".10.31 02:00"),lv_mqlDst2);
-if(TimeDayOfYear(TimeCurrent())> TimeDayOfYear(StringToTime(string(TimeYear(TimeCurrent()))+".03.31 01:00")-lv_mqlDst1.day_of_week*86400)&&TimeDayOfYear(TimeCurrent())< TimeDayOfYear(StringToTime(string(TimeYear(TimeCurrent()))+".10.31 02:00")-lv_mqlDst2.day_of_week*86400))
-{
-tmp_b1=true;
-}
-else
-{
-tmp_b1=false;
-}
-if(tmp_b1)
-{
-if((!(g_nfpToday)||!(g_nfpWindowOpen))&&AutoGMT&&!(lv_b1))
-{
-g_nfpToday=true;
-g_gmtOffset=GetGMT_Offset();
-if(g_gmtOffset==999)
-{
-Print("GMT_Offsetwronglydetected. Tryingagaing!");
-Sleep(2000);
-g_gmtOffset=GetGMT_Offset();
-}
-if(g_gmtOffset==999)
-{
-Print("GMT_Offsetstillwrong. UsingVPStimeforGMTdetection!");
-}
-g_nfpWindowOpen=true;
-lv_b1=true;
-Print("DST_EUon");
-}
-}
-else
-{
-if((g_nfpToday||!(g_nfpWindowOpen))&&AutoGMT&&!(lv_b1))
-{
-g_nfpToday=false;
-g_gmtOffset=GetGMT_Offset();
-if(g_gmtOffset==999)
-{
-Print("GMT_Offsetwronglydetected. Tryingagaing!");
-Sleep(2000);
-g_gmtOffset=GetGMT_Offset();
-}
-if(g_gmtOffset==999)
-{
-Print("GMT_Offsetstillwrong. UsingVPStimeforGMTdetection!");
-}
-g_nfpWindowOpen=true;
-lv_b1=true;
-Print("DST_EU off");
-}
-}
-if(AutoGMT&&MQLInfoInteger(MQL_TESTER)!=1)
-{
-if(g_gmtOffset!=999)
-{
-g_autoResetTime=TimeCurrent()-g_gmtOffset*3600;
-}
-else
-{
-g_autoResetTime=TimeGMT();
-}
-}
-else
-{
-g_autoResetTime=TimeCurrent()-g_nfpGMTOfs*3600;
-}
-if(TradeFrequency==5&&Risk==1234)
-{
-lv_d2=ConvertToUSD(AccountInfoDouble(ACCOUNT_BALANCE));
-lv_d3=MaxAllowedDD/100.0*lv_d2;
-if(lv_d3>g_autoMaxTrades)
-{
-g_minBarsBetween=3;
-}
-else
-{
-if(lv_d3>g_panelCol3X)
-{
-g_minBarsBetween=2;
-}
-else
-{
-if(lv_d3>g_panelCol2X)
-{
-g_minBarsBetween=1;
-}
-else
-{
-g_minBarsBetween=0;
-}
-}
-}
-}
-else
-{
-g_minBarsBetween=TradeFrequency;
-}
-if(g_minBarsBetween==0)
-{
-g_strat8_enabled=false;
-g_strat12_enabled=false;
-g_strat9_enabled=false;
-g_strat14_enabled=false;
-g_strat15_enabled=false;
-g_strat13_enabled=false;
-g_maxEquityDD=2.4;
-if(UseVariableValues)
-{
-g_maxEquityDD=3.0;
-}
-}
-else
-{
-if(g_minBarsBetween==1)
-{
-g_strat8_enabled=true;
-g_strat12_enabled=true;
-g_strat9_enabled=false;
-g_strat14_enabled=false;
-g_strat15_enabled=false;
-g_strat13_enabled=false;
-g_maxEquityDD=3.4;
-if(UseVariableValues)
-{
-g_maxEquityDD=4.0;
-}
-}
-else
-{
-if(g_minBarsBetween==2)
-{
-g_strat8_enabled=true;
-g_strat12_enabled=true;
-g_strat9_enabled=true;
-g_strat14_enabled=true;
-g_strat15_enabled=false;
-g_strat13_enabled=false;
-g_maxEquityDD=4.1;
-if(UseVariableValues)
-{
-g_maxEquityDD=5.0;
-}
-}
-else
-{
-if(g_minBarsBetween==3)
-{
-g_strat8_enabled=true;
-g_strat12_enabled=true;
-g_strat9_enabled=true;
-g_strat14_enabled=true;
-g_strat15_enabled=true;
-g_strat13_enabled=false;
-g_maxEquityDD=4.8;
-if(UseVariableValues)
-{
-g_maxEquityDD=5.6;
-}
-}
-else
-{
-if(g_minBarsBetween==4)
-{
-g_strat8_enabled=true;
-g_strat12_enabled=true;
-g_strat9_enabled=true;
-g_strat14_enabled=true;
-g_strat15_enabled=true;
-g_strat13_enabled=true;
-g_maxEquityDD=5.1;
-if(UseVariableValues)
-{
-g_maxEquityDD=6.0;
-}
-}
-else
-{
-if(g_minBarsBetween==6)
-{
-g_strat1_enabled=RunStrat1;
-g_strat4_enabled=RunStrat2;
-g_strat7_enabled=RunStrat3;
-g_strat8_enabled=RunStrat4;
-g_strat12_enabled=RunStrat5;
-g_strat9_enabled=RunStrat6;
-g_strat14_enabled=RunStrat7;
-g_strat15_enabled=RunStrat8;
-g_strat13_enabled=RunStrat9;
-}
-}
-}
-}
-}
-}
-if(iBars(g_tradeSymbol,PERIOD_D1)!=g_panelUpdateCnt)
-{
-g_panelUpdateCnt=iBars(g_tradeSymbol,PERIOD_D1);
-g_panelCreated=false;
-g_prevEquity=0.0;
-}
-if(PropFirmMaxDailyDD>0.0)
-{
-CalcPerformanceStats();
-}
-if(g_panelCreated||!(g_pairInitOK)) return;
-lv_b4=false;
-if(g_ddResetTime!=iTime(g_tradeSymbol,PERIOD_H1,1))
-{
-lv_b4=true;
-g_ddResetTime=iTime(g_tradeSymbol,PERIOD_H1,1);
-}
-if((StringFind(Symbol(),"XAUUSD",0)>=0||StringFind(Symbol(),"xauusd",0)>=0||StringFind(Symbol(),"GOLD",0)>=0||StringFind(Symbol(),"GLD",0)>=0||StringFind(Symbol(),"gold",0)>=0||StringFind(Symbol(),"Gold",0)>=0))
-{
-g_tradeSymbol=Symbol();
-if(g_strat1_enabled)
-{
-LoadStrategy1Params();
-InitSymbolData(0);
-ManageOrders(0);
-if(lv_b4)
-{
-if(MQLInfoInteger(MQL_TESTER)==1&&!(UpdateInfoTesting))
-{
-tmp_d2=0.0;
-}
-else
-{
-tmp_d3=0.0;
-g_pairBuyOpen[g_pairIdx]=0;
-for(tmp_i4=HistoryTotal();tmp_i4>=0;tmp_i4=tmp_i4-1)
-{
-if(OrderSelect(tmp_i4,0,1)!=true||OrderSymbol()!=g_tradeSymbol||OrderMagicNumber()!=g_magicMain) continue;
-
-if((OrderType()!=0&&OrderType()!=1)) continue;
-g_pairBuyOpen[g_pairIdx]++;
-tmp_d3=tmp_d3+OrderProfit()+OrderSwap()+OrderCommission();
-
-}
-tmp_d2=tmp_d3;
-}
-g_stratScores[0]=tmp_d2;
-if(g_stratScores[0]!=0.0&&g_pairBuyOpen[0]> 0)
-{
-g_pairBuyPrice[0]=g_stratScores[0]/g_pairBuyOpen[0];
-}
-}
-}
-if(g_strat8_enabled)
-{
-LoadStrategy2Params();
-InitSymbolData(3);
-ManageOrders(3);
-if(lv_b4)
-{
-if(MQLInfoInteger(MQL_TESTER)==1&&!(UpdateInfoTesting))
-{
-tmp_d5=0.0;
-}
-else
-{
-tmp_d6=0.0;
-g_pairBuyOpen[g_pairIdx]=0;
-for(tmp_i7=HistoryTotal();tmp_i7>=0;tmp_i7=tmp_i7-1)
-{
-if(OrderSelect(tmp_i7,0,1)!=true||OrderSymbol()!=g_tradeSymbol||OrderMagicNumber()!=g_magicMain) continue;
-
-if((OrderType()!=0&&OrderType()!=1)) continue;
-g_pairBuyOpen[g_pairIdx]++;
-tmp_d6=tmp_d6+OrderProfit()+OrderSwap()+OrderCommission();
-
-}
-tmp_d5=tmp_d6;
-}
-g_stratScores[3]=tmp_d5;
-if(g_stratScores[3]!=0.0&&g_pairBuyOpen[3]> 0)
-{
-g_pairBuyPrice[3]=g_stratScores[3]/g_pairBuyOpen[3];
-}
-}
-}
-if(g_strat4_enabled)
-{
-LoadStrategy3Params();
-InitSymbolData(1);
-ManageOrders(1);
-if(lv_b4)
-{
-if(MQLInfoInteger(MQL_TESTER)==1&&!(UpdateInfoTesting))
-{
-tmp_d8=0.0;
-}
-else
-{
-tmp_d9=0.0;
-g_pairBuyOpen[g_pairIdx]=0;
-for(tmp_i10=HistoryTotal();tmp_i10>=0;tmp_i10=tmp_i10-1)
-{
-if(OrderSelect(tmp_i10,0,1)!=true||OrderSymbol()!=g_tradeSymbol||OrderMagicNumber()!=g_magicMain) continue;
-
-if((OrderType()!=0&&OrderType()!=1)) continue;
-g_pairBuyOpen[g_pairIdx]++;
-tmp_d9=tmp_d9+OrderProfit()+OrderSwap()+OrderCommission();
-
-}
-tmp_d8=tmp_d9;
-}
-g_stratScores[1]=tmp_d8;
-if(g_stratScores[1]!=0.0&&g_pairBuyOpen[1]> 0)
-{
-g_pairBuyPrice[1]=g_stratScores[1]/g_pairBuyOpen[1];
-}
-}
-}
-if(g_strat7_enabled)
-{
-LoadStrategy4Params();
-InitSymbolData(2);
-ManageOrders(2);
-if(lv_b4)
-{
-if(MQLInfoInteger(MQL_TESTER)==1&&!(UpdateInfoTesting))
-{
-tmp_d11=0.0;
-}
-else
-{
-tmp_d12=0.0;
-g_pairBuyOpen[g_pairIdx]=0;
-for(tmp_i13=HistoryTotal();tmp_i13>=0;tmp_i13=tmp_i13-1)
-{
-if(OrderSelect(tmp_i13,0,1)!=true||OrderSymbol()!=g_tradeSymbol||OrderMagicNumber()!=g_magicMain) continue;
-
-if((OrderType()!=0&&OrderType()!=1)) continue;
-g_pairBuyOpen[g_pairIdx]++;
-tmp_d12=tmp_d12+OrderProfit()+OrderSwap()+OrderCommission();
-
-}
-tmp_d11=tmp_d12;
-}
-g_stratScores[2]=tmp_d11;
-if(g_stratScores[2]!=0.0&&g_pairBuyOpen[2]> 0)
-{
-g_pairBuyPrice[2]=g_stratScores[2]/g_pairBuyOpen[2];
-}
-}
-}
-if(g_strat9_enabled)
-{
-LoadStrategy5Params();
-InitSymbolData(5);
-ManageOrders(5);
-if(lv_b4)
-{
-if(MQLInfoInteger(MQL_TESTER)==1&&!(UpdateInfoTesting))
-{
-tmp_d14=0.0;
-}
-else
-{
-tmp_d15=0.0;
-g_pairBuyOpen[g_pairIdx]=0;
-for(tmp_i16=HistoryTotal();tmp_i16>=0;tmp_i16=tmp_i16-1)
-{
-if(OrderSelect(tmp_i16,0,1)!=true||OrderSymbol()!=g_tradeSymbol||OrderMagicNumber()!=g_magicMain) continue;
-
-if((OrderType()!=0&&OrderType()!=1)) continue;
-g_pairBuyOpen[g_pairIdx]++;
-tmp_d15=tmp_d15+OrderProfit()+OrderSwap()+OrderCommission();
-
-}
-tmp_d14=tmp_d15;
-}
-g_stratScores[5]=tmp_d14;
-if(g_stratScores[5]!=0.0&&g_pairBuyOpen[5]> 0)
-{
-g_pairBuyPrice[5]=g_stratScores[5]/g_pairBuyOpen[5];
-}
-}
-}
-if(g_strat12_enabled)
-{
-LoadStrategy6Params();
-InitSymbolData(4);
-ManageOrders(4);
-if(lv_b4)
-{
-if(MQLInfoInteger(MQL_TESTER)==1&&!(UpdateInfoTesting))
-{
-tmp_d17=0.0;
-}
-else
-{
-tmp_d18=0.0;
-g_pairBuyOpen[g_pairIdx]=0;
-for(tmp_i19=HistoryTotal();tmp_i19>=0;tmp_i19=tmp_i19-1)
-{
-if(OrderSelect(tmp_i19,0,1)!=true||OrderSymbol()!=g_tradeSymbol||OrderMagicNumber()!=g_magicMain) continue;
-
-if((OrderType()!=0&&OrderType()!=1)) continue;
-g_pairBuyOpen[g_pairIdx]++;
-tmp_d18=tmp_d18+OrderProfit()+OrderSwap()+OrderCommission();
-
-}
-tmp_d17=tmp_d18;
-}
-g_stratScores[4]=tmp_d17;
-if(g_stratScores[4]!=0.0&&g_pairBuyOpen[4]> 0)
-{
-g_pairBuyPrice[4]=g_stratScores[4]/g_pairBuyOpen[4];
-}
-}
-}
-if(g_strat13_enabled)
-{
-LoadStrategy7Params();
-InitSymbolData(8);
-ManageOrders(8);
-if(lv_b4)
-{
-if(MQLInfoInteger(MQL_TESTER)==1&&!(UpdateInfoTesting))
-{
-tmp_d20=0.0;
-}
-else
-{
-tmp_d21=0.0;
-g_pairBuyOpen[g_pairIdx]=0;
-for(tmp_i22=HistoryTotal();tmp_i22>=0;tmp_i22=tmp_i22-1)
-{
-if(OrderSelect(tmp_i22,0,1)!=true||OrderSymbol()!=g_tradeSymbol||OrderMagicNumber()!=g_magicMain) continue;
-
-if((OrderType()!=0&&OrderType()!=1)) continue;
-g_pairBuyOpen[g_pairIdx]++;
-tmp_d21=tmp_d21+OrderProfit()+OrderSwap()+OrderCommission();
-
-}
-tmp_d20=tmp_d21;
-}
-g_stratScores[8]=tmp_d20;
-if(g_stratScores[8]!=0.0&&g_pairBuyOpen[8]> 0)
-{
-g_pairBuyPrice[8]=g_stratScores[8]/g_pairBuyOpen[8];
-}
-}
-}
-if(g_strat14_enabled)
-{
-LoadStrategy8Params();
-InitSymbolData(6);
-ManageOrders(6);
-if(lv_b4)
-{
-if(MQLInfoInteger(MQL_TESTER)==1&&!(UpdateInfoTesting))
-{
-tmp_d23=0.0;
-}
-else
-{
-tmp_d24=0.0;
-g_pairBuyOpen[g_pairIdx]=0;
-for(tmp_i25=HistoryTotal();tmp_i25>=0;tmp_i25=tmp_i25-1)
-{
-if(OrderSelect(tmp_i25,0,1)!=true||OrderSymbol()!=g_tradeSymbol||OrderMagicNumber()!=g_magicMain) continue;
-
-if((OrderType()!=0&&OrderType()!=1)) continue;
-g_pairBuyOpen[g_pairIdx]++;
-tmp_d24=tmp_d24+OrderProfit()+OrderSwap()+OrderCommission();
-
-}
-tmp_d23=tmp_d24;
-}
-g_stratScores[6]=tmp_d23;
-if(g_stratScores[6]!=0.0&&g_pairBuyOpen[6]> 0)
-{
-g_pairBuyPrice[6]=g_stratScores[6]/g_pairBuyOpen[6];
-}
-}
-}
-if(g_strat15_enabled)
-{
-LoadStrategy9Params();
-InitSymbolData(7);
-ManageOrders(7);
-if(lv_b4)
-{
-if(MQLInfoInteger(MQL_TESTER)==1&&!(UpdateInfoTesting))
-{
-tmp_d26=0.0;
-}
-else
-{
-tmp_d27=0.0;
-g_pairBuyOpen[g_pairIdx]=0;
-for(tmp_i28=HistoryTotal();tmp_i28>=0;tmp_i28=tmp_i28-1)
-{
-if(OrderSelect(tmp_i28,0,1)!=true||OrderSymbol()!=g_tradeSymbol||OrderMagicNumber()!=g_magicMain) continue;
-
-if((OrderType()!=0&&OrderType()!=1)) continue;
-g_pairBuyOpen[g_pairIdx]++;
-tmp_d27=tmp_d27+OrderProfit()+OrderSwap()+OrderCommission();
-
-}
-tmp_d26=tmp_d27;
-}
-g_stratScores[7]=tmp_d26;
-if(g_stratScores[7]!=0.0&&g_pairBuyOpen[7]> 0)
-{
-g_pairBuyPrice[7]=g_stratScores[7]/g_pairBuyOpen[7];
-}
-}
-}
-}
-else
-{
-g_tradeSymbol=Symbol();
-ManageOrders(0);
-}
-DrawPanelBackground();
-if(iTime(Symbol(),PERIOD_M5,1)!=g_lastInitTime)
-{
-g_lastInitTime=iTime(Symbol(),PERIOD_M5,1);
-UpdateStrategyStats();
-DrawPanelDetails();
-}
-g_labelCount++;
-if(g_labelCount<2) return;
-g_dailyStartBal=AccountBalance();
-g_labelCount=0;
-}
-// OnTick<<==-------- --------
-int deinit()
-{
-DeleteChartObjects();
-return(0);
-}
-// deinit<<==-------- --------
-void InitSymbolData(int param0)
-{
-g_pairIdx=param0;
-g_point=SymbolInfoDouble(g_tradeSymbol,SYMBOL_TRADE_TICK_SIZE);
-g_pointSize=g_point;
-if((MarketInfo(g_tradeSymbol,MODE_DIGITS)==3.0||MarketInfo(g_tradeSymbol,MODE_DIGITS)==5.0))
-{
-g_pointSize=g_point*10.0;
-}
-if(SymbolInfoInteger(g_tradeSymbol,17)==0x1)
-{
-g_pointSize=g_point/10.0;
-}
-g_digits = (int)MarketInfo(g_tradeSymbol,MODE_DIGITS);
-g_spread=MarketInfo(g_tradeSymbol,MODE_ASK)-MarketInfo(g_tradeSymbol,MODE_BID);
-g_minStopLevel=MarketInfo(g_tradeSymbol,MODE_STOPLEVEL)*g_point;
-g_stopLevelPts=MarketInfo(g_tradeSymbol,MODE_FREEZELEVEL)*g_point;
-g_expirySeconds=g_expiryHours*60*60;
-if(g_expiryHours> 0)
-{
-g_lastTradeTime=TimeCurrent()+g_expirySeconds;
-}
-else
-{
-g_lastTradeTime=0;
-}
-if(Virtual_expiration)
-{
-g_lastTradeTime=0;
-}
-g_netProfit=1.0;
-if(!(UseVariableValues)) return;
-
-if(g_totalProfit>0.0)
-{
-g_totalLoss=iOpen(g_tradeSymbol,PERIOD_D1,1)/g_totalProfit;
-}
-else
-{
-g_totalLoss=1.0;
-}
-if(AdjustLotsizeToVariableValues)
-{
-g_netProfit=1.0/g_totalLoss;
-}
-else
-{
-g_netProfit=1.0;
-}
-g_takeProfitPips=g_takeProfitPips*g_totalLoss;
-g_slOffset=NormalizeDouble(g_slOffset*g_totalLoss,0);
-g_breakEvenPips=NormalizeDouble(g_breakEvenPips*g_totalLoss,0);
-g_minProfitClose=g_minProfitClose*g_totalLoss;
-g_maxLossClose=g_maxLossClose*g_totalLoss;
-g_trailStep=g_trailStep*g_totalLoss;
-g_trailStart=g_trailStart*g_totalLoss;
-g_trailStop=g_trailStop*g_totalLoss;
-g_trailMax=g_trailMax*g_totalLoss;
-g_trailFactor=g_trailFactor*g_totalLoss;
-g_beProfitTrigger=g_beProfitTrigger*g_totalLoss;
-g_beOffset=g_beOffset*g_totalLoss;
-}
-// InitSymbolData<<==-------- --------
-int ManageOrders(int param0)
-{
-bool lv_b2;
-datetime lv_dt3;
-int lv_i4;
-int lv_i5;
-string lv_s6;
-datetime lv_dt7;
-int lv_i8;
-int lv_i9;
-//----------
-bool _orderOK;
-int tmp_i1;
-int tmp_i2;
-int tmp_i3;
-int tmp_i4;
-int tmp_i5;
-int tmp_i6;
-int tmp_i7;
-int tmp_i8;
-int tmp_i9;
-int tmp_i10;
-int tmp_i11;
-int tmp_i12;
-int tmp_i13;
-int tmp_i14;
-int tmp_i15;
-int tmp_i16;
-int tmp_i17;
-int tmp_i18;
-int tmp_i19;
-int tmp_i20;
-int tmp_i21;
-int tmp_i22;
-int tmp_i23;
-int tmp_i24;
-int tmp_i25;
-int tmp_i26;
-int tmp_i27;
-int tmp_i28;
-int tmp_i29;
-int tmp_i30;
-int tmp_i31;
-int tmp_i32;
-int tmp_i33;
-int tmp_i34;
-int tmp_i35;
-int tmp_i36;
-int tmp_i37;
-int tmp_i38;
-int tmp_i39;
-int tmp_i40;
-int tmp_i41;
-int tmp_i42;
-int tmp_i43;
-int tmp_i44;
-int tmp_i45;
-int tmp_i46;
-int tmp_i47;
-int tmp_i48;
-int tmp_i49;
-int tmp_i50;
-int tmp_i51;
-int tmp_i52;
-int tmp_i53;
-int tmp_i54;
-int tmp_i55;
-int tmp_i56;
-int tmp_i57;
-int tmp_i58;
-int tmp_i59;
-int tmp_i60;
-int tmp_i61;
-int tmp_i62;
-int tmp_i63;
-int tmp_i64;
-int tmp_i65;
-int tmp_i66;
-int tmp_i67;
-int tmp_i68;
-int tmp_i69;
-int tmp_i70;
-int tmp_i71;
-int tmp_i72;
-int tmp_i73;
-int tmp_i74;
-int tmp_i75;
-int tmp_i76;
-int tmp_i77;
-int tmp_i78;
-int tmp_i79;
-int tmp_i80;
-int tmp_i81;
-int tmp_i82;
-int tmp_i83;
-int tmp_i84;
-int tmp_i85;
-int tmp_i86;
-int tmp_i87;
-int tmp_i88;
-int tmp_i89;
-double tmp_d90;
-long tmp_l91;
-int tmp_i92;
-long tmp_l93;
-int tmp_i94;
-int tmp_i95;
-int tmp_i96;
-double tmp_d97;
-long tmp_l98;
-int tmp_i99;
-long tmp_l100;
-int tmp_i101;
-int tmp_i102;
-int tmp_i103;
-int tmp_i104;
-int tmp_i105;
-bool tmp_b106 = false;
-int tmp_i107;
-int tmp_i108;
-bool tmp_b109 = false;
-int tmp_i110;
-long tmp_l111;
-int tmp_i112;
-long tmp_l113;
-string tmp_s114;
-int tmp_i115;
-int tmp_i116;
-int tmp_i117;
-int tmp_i118;
-
-g_pairIdx=param0;
-lv_b2=false;
-
-if(g_tpOffset>0.0)
-{
-g_takeProfitPips=g_tpOffset/100.0*MarketInfo(g_tradeSymbol,MODE_ASK)*10.0;
-}
-if(g_exitMode==0)
-{
-if(ManageBuyTrade())
-{
-lv_b2=true;
-}
-if(ManageSellTrade())
-{
-lv_b2=true;
-}
-if(lv_b2)
-{
-return(0);
-}
-}
-else
-{
-if(g_pairBuyTickets[g_pairIdx]!=iBars(g_tradeSymbol,g_exitMode))
-{
-g_pairBuyTickets[g_pairIdx]=iBars(g_tradeSymbol,g_exitMode);
-if(ManageBuyTrade())
-{
-lv_b2=true;
-}
-if(ManageSellTrade())
-{
-lv_b2=true;
-}
-if(lv_b2)
-{
-return(0);
-}
-}
-}
-DrawInfoPanel(false);
-if(!(IsTesting())&&MarketInfo(g_tradeSymbol,MODE_TRADEALLOWED)==0.0)
-{
-if(!(g_pendBuyExists))
-{
-Print("Marketclosed...waitingto continue");
-}
-g_pendBuyExists=true;
-return(0);
-}
-if(g_spreadFilterBars> 0&&((Hour()==0&&Minute()<g_spreadFilterBars)||(Hour()==23&&g_spreadFilterBars> 60-g_spreadFilterBars)))
-{
-if(!(g_pendBuyExists))
-{
-Print("DAYSWITCH -> Market might be closed... waiting"+string(g_spreadFilterBars)+" minutes before setting order..");
-}
-g_pendBuyExists=true;
-return(0);
-}
-g_pendBuyExists=false;
-if(g_useTradingHours)
-{
-if(CheckTradingHours()&&g_isInitialized)
-{
-if(g_useGMTOffset)
-{
-PrintOrderInfo();
-}
-g_isInitialized=false;
-}
-if(!(CheckTradingHours())&&!(g_isInitialized))
-{
-Print("ENTERING NON-TRADING HOURS! Closing orders...");
-if(g_useGMTOffset)
-{
-for(tmp_i1=0;tmp_i1<g_panelY;tmp_i1=tmp_i1+1)
-{
-for(tmp_i2=0;tmp_i2<2;tmp_i2=tmp_i2+1)
-{
-g_tradeHistory[tmp_i1][tmp_i2]=0.0;
-}
-}
-tmp_i3=0;
-for(tmp_i4=OrdersTotal();tmp_i4>=0;tmp_i4=tmp_i4-1)
-{
-if(OrderSelect(tmp_i4,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol) continue;
-
-if((OrderType()!=4&&OrderType()!=5)) continue;
-Print("Storing pending order nr "+string(OrderTicket()));
-g_tradeHistory[tmp_i3][1]=OrderType();
-g_tradeHistory[tmp_i3][0]=OrderOpenPrice();
-g_tradeHistory[tmp_i3][2]=OrderLots();
-tmp_i3=tmp_i3+1;
-
-}
-}
-tmp_i5=1;
-for(tmp_i6=OrdersTotal();tmp_i6>=0;tmp_i6=tmp_i6-1)
-{
-if(OrderSelect(tmp_i6,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=4) continue;
-_orderOK = OrderDelete(OrderTicket(),clrNONE);
-
-}
-if(tmp_i5==2)
-{
-for(tmp_i7=OrdersTotal();tmp_i7>=0;tmp_i7=tmp_i7-1)
-{
-if(OrderSelect(tmp_i7,0,0)!=true||OrderMagicNumber()!=g_magicStrat2||OrderSymbol()!=g_tradeSymbol||OrderType()!=4) continue;
-_orderOK = OrderDelete(OrderTicket(),clrNONE);
-
-}
-}
-tmp_i8=1;
-for(tmp_i9=OrdersTotal();tmp_i9>=0;tmp_i9=tmp_i9-1)
-{
-if(OrderSelect(tmp_i9,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=5) continue;
-_orderOK = OrderDelete(OrderTicket(),clrNONE);
-
-}
-if(tmp_i8==2)
-{
-for(tmp_i10=OrdersTotal();tmp_i10>=0;tmp_i10=tmp_i10-1)
-{
-if(OrderSelect(tmp_i10,0,0)!=true||OrderMagicNumber()!=g_magicStrat2||OrderSymbol()!=g_tradeSymbol||OrderType()!=5) continue;
-_orderOK = OrderDelete(OrderTicket(),clrNONE);
-
-}
-}
-tmp_i11=2;
-if(1==0)//false
-{
-do
-{
-if(OrderSelect(1,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=4) continue;
-_orderOK = OrderDelete(OrderTicket(),clrNONE);
-
-}
-while(-1>=0);
-
-}
-if(tmp_i11==2)
-{
-for(tmp_i12=OrdersTotal();tmp_i12>=0;tmp_i12=tmp_i12-1)
-{
-if(OrderSelect(tmp_i12,0,0)!=true||OrderMagicNumber()!=g_magicStrat2||OrderSymbol()!=g_tradeSymbol||OrderType()!=4) continue;
-_orderOK = OrderDelete(OrderTicket(),clrNONE);
-
-}
-}
-tmp_i13=2;
-if(1==0)//false
-{
-do
-{
-if(OrderSelect(1,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=5) continue;
-_orderOK = OrderDelete(OrderTicket(),clrNONE);
-
-}
-while(-1>=0);
-
-}
-if(tmp_i13==2)
-{
-for(tmp_i14=OrdersTotal();tmp_i14>=0;tmp_i14=tmp_i14-1)
-{
-if(OrderSelect(tmp_i14,0,0)!=true||OrderMagicNumber()!=g_magicStrat2||OrderSymbol()!=g_tradeSymbol||OrderType()!=5) continue;
-_orderOK = OrderDelete(OrderTicket(),clrNONE);
-
-}
-}
-g_isInitialized=true;
-return(0);
-}
-}
-if(EnableNFP_Filter)
-{
-if(Year()<=2026)
-{
-lv_dt3=0;
-for(lv_i4=0;lv_i4<300;lv_i4++)
-{
-tmp_i15=TimeYear(g_nfpDates[lv_i4]);
-if(tmp_i15!=Year()) continue;
-tmp_i16=TimeMonth(g_nfpDates[lv_i4]);
-if(tmp_i16!=Month()) continue;
-lv_dt3=g_nfpDates[lv_i4];
-break;
-
-}
-lv_i5=60;
-if(IsAmericanDST())
-{
-lv_i5=0;
-}
-if(g_autoResetTime>=lv_dt3-NFP_MinutesBefore*60+lv_i5*60&&g_autoResetTime<=lv_dt3+NFP_MinutesAfter*60+lv_i5*60)
-{
-if(NFP_ClosePendingOrders)
-{
-tmp_i17=1;
-for(tmp_i18=OrdersTotal();tmp_i18>=0;tmp_i18=tmp_i18-1)
-{
-if(OrderSelect(tmp_i18,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=4) continue;
-_orderOK = OrderDelete(OrderTicket(),clrNONE);
-
-}
-if(tmp_i17==2)
-{
-for(tmp_i19=OrdersTotal();tmp_i19>=0;tmp_i19=tmp_i19-1)
-{
-if(OrderSelect(tmp_i19,0,0)!=true||OrderMagicNumber()!=g_magicStrat2||OrderSymbol()!=g_tradeSymbol||OrderType()!=4) continue;
-_orderOK = OrderDelete(OrderTicket(),clrNONE);
-
-}
-}
-tmp_i20=1;
-for(tmp_i21=OrdersTotal();tmp_i21>=0;tmp_i21=tmp_i21-1)
-{
-if(OrderSelect(tmp_i21,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=5) continue;
-_orderOK = OrderDelete(OrderTicket(),clrNONE);
-
-}
-if(tmp_i20==2)
-{
-for(tmp_i22=OrdersTotal();tmp_i22>=0;tmp_i22=tmp_i22-1)
-{
-if(OrderSelect(tmp_i22,0,0)!=true||OrderMagicNumber()!=g_magicStrat2||OrderSymbol()!=g_tradeSymbol||OrderType()!=5) continue;
-_orderOK = OrderDelete(OrderTicket(),clrNONE);
-
-}
-}
-tmp_i23=2;
-if(1==0)//false
-{
-do
-{
-if(OrderSelect(1,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=4) continue;
-_orderOK = OrderDelete(OrderTicket(),clrNONE);
-
-}
-while(-1>=0);
-
-}
-if(tmp_i23==2)
-{
-for(tmp_i24=OrdersTotal();tmp_i24>=0;tmp_i24=tmp_i24-1)
-{
-if(OrderSelect(tmp_i24,0,0)!=true||OrderMagicNumber()!=g_magicStrat2||OrderSymbol()!=g_tradeSymbol||OrderType()!=4) continue;
-_orderOK = OrderDelete(OrderTicket(),clrNONE);
-
-}
-}
-tmp_i25=2;
-if(1==0)//false
-{
-do
-{
-if(OrderSelect(1,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=5) continue;
-_orderOK = OrderDelete(OrderTicket(),clrNONE);
-
-}
-while(-1>=0);
-
-}
-if(tmp_i25==2)
-{
-for(tmp_i26=OrdersTotal();tmp_i26>=0;tmp_i26=tmp_i26-1)
-{
-if(OrderSelect(tmp_i26,0,0)!=true||OrderMagicNumber()!=g_magicStrat2||OrderSymbol()!=g_tradeSymbol||OrderType()!=5) continue;
-_orderOK = OrderDelete(OrderTicket(),clrNONE);
-
-}
-}
-}
-if(NFP_CloseOpenTrades)
-{
-for(tmp_i27=OrdersTotal();tmp_i27>=0;tmp_i27=tmp_i27-1)
-{
-if(OrderSelect(tmp_i27,0,0)!=true||OrderSymbol()!=g_tradeSymbol) continue;
-tmp_i28=OrderMagicNumber();
-tmp_i29=ST1_MagicNumber+1;
-if(tmp_i28!=tmp_i29)
-{
-tmp_i29=OrderMagicNumber();
-tmp_i30=ST1_MagicNumber+2;
-if(tmp_i29!=tmp_i30)
-{
-tmp_i30=OrderMagicNumber();
-tmp_i31=ST1_MagicNumber+3;
-if(tmp_i30!=tmp_i31)
-{
-tmp_i31=OrderMagicNumber();
-tmp_i32=ST1_MagicNumber+4;
-if(tmp_i31!=tmp_i32)
-{
-tmp_i32=OrderMagicNumber();
-tmp_i33=ST1_MagicNumber+5;
-if(tmp_i32!=tmp_i33)
-{
-tmp_i33=OrderMagicNumber();
-tmp_i34=ST1_MagicNumber+6;
-if(tmp_i33!=tmp_i34)
-{
-tmp_i34=OrderMagicNumber();
-tmp_i35=ST1_MagicNumber+7;
-if(tmp_i34!=tmp_i35)
-{
-tmp_i35=OrderMagicNumber();
-tmp_i36=ST1_MagicNumber+8;
-if(tmp_i35!=tmp_i36)
-{
-tmp_i36=OrderMagicNumber();
-tmp_i37=ST1_MagicNumber+9;
-if(tmp_i36!=tmp_i37)
-{
-tmp_i37=OrderMagicNumber();
-tmp_i38=ST1_MagicNumber+10;
-if(tmp_i37!=tmp_i38)
-{
-tmp_i38=OrderMagicNumber();
-tmp_i39=ST1_MagicNumber+11;
-if(tmp_i38!=tmp_i39)
-{
-tmp_i39=OrderMagicNumber();
-tmp_i40=ST1_MagicNumber+12;
-if(tmp_i39!=tmp_i40)
-{
-tmp_i40=OrderMagicNumber();
-tmp_i41=ST1_MagicNumber+13;
-if(tmp_i40!=tmp_i41)
-{
-tmp_i41=OrderMagicNumber();
-tmp_i42=ST1_MagicNumber+14;
-if(tmp_i41!=tmp_i42)
-{
-tmp_i42=OrderMagicNumber();
-tmp_i43=ST1_MagicNumber+15;
-if(tmp_i42!=tmp_i43) continue;
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-if(OrderType()==0)
-{
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_BID),99999,Red);
-}
-if(OrderType()!=1) continue;
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_ASK),99999,Red);
-
-}
-}
-if(!(g_dailyDDHit))
-{
-Print("NFP!! deleting trades!!");
-}
-g_dailyDDHit=true;
-}
-else
-{
-g_dailyDDHit=false;
-}
-}
-else
-{
-if(Day()<=7&&DayOfWeek()==5)
-{
-lv_s6=IntegerToString(Year(),0,32)+IntegerToString(Month(),0,32)+IntegerToString(Day(),0,32)+""+IntegerToString(1230,0,32);
-lv_dt7=StringToTime(lv_s6);
-if(g_autoResetTime>=lv_dt7-NFP_MinutesBefore*60&&g_autoResetTime<=lv_dt7+NFP_MinutesAfter*60)
-{
-if(NFP_ClosePendingOrders)
-{
-tmp_i44=1;
-for(tmp_i45=OrdersTotal();tmp_i45>=0;tmp_i45=tmp_i45-1)
-{
-if(OrderSelect(tmp_i45,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=4) continue;
-_orderOK = OrderDelete(OrderTicket(),clrNONE);
-
-}
-if(tmp_i44==2)
-{
-for(tmp_i46=OrdersTotal();tmp_i46>=0;tmp_i46=tmp_i46-1)
-{
-if(OrderSelect(tmp_i46,0,0)!=true||OrderMagicNumber()!=g_magicStrat2||OrderSymbol()!=g_tradeSymbol||OrderType()!=4) continue;
-_orderOK = OrderDelete(OrderTicket(),clrNONE);
-
-}
-}
-tmp_i47=1;
-for(tmp_i48=OrdersTotal();tmp_i48>=0;tmp_i48=tmp_i48-1)
-{
-if(OrderSelect(tmp_i48,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=5) continue;
-_orderOK = OrderDelete(OrderTicket(),clrNONE);
-
-}
-if(tmp_i47==2)
-{
-for(tmp_i49=OrdersTotal();tmp_i49>=0;tmp_i49=tmp_i49-1)
-{
-if(OrderSelect(tmp_i49,0,0)!=true||OrderMagicNumber()!=g_magicStrat2||OrderSymbol()!=g_tradeSymbol||OrderType()!=5) continue;
-_orderOK = OrderDelete(OrderTicket(),clrNONE);
-
-}
-}
-tmp_i50=2;
-if(1==0)//false
-{
-do
-{
-if(OrderSelect(1,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=4) continue;
-_orderOK = OrderDelete(OrderTicket(),clrNONE);
-
-}
-while(-1>=0);
-
-}
-if(tmp_i50==2)
-{
-for(tmp_i51=OrdersTotal();tmp_i51>=0;tmp_i51=tmp_i51-1)
-{
-if(OrderSelect(tmp_i51,0,0)!=true||OrderMagicNumber()!=g_magicStrat2||OrderSymbol()!=g_tradeSymbol||OrderType()!=4) continue;
-_orderOK = OrderDelete(OrderTicket(),clrNONE);
-
-}
-}
-tmp_i52=2;
-if(1==0)//false
-{
-do
-{
-if(OrderSelect(1,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=5) continue;
-_orderOK = OrderDelete(OrderTicket(),clrNONE);
-
-}
-while(-1>=0);
-
-}
-if(tmp_i52==2)
-{
-for(tmp_i53=OrdersTotal();tmp_i53>=0;tmp_i53=tmp_i53-1)
-{
-if(OrderSelect(tmp_i53,0,0)!=true||OrderMagicNumber()!=g_magicStrat2||OrderSymbol()!=g_tradeSymbol||OrderType()!=5) continue;
-_orderOK = OrderDelete(OrderTicket(),clrNONE);
-
-}
-}
-}
-if(NFP_CloseOpenTrades)
-{
-for(tmp_i54=OrdersTotal();tmp_i54>=0;tmp_i54=tmp_i54-1)
-{
-if(OrderSelect(tmp_i54,0,0)!=true||OrderSymbol()!=g_tradeSymbol) continue;
-tmp_i55=OrderMagicNumber();
-tmp_i56=ST1_MagicNumber+1;
-if(tmp_i55!=tmp_i56)
-{
-tmp_i56=OrderMagicNumber();
-tmp_i57=ST1_MagicNumber+2;
-if(tmp_i56!=tmp_i57)
-{
-tmp_i57=OrderMagicNumber();
-tmp_i58=ST1_MagicNumber+3;
-if(tmp_i57!=tmp_i58)
-{
-tmp_i58=OrderMagicNumber();
-tmp_i59=ST1_MagicNumber+4;
-if(tmp_i58!=tmp_i59)
-{
-tmp_i59=OrderMagicNumber();
-tmp_i60=ST1_MagicNumber+5;
-if(tmp_i59!=tmp_i60)
-{
-tmp_i60=OrderMagicNumber();
-tmp_i61=ST1_MagicNumber+6;
-if(tmp_i60!=tmp_i61)
-{
-tmp_i61=OrderMagicNumber();
-tmp_i62=ST1_MagicNumber+7;
-if(tmp_i61!=tmp_i62)
-{
-tmp_i62=OrderMagicNumber();
-tmp_i63=ST1_MagicNumber+8;
-if(tmp_i62!=tmp_i63)
-{
-tmp_i63=OrderMagicNumber();
-tmp_i64=ST1_MagicNumber+9;
-if(tmp_i63!=tmp_i64)
-{
-tmp_i64=OrderMagicNumber();
-tmp_i65=ST1_MagicNumber+10;
-if(tmp_i64!=tmp_i65)
-{
-tmp_i65=OrderMagicNumber();
-tmp_i66=ST1_MagicNumber+11;
-if(tmp_i65!=tmp_i66)
-{
-tmp_i66=OrderMagicNumber();
-tmp_i67=ST1_MagicNumber+12;
-if(tmp_i66!=tmp_i67)
-{
-tmp_i67=OrderMagicNumber();
-tmp_i68=ST1_MagicNumber+13;
-if(tmp_i67!=tmp_i68)
-{
-tmp_i68=OrderMagicNumber();
-tmp_i69=ST1_MagicNumber+14;
-if(tmp_i68!=tmp_i69)
-{
-tmp_i69=OrderMagicNumber();
-tmp_i70=ST1_MagicNumber+15;
-if(tmp_i69!=tmp_i70) continue;
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-if(OrderType()==0)
-{
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_BID),99999,Red);
-}
-if(OrderType()!=1) continue;
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_ASK),99999,Red);
-
-}
-}
-if(!(g_dailyDDHit))
-{
-Print("NFP!! deleting trades!!");
-}
-g_dailyDDHit=true;
-}
-else
-{
-g_dailyDDHit=false;
-}
-}
-}
-}
-if(g_dailyDDHit)
-{
-return(0);
-}
-if(g_useMonFilter)
-{
-if(DayOfWeek()==5&&Hour()>=FridayStopHour&&!(g_symbolReady))
-{
-for(tmp_i71=OrdersTotal();tmp_i71>=0;tmp_i71=tmp_i71-1)
-{
-if(OrderSelect(tmp_i71,0,0)!=true||OrderSymbol()!=g_tradeSymbol) continue;
-tmp_i72=OrderMagicNumber();
-tmp_i73=ST1_MagicNumber+1;
-if(tmp_i72!=tmp_i73)
-{
-tmp_i73=OrderMagicNumber();
-tmp_i74=ST1_MagicNumber+2;
-if(tmp_i73!=tmp_i74)
-{
-tmp_i74=OrderMagicNumber();
-tmp_i75=ST1_MagicNumber+3;
-if(tmp_i74!=tmp_i75)
-{
-tmp_i75=OrderMagicNumber();
-tmp_i76=ST1_MagicNumber+4;
-if(tmp_i75!=tmp_i76)
-{
-tmp_i76=OrderMagicNumber();
-tmp_i77=ST1_MagicNumber+5;
-if(tmp_i76!=tmp_i77)
-{
-tmp_i77=OrderMagicNumber();
-tmp_i78=ST1_MagicNumber+6;
-if(tmp_i77!=tmp_i78)
-{
-tmp_i78=OrderMagicNumber();
-tmp_i79=ST1_MagicNumber+7;
-if(tmp_i78!=tmp_i79)
-{
-tmp_i79=OrderMagicNumber();
-tmp_i80=ST1_MagicNumber+8;
-if(tmp_i79!=tmp_i80)
-{
-tmp_i80=OrderMagicNumber();
-tmp_i81=ST1_MagicNumber+9;
-if(tmp_i80!=tmp_i81)
-{
-tmp_i81=OrderMagicNumber();
-tmp_i82=ST1_MagicNumber+10;
-if(tmp_i81!=tmp_i82)
-{
-tmp_i82=OrderMagicNumber();
-tmp_i83=ST1_MagicNumber+11;
-if(tmp_i82!=tmp_i83)
-{
-tmp_i83=OrderMagicNumber();
-tmp_i84=ST1_MagicNumber+12;
-if(tmp_i83!=tmp_i84)
-{
-tmp_i84=OrderMagicNumber();
-tmp_i85=ST1_MagicNumber+13;
-if(tmp_i84!=tmp_i85)
-{
-tmp_i85=OrderMagicNumber();
-tmp_i86=ST1_MagicNumber+14;
-if(tmp_i85!=tmp_i86)
-{
-tmp_i86=OrderMagicNumber();
-tmp_i87=ST1_MagicNumber+15;
-if(tmp_i86!=tmp_i87) continue;
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-if(OrderType()==0)
-{
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_BID),(int)g_maxVolatility,Red);
-}
-if(OrderType()==1)
-{
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_ASK),(int)g_maxVolatility,Red);
-}
-if((OrderType()!=4&&OrderType()!=5)) continue;
-_orderOK = OrderDelete(OrderTicket(),Red);
-
-}
-Print("Weekend starting! closing trades..");
-g_symbolReady=true;
-return(0);
-}
-if(DayOfWeek()!=5&&g_symbolReady==true)
-{
-g_symbolReady=false;
-if(g_useTueFilter)
-{
-PrintOrderInfo();
-return(0);
-}
-}
-}
-g_spread=MarketInfo(g_tradeSymbol,MODE_ASK)-MarketInfo(g_tradeSymbol,MODE_BID);
-if(g_strat16_enabled)
-{
-if(g_spread>MaxSpread*g_pointSize)
-{
-CheckMaxOrders();
-return(0);
-}
-if(g_spread<=g_minVolatility*g_pointSize&&(!(g_useMonFilter)||DayOfWeek()!=5||Hour()< FridayStopHour)&&(!(g_useTradingHours)||CheckTradingHours()))
-{
-PrintOrderInfo();
-}
-}
-if(g_entryMode==1)
-{
-tmp_i88=0;
-for(tmp_i89=OrdersTotal();tmp_i89>=0;tmp_i89=tmp_i89-1)
-{
-if(OrderSelect(tmp_i89,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=4) continue;
-tmp_i88=tmp_i88+1;
-
-}
-if(tmp_i88> g_maxConcurrent)
-{
-tmp_d90=0.0;
-tmp_l91=0;
-for(tmp_i92=OrdersTotal();tmp_i92>=0;tmp_i92=tmp_i92-1)
-{
-if(OrderSelect(tmp_i92,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=4||!(OrderOpenPrice()>tmp_d90)) continue;
-tmp_l91=OrderTicket();
-tmp_d90=OrderOpenPrice();
-
-}
-if(tmp_l91!=0)
-{
-_orderOK = OrderDelete((int)tmp_l91,Green);
-tmp_l93=tmp_l91;
-for(tmp_i94=0;tmp_i94<100;tmp_i94=tmp_i94+1)
-{
-if(!(g_tradeStats[tmp_i94][0]==tmp_l93)) continue;
-g_tradeStats[tmp_i94][0]=0.0;
-g_tradeStats[tmp_i94][1]=0.0;
-break;
-
-}
-Print("Max number of pending buy orders reached... deleting highest buy stop order!");
-}
-}
-tmp_i95=0;
-for(tmp_i96=OrdersTotal();tmp_i96>=0;tmp_i96=tmp_i96-1)
-{
-if(OrderSelect(tmp_i96,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=5) continue;
-tmp_i95=tmp_i95+1;
-
-}
-if(tmp_i95> g_maxConcurrent)
-{
-tmp_d97=9999.0;
-tmp_l98=0;
-for(tmp_i99=OrdersTotal();tmp_i99>=0;tmp_i99=tmp_i99-1)
-{
-if(OrderSelect(tmp_i99,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=5||!(OrderOpenPrice()<tmp_d97)) continue;
-tmp_l98=OrderTicket();
-tmp_d97=OrderOpenPrice();
-
-}
-if(tmp_l98!=0)
-{
-_orderOK = OrderDelete((int)tmp_l98,Green);
-tmp_l100=tmp_l98;
-for(tmp_i101=0;tmp_i101<100;tmp_i101=tmp_i101+1)
-{
-if(!(g_tradeStats[tmp_i101][0]==tmp_l100)) continue;
-g_tradeStats[tmp_i101][0]=0.0;
-g_tradeStats[tmp_i101][1]=0.0;
-break;
-
-}
-Print("Max number of pending sell orders reached... deleting lowest sell stop order!");
-}
-}
-}
-if(!(g_symbolReady)&&g_entryMode==1&&!(g_isInitialized))
-{
-if((g_pairSellTickets[g_pairIdx]!=iBars(g_tradeSymbol,g_entryPeriod)||g_entryPeriod==0))
-{
-g_pairSellTickets[g_pairIdx]=iBars(g_tradeSymbol,g_entryPeriod);
-if(g_hlTrailShift> 0&&g_hlTrailMode>=0)
-{
-g_pairOpenProfit[g_pairIdx]=g_hlTrailMult*g_pointSize+(GetHighestHigh(g_hlTrailTF,g_hlTrailShift,g_hlTrailMode)+g_spread);
-g_pairClosedProfit[g_pairIdx]=GetLowestLow(g_hlTrailTF,g_hlTrailShift,g_hlTrailMode)-g_hlTrailMult*g_pointSize;
-}
-if(g_backtestYear> 0)
-{
-lv_i8=MathRand()*g_backtestYear/32768+1;
-g_tradeCount=lv_i8;
-Print("Slippage: "+(string(lv_i8)));
-}
-if(g_newsFilterMode!=1)
-{
-tmp_i102=0;
-for(tmp_i103=OrdersTotal();tmp_i103>=0;tmp_i103=tmp_i103-1)
-{
-if(OrderSelect(tmp_i103,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=0) continue;
-tmp_i102=tmp_i102+1;
-
-}
-if(tmp_i102==0)
-{
-tmp_i104=0;
-for(tmp_i105=OrdersTotal();tmp_i105>=0;tmp_i105=tmp_i105-1)
-{
-if(OrderSelect(tmp_i105,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=1) continue;
-tmp_i104=tmp_i104+1;
-
-}
-if(tmp_i104==0)
-{
-tmp_b106=false;
-for(tmp_i107=0;tmp_i107<g_panelX;tmp_i107=tmp_i107+1)
-{
-if(!(g_perfMatrix[tmp_i107][0]>0.0)) continue;
-tmp_b106=false;
-for(tmp_i108=OrdersTotal();tmp_i108>=0;tmp_i108=tmp_i108-1)
-{
-if(OrderSelect(tmp_i108,0,0)!=true) continue;
-
-if((OrderType()!=0&&OrderType()!=1)||!(OrderTicket()==g_perfMatrix[tmp_i107][0])) continue;
-tmp_b106=true;
-
-}
-if(tmp_b106) continue;
-g_perfMatrix[tmp_i107][0]=0.0;
-g_perfMatrix[tmp_i107][1]=0.0;
-
-}
-}
-}
-}
-for(lv_i9=0;lv_i9<g_maxConcurrent;lv_i9++)
-{
-DeletePendingOrders();
-}
-}
-DrawPanelDetails();
-if(g_errorCount!=Hour())
-{
-g_errorCount=Hour();
-tmp_b109=false;
-for(tmp_i110=0;tmp_i110<100;tmp_i110=tmp_i110+1)
-{
-tmp_l111 = (long)(g_tradeStats[tmp_i110][0]);
-tmp_b109=false;
-for(tmp_i112=OrdersTotal();tmp_i112>=0;tmp_i112=tmp_i112-1)
-{
-if(!(OrderSelect(tmp_i112,0,0))) continue;
-tmp_l113=OrderTicket();
-if(tmp_l111!=tmp_l113) continue;
-tmp_b109=true;
-
-}
-if(tmp_b109) continue;
-g_tradeStats[tmp_i110][0]=0.0;
-g_tradeStats[tmp_i110][1]=0.0;
-
-}
-}
-}
-if(g_closeDuringNews)
-{
-tmp_s114="Current spread: "+string(NormalizeDouble(g_spread/g_pointSize,1))+"\nPending Buy Order: ";
-tmp_i115=0;
-for(tmp_i116=OrdersTotal();tmp_i116>=0;tmp_i116=tmp_i116-1)
-{
-if(OrderSelect(tmp_i116,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=4) continue;
-tmp_i115=tmp_i115+1;
-
-}
-tmp_s114=tmp_s114+string(tmp_i115);
-tmp_s114=tmp_s114+"\nPending Sell Orders: ";
-tmp_i117=0;
-for(tmp_i118=OrdersTotal();tmp_i118>=0;tmp_i118=tmp_i118-1)
-{
-if(OrderSelect(tmp_i118,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=5) continue;
-tmp_i117=tmp_i117+1;
-
-}
-tmp_s114=tmp_s114+string(tmp_i117);
-Comment(tmp_s114);
-}
-return(0);
-}
-// ManageOrders<<==-------- --------
-void PrintOrderInfo()
-{
-int lv_i1;
-//----------
-double tmp_d1;
-long tmp_l2;
-int tmp_i3;
-double tmp_d4;
-long tmp_l5;
-int tmp_i6;
-double tmp_d7;
-long tmp_l8;
-int tmp_i9;
-double tmp_d10;
-long tmp_l11;
-int tmp_i12;
-int tmp_i13;
-
-for(lv_i1=0;lv_i1<g_panelY;lv_i1++)
-{
-if(!(g_tradeHistory[lv_i1][0]>0.0)) continue;
-
-if(g_tradeHistory[lv_i1][1]==4.0&&MarketInfo(g_tradeSymbol,MODE_ASK)<g_tradeHistory[lv_i1][0]-g_minStopLevel)
-{
-Print("Restoring pending buy-order ");
-g_lastError=OrderSend(g_tradeSymbol,OP_BUYSTOP,g_tradeHistory[lv_i1][2],g_tradeHistory[lv_i1][0],int(g_maxVolatility*g_pointSize),g_tradeHistory[lv_i1][0]-(g_minProfitClose+g_newsImpactLevel)*g_pointSize,g_maxLossClose*g_pointSize+g_tradeHistory[lv_i1][0],g_currentSymbol,g_magicMain,g_lastTradeTime+172800/*=2 ngay*/,Green);
-g_tp_hitBuy=false;
-tmp_d1=g_tradeHistory[lv_i1][0];
-tmp_l2=g_lastError;
-for(tmp_i3=0;tmp_i3<100;tmp_i3=tmp_i3+1)
-{
-if(!(g_tradeStats[tmp_i3][0]==0.0)) continue;
-g_tradeStats[tmp_i3][0] = (double)(tmp_l2);
-g_tradeStats[tmp_i3][1]=tmp_d1;
-break;
-
-}
-if(g_lastError<=0)
-{
-if(GetLastError()==132)
-{
-ResetLastError();
-if(1==0)//false
-{
-do
-{
-Sleep((uint)2500);
-g_lastError=OrderSend(g_tradeSymbol,OP_BUYSTOP,g_tradeHistory[lv_i1][2],g_tradeHistory[lv_i1][0],int(g_maxVolatility*g_pointSize),g_tradeHistory[lv_i1][0]-(g_minProfitClose+g_newsImpactLevel)*g_pointSize,g_maxLossClose*g_pointSize+g_tradeHistory[lv_i1][0],g_currentSymbol,g_magicMain,g_lastTradeTime+172800/*=2 ngay*/,Green);
-g_tp_hitBuy=false;
-tmp_d4=g_tradeHistory[lv_i1][0];
-tmp_l5=g_lastError;
-for(tmp_i6=0;tmp_i6<100;tmp_i6=tmp_i6+1)
-{
-if(!(g_tradeStats[tmp_i6][0]==0.0)) continue;
-g_tradeStats[tmp_i6][0] = (double)(tmp_l5);
-g_tradeStats[tmp_i6][1]=tmp_d4;
-break;
-
-}
-}
-while(GetLastError()==132);
-
-}
-}
-Print("error:\'"+GetErrorDescription(GetLastError())+"\'whensettingentryorder");
-}
-}
-if(!(g_tradeHistory[lv_i1][1]==5.0)||!(MarketInfo(g_tradeSymbol,MODE_BID)>g_tradeHistory[lv_i1][0]+g_minStopLevel)) continue;
-Print("Restoring pending sell-order ");
-g_lastError=OrderSend(g_tradeSymbol,OP_SELLSTOP,g_tradeHistory[lv_i1][2],g_tradeHistory[lv_i1][0],int(g_maxVolatility*g_pointSize),(g_minProfitClose+g_newsImpactLevel)*g_pointSize+g_tradeHistory[lv_i1][0],g_tradeHistory[lv_i1][0]-g_maxLossClose*g_pointSize,g_currentSymbol,g_magicMain,g_lastTradeTime+172800/*=2 ngay*/,Green);
-g_tp_hitSell=false;
-tmp_d7=g_tradeHistory[lv_i1][0];
-tmp_l8=g_lastError;
-for(tmp_i9=0;tmp_i9<100;tmp_i9=tmp_i9+1)
-{
-if(!(g_tradeStats[tmp_i9][0]==0.0)) continue;
-g_tradeStats[tmp_i9][0] = (double)(tmp_l8);
-g_tradeStats[tmp_i9][1]=tmp_d7;
-break;
-
-}
-if(g_lastError>0) continue;
-
-if(GetLastError()==132)
-{
-ResetLastError();
-if(1==0)//false
-{
-do
-{
-Sleep((uint)2500);
-g_lastError=OrderSend(g_tradeSymbol,OP_SELLSTOP,g_tradeHistory[lv_i1][2],g_tradeHistory[lv_i1][0],int(g_maxVolatility*g_pointSize),(g_minProfitClose+g_newsImpactLevel)*g_pointSize+g_tradeHistory[lv_i1][0],g_tradeHistory[lv_i1][0]-g_maxLossClose*g_pointSize,g_currentSymbol,g_magicMain,g_lastTradeTime+172800/*=2 ngay*/,Green);
-g_tp_hitSell=false;
-tmp_d10=g_tradeHistory[lv_i1][0];
-tmp_l11=g_lastError;
-for(tmp_i12=0;tmp_i12<100;tmp_i12=tmp_i12+1)
-{
-if(!(g_tradeStats[tmp_i12][0]==0.0)) continue;
-g_tradeStats[tmp_i12][0] = (double)(tmp_l11);
-g_tradeStats[tmp_i12][1]=tmp_d10;
-break;
-
-}
-}
-while(GetLastError()==132);
-
-}
-}
-Print("error:\'"+GetErrorDescription(GetLastError())+"\'whensettingentryorder");
-
-}
-for(tmp_i13=0;tmp_i13<g_panelY;tmp_i13=tmp_i13+1)
-{
-g_tradeHistory[tmp_i13][0]=0.0;
-g_tradeHistory[tmp_i13][1]=0.0;
-g_tradeHistory[tmp_i13][2]=0.0;
-}
-}
-// PrintOrderInfo<<==-------- --------
-bool CheckMaxOrders()
-{
-int lv_i2;
-int lv_i3;
-int lv_i4;
-//----------
-bool _orderOK;
-long tmp_l1;
-int tmp_i2;
-long tmp_l3;
-int tmp_i4;
-double tmp_d5;
-double tmp_d6;
-long tmp_l7;
-int tmp_i8;
-long tmp_l9;
-int tmp_i10;
-
-for(lv_i2=OrdersTotal();lv_i2>=0;lv_i2--)
-{
-if(OrderSelect(lv_i2,0,0)!=true) continue;
-
-if((OrderMagicNumber()!=g_magicMain&&OrderMagicNumber()!=g_magicStrat2)||OrderSymbol()!=g_tradeSymbol) continue;
-
-if(OrderType()==4&&OrderOpenPrice()<g_fakeoutStrength*g_pointSize+MarketInfo(g_tradeSymbol,MODE_ASK)&&MarketInfo(g_tradeSymbol,MODE_ASK)<OrderOpenPrice()-g_stopLevelPts)
-{
-if(g_minVolatility>0.0)
-{
-Print("Spread too high.. ("+string(g_spread)+") storing and deleting order"+string(OrderTicket()));
-for(lv_i3=0;lv_i3<g_panelY;lv_i3++)
-{
-if(g_tradeHistory[lv_i3][0]==0.0)
-{
-Print("Storing pending order nr "+string(OrderTicket()));
-g_tradeHistory[lv_i3][1]=OrderType();
-g_tradeHistory[lv_i3][0]=OrderOpenPrice();
-g_tradeHistory[lv_i3][2]=OrderLots();
-break;
-}
-}
-tmp_l1=OrderTicket();
-for(tmp_i2=0;tmp_i2<100;tmp_i2=tmp_i2+1)
-{
-if(!(g_tradeStats[tmp_i2][0]==tmp_l1)) continue;
-g_tradeStats[tmp_i2][0]=0.0;
-g_tradeStats[tmp_i2][1]=0.0;
-break;
-
-}
-_orderOK = OrderDelete(OrderTicket(),Green);
-}
-else
-{
-Print("Spread too high.. ("+string(g_spread)+") deleting order"+string(OrderTicket()));
-tmp_l3=OrderTicket();
-for(tmp_i4=0;tmp_i4<100;tmp_i4=tmp_i4+1)
-{
-if(!(g_tradeStats[tmp_i4][0]==tmp_l3)) continue;
-g_tradeStats[tmp_i4][0]=0.0;
-g_tradeStats[tmp_i4][1]=0.0;
-break;
-
-}
-_orderOK = OrderDelete(OrderTicket(),Green);
-}
-}
-if(OrderType()!=5) continue;
-tmp_d5=OrderOpenPrice();
-if(!(tmp_d5>MarketInfo(g_tradeSymbol,MODE_BID)-g_fakeoutStrength*g_pointSize)) continue;
-tmp_d6=MarketInfo(g_tradeSymbol,MODE_BID);
-if(!(tmp_d6>OrderOpenPrice()+g_stopLevelPts)) continue;
-
-if(g_minVolatility>0.0)
-{
-Print("Spread too high.. ("+string(g_spread)+") storing and deleting order"+string(OrderTicket()));
-for(lv_i4=0;lv_i4<g_panelY;lv_i4++)
-{
-if(g_tradeHistory[lv_i4][0]==0.0)
-{
-Print("Storing pending order nr "+string(OrderTicket()));
-g_tradeHistory[lv_i4][1]=OrderType();
-g_tradeHistory[lv_i4][0]=OrderOpenPrice();
-g_tradeHistory[lv_i4][2]=OrderLots();
-break;
-}
-}
-tmp_l7=OrderTicket();
-for(tmp_i8=0;tmp_i8<100;tmp_i8=tmp_i8+1)
-{
-if(!(g_tradeStats[tmp_i8][0]==tmp_l7)) continue;
-g_tradeStats[tmp_i8][0]=0.0;
-g_tradeStats[tmp_i8][1]=0.0;
-break;
-
-}
-_orderOK = OrderDelete(OrderTicket(),Green);
-continue;
-}
-Print("Spread too high.. ("+string(g_spread)+") deleting order"+string(OrderTicket()));
-tmp_l9=OrderTicket();
-for(tmp_i10=0;tmp_i10<100;tmp_i10=tmp_i10+1)
-{
-if(!(g_tradeStats[tmp_i10][0]==tmp_l9)) continue;
-g_tradeStats[tmp_i10][0]=0.0;
-g_tradeStats[tmp_i10][1]=0.0;
-break;
-
-}
-_orderOK = OrderDelete(OrderTicket(),Green);
-
-}
-return(false);
-}
-// CheckMaxOrders<<==-------- --------
-void CalcLotSize(double dParam0,int param1)
-{
-double lv_d1;
-double lv_d2;
-double lv_d3;
-double lv_d4;
-double lv_d5;
-double lv_d6;
-double lv_d7;
-//----------
-
-lv_d1=g_pairStratLots[g_pairIdx];
-lv_d2=g_pairStratLots[g_pairIdx];
-g_balForLots=AccountInfoDouble(ACCOUNT_BALANCE);
-if(UseEquity)
-{
-g_balForLots=AccountInfoDouble(ACCOUNT_EQUITY);
-}
-if(ForceBalanceToUse>0.0)
-{
-g_balForLots=ForceBalanceToUse;
-}
-if(OnlyUp&&g_balSnapshot>g_balForLots)
-{
-g_balForLots=g_balSnapshot;
-}
-if(g_balForLots>g_balSnapshot)
-{
-g_balSnapshot=g_balForLots;
-}
-lv_d3=dParam0;
-if((g_digits==2||g_digits==4))
-{
-lv_d3=dParam0/10.0;
-}
-if(Risk< 999&&Risk> 0)
-{
-lv_d4=Risk;
-lv_d5=lv_d4/1000.0*g_balForLots;
-if(MarketInfo(g_tradeSymbol,MODE_LOTSTEP)==0.1)
-{
-lv_d2=NormalizeDouble(param1*0.01*(lv_d5/(MarketInfo(g_tradeSymbol,MODE_TICKVALUE)*lv_d3)*0.1),1);
-}
-if(MarketInfo(g_tradeSymbol,MODE_LOTSTEP)==0.01)
-{
-lv_d2=NormalizeDouble(param1*0.01*(lv_d5/(MarketInfo(g_tradeSymbol,MODE_TICKVALUE)*lv_d3)*0.1),2);
-}
-}
-if(Risk==999)
-{
-lv_d6=g_zrProfitTarget/100.0*g_balForLots;
-if(MarketInfo(g_tradeSymbol,MODE_LOTSTEP)==0.1)
-{
-lv_d2=NormalizeDouble(param1*0.01*(lv_d6/(MarketInfo(g_tradeSymbol,MODE_TICKVALUE)*lv_d3)*0.1),1);
-}
-if(MarketInfo(g_tradeSymbol,MODE_LOTSTEP)==0.01)
-{
-lv_d2=NormalizeDouble(param1*0.01*(lv_d6/(MarketInfo(g_tradeSymbol,MODE_TICKVALUE)*lv_d3)*0.1),2);
-}
-}
-if(Risk==0)
-{
-if(MarketInfo(g_tradeSymbol,MODE_LOTSTEP)==0.1)
-{
-lv_d2=NormalizeDouble(param1*0.01*StartLots,1);
-}
-if(MarketInfo(g_tradeSymbol,MODE_LOTSTEP)==0.01)
-{
-lv_d2=NormalizeDouble(param1*0.01*StartLots,2);
-}
-}
-if(Risk==9999)
-{
-if(MarketInfo(g_tradeSymbol,MODE_LOTSTEP)==0.1)
-{
-lv_d2=NormalizeDouble(param1*0.01*(g_balForLots/g_zrLotStep*0.01),1);
-}
-if(MarketInfo(g_tradeSymbol,MODE_LOTSTEP)==0.01)
-{
-lv_d2=NormalizeDouble(param1*0.01*(g_balForLots/g_zrLotStep*0.01),2);
-}
-}
-if(Risk==1234)
-{
-if(UseWeightedLots)
-{
-if(g_gmtOffsetFloat==0.0)
-{
-g_gmtOffsetFloat=100000.0;
-}
-g_zrLotFactor=MaxAllowedDD/g_maxEquityDD;
-if(SymbolInfoDouble(g_tradeSymbol,SYMBOL_VOLUME_STEP)==0.1)
-{
-lv_d2=NormalizeDouble(g_zrLotFactor/g_gmtOffsetFloat*g_balForLots/100.0*0.01,1);
-}
-if(SymbolInfoDouble(g_tradeSymbol,SYMBOL_VOLUME_STEP)==0.01)
-{
-lv_d2=NormalizeDouble(g_zrLotFactor/g_gmtOffsetFloat*g_balForLots/100.0*0.01,2);
-}
-}
-else
-{
-if(g_gmtOffsetFloat==0.0)
-{
-g_gmtOffsetFloat=100000.0;
-}
-lv_d7=ConvertToUSD(g_balForLots);
-if(g_minBarsBetween==0)
-{
-g_zrLotStep = (int)(g_panelCol1X/(MaxAllowedDD/100.0));
-}
-if(g_minBarsBetween==1)
-{
-g_zrLotStep = (int)(g_panelCol2X/(MaxAllowedDD/100.0));
-}
-if(g_minBarsBetween==2)
-{
-g_zrLotStep = (int)(g_panelCol3X/(MaxAllowedDD/100.0));
-}
-if(g_minBarsBetween==3)
-{
-g_zrLotStep = (int)(g_autoMaxTrades/(MaxAllowedDD/100.0));
-}
-if(g_minBarsBetween==4)
-{
-g_zrLotStep = (int)(g_autoCount/(MaxAllowedDD/100.0));
-}
-if(SymbolInfoDouble(g_tradeSymbol,SYMBOL_VOLUME_STEP)==0.1)
-{
-lv_d2=NormalizeDouble(param1*0.01*(lv_d7/g_zrLotStep*0.01),1);
-}
-if(SymbolInfoDouble(g_tradeSymbol,SYMBOL_VOLUME_STEP)==0.01)
-{
-lv_d2=NormalizeDouble(param1*0.01*(lv_d7/g_zrLotStep*0.01),2);
-}
-}
-}
-if(Risk==3)
-{
-if(SymbolInfoDouble(g_tradeSymbol,SYMBOL_VOLUME_STEP)==0.1)
-{
-lv_d2=NormalizeDouble(MaxRiskPerStrategy_/g_gmtOffsetFloat*g_balForLots/100.0*0.01,1);
-}
-if(SymbolInfoDouble(g_tradeSymbol,SYMBOL_VOLUME_STEP)==0.01)
-{
-lv_d2=NormalizeDouble(MaxRiskPerStrategy_/g_gmtOffsetFloat*g_balForLots/100.0*0.01,2);
-}
-}
-lv_d2=lv_d2*g_netProfit;
-if(lv_d2<MarketInfo(g_tradeSymbol,MODE_LOTSTEP))
-{
-lv_d2=MarketInfo(g_tradeSymbol,MODE_LOTSTEP);
-}
-if(lv_d2>g_zrMaxLoss)
-{
-lv_d2=g_zrMaxLoss;
-}
-if(lv_d2<MarketInfo(g_tradeSymbol,MODE_MINLOT))
-{
-lv_d2=MarketInfo(g_tradeSymbol,MODE_MINLOT);
-}
-if(lv_d2>MarketInfo(g_tradeSymbol,MODE_MAXLOT)&&MarketInfo(g_tradeSymbol,MODE_MAXLOT)!=0.0)
-{
-lv_d2=MarketInfo(g_tradeSymbol,MODE_MAXLOT);
-}
-if(MarketInfo(g_tradeSymbol,MODE_LOTSTEP)==0.1)
-{
-g_pairStratLots[g_pairIdx]=NormalizeDouble((MathFloor(lv_d2*10.0))/10.0,1);
-return;
-}
-g_pairStratLots[g_pairIdx]=NormalizeDouble(MathFloor(lv_d2*100.0)/100.0,2);
-}
-// CalcLotSize<<==-------- --------
-double GetBuyEntryPrice(int searchTF)
-{
-//==================================================================
-// TIM DIEM VAO LENH BUY = quet nguoc lich su tim DINH SWING (fractal high)
-//   - centerBar: nen dang xet lam dinh swing
-//   - isRightConfirmed: khong nen nao trong 'g_entryRetries' nen ben phai cao hon
-//   - isLeftConfirmed : khong nen nao trong 'g_entryBars'   nen ben trai cao hon
-//   - extremeSinceSwing: dinh cao nhat tu nen 0..swingBar (loc HTF)
-//   - dupExists: da co BUYSTOP gan muc nay chua (chong dat trung)
-//   Ket qua: g_pendBuySL = gia dinh swing de dat BUY STOP.
-//==================================================================
-bool entryFound=false;
-bool isLeftConfirmed=false;
-bool isRightConfirmed;
-int centerBar;
-int rBar;
-int lBar;
-//----------
-double swingPrice;
-int swingBar;
-double extremeSinceSwing;
-int scanBar;
-double swingPriceNorm;
-int ordIdx;
-bool dupExists = false;
-
-isRightConfirmed=false;
-centerBar=g_entryRetries+1;
-do
-{
-isLeftConfirmed=true;
-isRightConfirmed=true;
-for(rBar=centerBar;rBar>=centerBar-g_entryRetries;rBar--)
-{
-if(iHigh(g_tradeSymbol,searchTF,rBar)>iHigh(g_tradeSymbol,searchTF,centerBar))
-{
-isRightConfirmed=false;
-}
-}
-for(lBar=centerBar;lBar<=centerBar+g_entryBars;lBar++)
-{
-if(iHigh(g_tradeSymbol,searchTF,lBar)>iHigh(g_tradeSymbol,searchTF,centerBar))
-{
-isLeftConfirmed=false;
-}
-}
-if(isRightConfirmed&&isLeftConfirmed&&iHigh(g_tradeSymbol,searchTF,centerBar)>g_takeProfitPips*g_pointSize+MarketInfo(g_tradeSymbol,MODE_ASK))
-{
-swingPrice=iHigh(g_tradeSymbol,searchTF,centerBar);
-swingBar=centerBar;
-extremeSinceSwing=iHigh(g_tradeSymbol,g_entryTF,0);
-for(scanBar=1;scanBar<=swingBar;scanBar=scanBar+1)
-{
-if(iHigh(g_tradeSymbol,g_entryTF,scanBar)>extremeSinceSwing)
-{
-extremeSinceSwing=iHigh(g_tradeSymbol,g_entryTF,scanBar);
-}
-}
-if(swingPrice>=extremeSinceSwing)
-{
-swingPriceNorm=NormalizeDouble(iHigh(g_tradeSymbol,searchTF,centerBar),g_digits);
-dupExists=false;
-for(ordIdx=OrdersTotal();ordIdx>=0;ordIdx=ordIdx-1)
-{
-if(OrderSelect(ordIdx,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=4||!(MathAbs(OrderOpenPrice()-(g_slOffset*g_pointSize+swingPriceNorm))<g_lotMultiplier*g_pointSize)) continue;
-dupExists=true;
-break;
-
-}
-if(!(dupExists)&&(!(g_useEntryDelay)||!(iClose(g_tradeSymbol,searchTF,centerBar-1)>iHigh(g_tradeSymbol,searchTF,centerBar)-g_takeProfitPips*g_pointSize)))
-{
-entryFound=true;
-g_pendBuySL=NormalizeDouble(iHigh(g_tradeSymbol,searchTF,centerBar),g_digits);
-g_openBuyTicket=centerBar;
-break;
-}
-}
-}
-centerBar++;
-if(centerBar<=g_entryDelaySeconds) continue;
-g_pendBuySL=0.0;
-break;
-
-}
-while(!(entryFound));
-
-return(g_pendBuySL);
-}
-// GetBuyEntryPrice<<==-------- --------
-double GetSellEntryPrice(int searchTF)
-{
-//==================================================================
-// TIM DIEM VAO LENH SELL = quet nguoc lich su tim DAY SWING (fractal low)
-//   Doi xung voi GetBuyEntryPrice. Ket qua: g_pendSellPrice.
-//==================================================================
-bool entryFound=false;
-bool isLeftConfirmed=false;
-bool isRightConfirmed;
-int centerBar;
-int rBar;
-int lBar;
-//----------
-double swingPrice;
-int swingBar;
-double extremeSinceSwing;
-int scanBar;
-double swingPriceNorm;
-int ordIdx;
-bool dupExists = false;
-
-isRightConfirmed=false;
-centerBar=g_entryRetries+1;
-do
-{
-isLeftConfirmed=true;
-isRightConfirmed=true;
-for(rBar=centerBar;rBar>=centerBar-g_entryRetries;rBar--)
-{
-if(iLow(g_tradeSymbol,searchTF,rBar)<iLow(g_tradeSymbol,searchTF,centerBar))
-{
-isRightConfirmed=false;
-}
-}
-for(lBar=centerBar;lBar<=centerBar+g_entryBars;lBar++)
-{
-if(iLow(g_tradeSymbol,searchTF,lBar)<iLow(g_tradeSymbol,searchTF,centerBar))
-{
-isLeftConfirmed=false;
-}
-}
-if(isRightConfirmed&&isLeftConfirmed&&iLow(g_tradeSymbol,searchTF,centerBar)<MarketInfo(g_tradeSymbol,MODE_BID)-g_takeProfitPips*g_pointSize)
-{
-swingPrice=iLow(g_tradeSymbol,searchTF,centerBar);
-swingBar=centerBar;
-extremeSinceSwing=iLow(g_tradeSymbol,g_entryTF,0);
-for(scanBar=1;scanBar<=swingBar;scanBar=scanBar+1)
-{
-if(iLow(g_tradeSymbol,g_entryTF,scanBar)<extremeSinceSwing)
-{
-extremeSinceSwing=iLow(g_tradeSymbol,g_entryTF,scanBar);
-}
-}
-if(swingPrice<=extremeSinceSwing)
-{
-swingPriceNorm=NormalizeDouble(iLow(g_tradeSymbol,searchTF,centerBar),g_digits);
-dupExists=false;
-for(ordIdx=OrdersTotal();ordIdx>=0;ordIdx=ordIdx-1)
-{
-if(OrderSelect(ordIdx,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=5||!(MathAbs(OrderOpenPrice()-(swingPriceNorm-g_breakEvenPips*g_pointSize))<g_lotMultiplier*g_pointSize)) continue;
-dupExists=true;
-break;
-
-}
-if(!(dupExists)&&(!(g_useEntryDelay)||!(iClose(g_tradeSymbol,searchTF,centerBar-1)<g_takeProfitPips*g_pointSize+iLow(g_tradeSymbol,searchTF,centerBar))))
-{
-entryFound=true;
-g_pendSellPrice=NormalizeDouble(iLow(g_tradeSymbol,searchTF,centerBar),g_digits);
-g_openSellTicket=centerBar;
-break;
-}
-}
-}
-centerBar++;
-if(centerBar<=g_entryDelaySeconds) continue;
-g_pendSellPrice=0.0;
-break;
-
-}
-while(!(entryFound));
-
-return(g_pendSellPrice);
-}
-// GetSellEntryPrice<<==-------- --------
-double GetHighestHigh(int param0,int param1,int param2)
-{
-bool lv_b2=false;
-double lv_d3=0.0;
-bool lv_b4=false;
-bool lv_b5;
-int lv_i6;
-int lv_i7;
-int lv_i8;
-//----------
-
-lv_b5=false;
-lv_i6=param2+1;
-do
-{
-lv_b4=true;
-lv_b5=true;
-for(lv_i7=lv_i6;lv_i7>=lv_i6-param2;lv_i7--)
-{
-if(iHigh(g_tradeSymbol,param0,lv_i7)>iHigh(g_tradeSymbol,param0,lv_i6))
-{
-lv_b5=false;
-}
-}
-for(lv_i8=lv_i6;lv_i8<=lv_i6+param1;lv_i8++)
-{
-if(iHigh(g_tradeSymbol,param0,lv_i8)>iHigh(g_tradeSymbol,param0,lv_i6))
-{
-lv_b4=false;
-}
-}
-if(lv_b5&&lv_b4&&iHigh(g_tradeSymbol,param0,lv_i6)>g_minStopLevel*g_pointSize+MarketInfo(g_tradeSymbol,MODE_ASK))
-{
-lv_b2=true;
-lv_d3=NormalizeDouble(iHigh(g_tradeSymbol,param0,lv_i6),g_digits);
-break;
-}
-lv_i6++;
-if(lv_i6<=g_hlTrailPeriod) continue;
-lv_d3=9999.0;
-break;
-
-}
-while(!(lv_b2));
-
-return(lv_d3);
-}
-// GetHighestHigh<<==-------- --------
-double GetLowestLow(int param0,int param1,int param2)
-{
-bool lv_b2=false;
-double lv_d3=0.0;
-bool lv_b4=false;
-bool lv_b5;
-int lv_i6;
-int lv_i7;
-int lv_i8;
-//----------
-
-lv_b5=false;
-lv_i6=param2+1;
-do
-{
-lv_b4=true;
-lv_b5=true;
-for(lv_i7=lv_i6;lv_i7>=lv_i6-param2;lv_i7--)
-{
-if(iLow(g_tradeSymbol,param0,lv_i7)<iLow(g_tradeSymbol,param0,lv_i6))
-{
-lv_b5=false;
-}
-}
-for(lv_i8=lv_i6;lv_i8<=lv_i6+param1;lv_i8++)
-{
-if(iLow(g_tradeSymbol,param0,lv_i8)<iLow(g_tradeSymbol,param0,lv_i6))
-{
-lv_b4=false;
-}
-}
-if(lv_b5&&lv_b4&&iLow(g_tradeSymbol,param0,lv_i6)<MarketInfo(g_tradeSymbol,MODE_BID)-g_minStopLevel*g_pointSize)
-{
-lv_b2=true;
-lv_d3=NormalizeDouble(iLow(g_tradeSymbol,param0,lv_i6),g_digits);
-break;
-}
-lv_i6++;
-if(lv_i6<=g_hlTrailPeriod) continue;
-lv_d3=0.0;
-break;
-
-}
-while(!(lv_b2));
-
-return(lv_d3);
-}
-// GetLowestLow<<==-------- --------
-void DeletePendingOrders()
-{
-int lv_i1;
-//----------
-bool _orderOK;
-long tmp_l1;
-long tmp_l2;
-int tmp_i3;
-int tmp_i4;
-int tmp_i5;
-int tmp_i6;
-int tmp_i7;
-int tmp_i8;
-int tmp_i9;
-int tmp_i10;
-int tmp_i11;
-int tmp_i12;
-
-if(g_virtualSLActive)
-{
-g_openBuyPrice=iMA(g_tradeSymbol,0,g_virtualSLMode,0,1,0,1);
-g_openSellPrice=iMA(g_tradeSymbol,0,g_panelWidth,0,1,0,1);
-}
-CalcLotSize(g_minProfitClose,g_strategyMask);
-if(g_pairStratLots[g_pairIdx]>g_zrMaxLoss)
-{
-g_pairStratLots[g_pairIdx]=g_zrMaxLoss;
-}
-if(g_expiryHours> 0)
-{
-g_lastTradeTime=TimeCurrent()+g_expirySeconds;
-}
-if(Virtual_expiration)
-{
-g_lastTradeTime=0;
-for(lv_i1=OrdersTotal();lv_i1>=0;lv_i1--)
-{
-if(OrderSelect(lv_i1,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol) continue;
-
-if((OrderType()!=4&&OrderType()!=5)) continue;
-tmp_l1=TimeCurrent();
-tmp_l2=OrderOpenTime()+g_expirySeconds;
-if(tmp_l1<tmp_l2) continue;
-_orderOK = OrderDelete(OrderTicket(),Red);
-
-}
-}
-tmp_i3=0;
-for(tmp_i4=OrdersTotal();tmp_i4>=0;tmp_i4=tmp_i4-1)
-{
-if(OrderSelect(tmp_i4,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=0) continue;
-tmp_i3=tmp_i3+1;
-
-}
-if(tmp_i3< g_maxOrdersTotal)
-{
-PlaceBuyOrder(1);
-}
-else
-{
-tmp_i5=1;
-for(tmp_i6=OrdersTotal();tmp_i6>=0;tmp_i6=tmp_i6-1)
-{
-if(OrderSelect(tmp_i6,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=4) continue;
-_orderOK = OrderDelete(OrderTicket(),clrNONE);
-
-}
-if(tmp_i5==2)
-{
-for(tmp_i7=OrdersTotal();tmp_i7>=0;tmp_i7=tmp_i7-1)
-{
-if(OrderSelect(tmp_i7,0,0)!=true||OrderMagicNumber()!=g_magicStrat2||OrderSymbol()!=g_tradeSymbol||OrderType()!=4) continue;
-_orderOK = OrderDelete(OrderTicket(),clrNONE);
-
-}
-}
-}
-tmp_i8=0;
-for(tmp_i9=OrdersTotal();tmp_i9>=0;tmp_i9=tmp_i9-1)
-{
-if(OrderSelect(tmp_i9,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=1) continue;
-tmp_i8=tmp_i8+1;
-
-}
-if(tmp_i8< g_maxOrdersTotal)
-{
-PlaceSellOrder(1);
-return;
-}
-tmp_i10=1;
-for(tmp_i11=OrdersTotal();tmp_i11>=0;tmp_i11=tmp_i11-1)
-{
-if(OrderSelect(tmp_i11,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=5) continue;
-_orderOK = OrderDelete(OrderTicket(),clrNONE);
-
-}
-if(tmp_i10!=2) return;
-for(tmp_i12=OrdersTotal();tmp_i12>=0;tmp_i12=tmp_i12-1)
-{
-if(OrderSelect(tmp_i12,0,0)!=true||OrderMagicNumber()!=g_magicStrat2||OrderSymbol()!=g_tradeSymbol||OrderType()!=5) continue;
-_orderOK = OrderDelete(OrderTicket(),clrNONE);
-
-}
-}
-// DeletePendingOrders<<==-------- --------
-bool PlaceBuyOrder(int param0)
-{
-bool lv_b2;
-double lv_d3;
-double lv_d4;
-double lv_d5;
-double lv_d6;
-//----------
-bool tmp_b1 = false;
-int tmp_i2;
-double tmp_d3;
-int tmp_i4;
-bool tmp_b5 = false;
-int tmp_i6;
-int tmp_i7;
-double tmp_d8;
-int tmp_i9;
-double tmp_d10;
-int tmp_i11;
-bool tmp_b12 = false;
-bool tmp_b13 = false;
-int tmp_i14;
-bool tmp_b15 = false;
-int tmp_i16;
-double tmp_d17;
-long tmp_l18;
-int tmp_i19;
-
-if(!(AllowBuyTrades))
-{
-return(false);
-}
-if(g_panelVisible)
-{
-tmp_b1=false;
-}
-else
-{
-tmp_b1=false;
-for(tmp_i2=0;tmp_i2<OrdersTotal();tmp_i2=tmp_i2+1)
-{
-if(OrderSelect(tmp_i2,0,0)!=true||OrderType()!=0||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol) continue;
-tmp_b1=true;
-break;
-
-}
-}
-if(tmp_b1==true)
-{
-return(false);
-}
-if(g_virtualSLActive&&g_openBuyPrice<g_openSellPrice)
-{
-return(false);
-}
-if(param0==1)
-{
-GetBuyEntryPrice(g_entryTF);
-lv_b2=false;
-tmp_d3=g_pendBuySL;
-tmp_b5=false;
-for(tmp_i4=OrdersTotal();tmp_i4>=0;tmp_i4=tmp_i4-1)
-{
-if(OrderSelect(tmp_i4,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=4||!(MathAbs(OrderOpenPrice()-(g_slOffset*g_pointSize+tmp_d3))<g_lotMultiplier*g_pointSize)) continue;
-tmp_b5=true;
-break;
-
-}
-if(!(tmp_b5))
-{
-tmp_i6=0;
-for(tmp_i7=OrdersTotal();tmp_i7>=0;tmp_i7=tmp_i7-1)
-{
-if(OrderSelect(tmp_i7,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=4) continue;
-tmp_i6=tmp_i6+1;
-
-}
-if(tmp_i6==g_maxConcurrent)
-{
-tmp_d8=9999.0;
-for(tmp_i9=OrdersTotal();tmp_i9>=0;tmp_i9=tmp_i9-1)
-{
-if(OrderSelect(tmp_i9,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=4||!(OrderOpenPrice()<tmp_d8)) continue;
-tmp_d8=OrderOpenPrice();
-
-}
-if(g_pendBuySL>tmp_d8)
-{
-return(false);
-}
-}
-g_pendBuyTP=g_pendBuySL;
-lv_b2=true;
-g_backtestLot=NormalizeDouble(g_pendBuySL,g_digits);
-}
-if(g_backtestLot==0.0)
-{
-return(false);
-}
-if(lv_b2)
-{
-g_st2_entryHigh=g_magicTrailStep;
-lv_d3=NormalizeDouble(g_slOffset*g_pointSize+g_backtestLot,g_digits);
-tmp_d10=lv_d3;
-tmp_b12=false;
-for(tmp_i11=OrdersTotal();tmp_i11>=0;tmp_i11=tmp_i11-1)
-{
-if(OrderSelect(tmp_i11,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=4||!(OrderOpenPrice()<=tmp_d10)) continue;
-tmp_b12=true;
-break;
-
-}
-if(tmp_b12)
-{
-return(false);
-}
-g_ddStartBalance=lv_d3;
-if(!(g_useSpreadFilter))
-{
-if(CheckMargin&&AccountFreeMarginCheck(g_tradeSymbol,0,g_pairStratLots[g_pairIdx])<=0.0)
-{
-Print("Free margin not sufficient for setting order with lotsize "+string(g_pairStratLots[g_pairIdx])+"...");
-return(false);
-}
-lv_d4=NormalizeDouble(g_tradeCount*g_pointSize+lv_d3,g_digits);
-lv_d5=NormalizeDouble(lv_d3-(g_minProfitClose+g_newsImpactLevel)*g_pointSize,g_digits);
-lv_d6=NormalizeDouble(g_maxLossClose*g_pointSize+lv_d3,g_digits);
-if(g_pairStratLots[g_pairIdx]<SymbolInfoDouble(g_tradeSymbol,SYMBOL_VOLUME_MIN))
-{
-Print("Volume is less than the minimal allowed SYMBOL_VOLUME_MIN="+string(SymbolInfoDouble(g_tradeSymbol,SYMBOL_VOLUME_MIN)));
-tmp_b13=false;
-}
-else
-{
-if(g_pairStratLots[g_pairIdx]>SymbolInfoDouble(g_tradeSymbol,SYMBOL_VOLUME_MAX))
-{
-Print("Volume is greater than the maximal allowed SYMBOL_VOLUME_MAX="+string(SymbolInfoDouble(g_tradeSymbol,SYMBOL_VOLUME_MAX)));
-tmp_b13=false;
-}
-else
-{
-if(MathAbs(NormalizeDouble(g_pairStratLots[g_pairIdx]/SymbolInfoDouble(g_tradeSymbol,SYMBOL_VOLUME_STEP),0)*SymbolInfoDouble(g_tradeSymbol,SYMBOL_VOLUME_STEP)-g_pairStratLots[g_pairIdx])>0.0000001)
-{
-Print("Volume"+string(g_pairStratLots[g_pairIdx])+" is not a multiple of the minimal step SYMBOL_VOLUME_STEP="+string(SymbolInfoDouble(g_tradeSymbol,SYMBOL_VOLUME_STEP)));
-tmp_b13=false;
-}
-else
-{
-tmp_b13=true;
-}
-}
-}
-
-tmp_i14 = (int)AccountInfoInteger(ACCOUNT_LIMIT_ORDERS);
-if(tmp_i14==0)
-{
-tmp_b15=true;
-}
-else
-{
-tmp_b15=OrdersTotal()<tmp_i14;
-}
-if((!(tmp_b13)||!(tmp_b15)))
-{
-return(false);
-}
-if(MarketInfo(g_tradeSymbol,MODE_ASK)<lv_d4-g_stopLevelPts*g_pointSize&&MarketInfo(g_tradeSymbol,MODE_ASK)<lv_d4-g_minStopLevel*g_pointSize)
-{
-if(!(setSL_TP_After_Entry))
-{
-g_lastError=OrderSend(g_tradeSymbol,OP_BUYSTOP,g_pairStratLots[g_pairIdx],lv_d4,int(g_maxVolatility*g_pointSize),lv_d5,lv_d6,g_currentSymbol,g_magicMain,g_lastTradeTime,Green);
-}
-else
-{
-g_lastError=OrderSend(g_tradeSymbol,OP_BUYSTOP,g_pairStratLots[g_pairIdx],lv_d4,int(g_maxVolatility*g_pointSize),0.0,0.0,g_currentSymbol,g_magicMain,g_lastTradeTime,Green);
-}
-g_tp_hitBuy=false;
-if(g_lastError<=0)
-{
-tmp_i16=GetLastError();
-if(tmp_i16==132)
-{
-ResetLastError();
-if(1==0)//false
-{
-do
-{
-Sleep((uint)2500);
-if(!(setSL_TP_After_Entry))
-{
-tmp_i16 = (int)(g_maxVolatility*g_pointSize);
-g_lastError=OrderSend(g_tradeSymbol,OP_BUYSTOP,g_pairStratLots[g_pairIdx],lv_d4,tmp_i16,lv_d5,lv_d6,g_currentSymbol,g_magicMain,g_lastTradeTime,Green);
-}
-else
-{
-g_lastError=OrderSend(g_tradeSymbol,OP_BUYSTOP,g_pairStratLots[g_pairIdx],lv_d4,int(g_maxVolatility*g_pointSize),0.0,0.0,g_currentSymbol,g_magicMain,g_lastTradeTime,Green);
-}
-g_tp_hitBuy=false;
-}
-while(GetLastError()==132);
-
-}
-}
-Print("error:\'"+GetErrorDescription(GetLastError())+"\'whensettingentryorder");
-}
-else
-{
-tmp_d17=lv_d3;
-tmp_l18=g_lastError;
-for(tmp_i19=0;tmp_i19<100;tmp_i19=tmp_i19+1)
-{
-if(!(g_tradeStats[tmp_i19][0]==0.0)) continue;
-g_tradeStats[tmp_i19][0] = (double)(tmp_l18);
-g_tradeStats[tmp_i19][1]=tmp_d17;
-break;
-
-}
-}
-}
-}
-return(true);
-}
-}
-return(false);
-}
-// PlaceBuyOrder<<==-------- --------
-bool PlaceSellOrder(int param0)
-{
-bool lv_b2;
-double lv_d3;
-double lv_d4;
-double lv_d5;
-double lv_d6;
-//----------
-bool tmp_b1 = false;
-int tmp_i2;
-double tmp_d3;
-int tmp_i4;
-bool tmp_b5 = false;
-int tmp_i6;
-int tmp_i7;
-double tmp_d8;
-int tmp_i9;
-double tmp_d10;
-int tmp_i11;
-bool tmp_b12 = false;
-bool tmp_b13 = false;
-int tmp_i14;
-bool tmp_b15 = false;
-int tmp_i16;
-double tmp_d17;
-long tmp_l18;
-int tmp_i19;
-
-if(!(AllowSellTrades))
-{
-return(false);
-}
-if(g_panelVisible)
-{
-tmp_b1=false;
-}
-else
-{
-tmp_b1=false;
-for(tmp_i2=0;tmp_i2<OrdersTotal();tmp_i2=tmp_i2+1)
-{
-if(OrderSelect(tmp_i2,0,0)!=true||OrderType()!=1||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol) continue;
-tmp_b1=true;
-break;
-
-}
-}
-if(tmp_b1==true)
-{
-return(false);
-}
-if(g_virtualSLActive&&g_openBuyPrice>g_openSellPrice)
-{
-return(false);
-}
-if(param0==1)
-{
-GetSellEntryPrice(g_entryTF);
-lv_b2=false;
-tmp_d3=g_pendSellPrice;
-tmp_b5=false;
-for(tmp_i4=OrdersTotal();tmp_i4>=0;tmp_i4=tmp_i4-1)
-{
-if(OrderSelect(tmp_i4,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=5||!(MathAbs(OrderOpenPrice()-(tmp_d3-g_breakEvenPips*g_pointSize))<g_lotMultiplier*g_pointSize)) continue;
-tmp_b5=true;
-break;
-
-}
-if(!(tmp_b5))
-{
-tmp_i6=0;
-for(tmp_i7=OrdersTotal();tmp_i7>=0;tmp_i7=tmp_i7-1)
-{
-if(OrderSelect(tmp_i7,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=5) continue;
-tmp_i6=tmp_i6+1;
-
-}
-if(tmp_i6==g_maxConcurrent)
-{
-tmp_d8=0.0;
-for(tmp_i9=OrdersTotal();tmp_i9>=0;tmp_i9=tmp_i9-1)
-{
-if(OrderSelect(tmp_i9,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=5||!(OrderOpenPrice()>tmp_d8)) continue;
-tmp_d8=OrderOpenPrice();
-
-}
-if(g_pendSellPrice<tmp_d8)
-{
-return(false);
-}
-}
-g_pendSellSL=g_pendSellPrice;
-lv_b2=true;
-g_backtestBalance=NormalizeDouble(g_pendSellPrice,g_digits);
-}
-if(g_backtestBalance==0.0)
-{
-return(false);
-}
-if(lv_b2)
-{
-g_st2_entryHigh=g_magicTrailStep;
-lv_d3=NormalizeDouble(g_backtestBalance-g_breakEvenPips*g_pointSize,g_digits);
-tmp_d10=lv_d3;
-tmp_b12=false;
-for(tmp_i11=OrdersTotal();tmp_i11>=0;tmp_i11=tmp_i11-1)
-{
-if(OrderSelect(tmp_i11,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol||OrderType()!=5||!(OrderOpenPrice()>=tmp_d10)) continue;
-tmp_b12=true;
-break;
-
-}
-if(tmp_b12)
-{
-return(false);
-}
-g_maxDDBalance=lv_d3;
-if(!(g_useSpreadFilter))
-{
-if(CheckMargin&&AccountFreeMarginCheck(g_tradeSymbol,1,g_pairStratLots[g_pairIdx])<=0.0)
-{
-Print("Free margin not sufficient for setting order with lotsize "+string(g_pairStratLots[g_pairIdx])+"...");
-return(false);
-}
-lv_d4=NormalizeDouble(lv_d3-g_tradeCount*g_pointSize,g_digits);
-lv_d5=NormalizeDouble((g_minProfitClose+g_newsImpactLevel)*g_pointSize+lv_d3,g_digits);
-lv_d6=NormalizeDouble(lv_d3-g_maxLossClose*g_pointSize,g_digits);
-if(g_pairStratLots[g_pairIdx]<SymbolInfoDouble(g_tradeSymbol,SYMBOL_VOLUME_MIN))
-{
-Print("Volume is less than the minimal allowed SYMBOL_VOLUME_MIN="+string(SymbolInfoDouble(g_tradeSymbol,SYMBOL_VOLUME_MIN)));
-tmp_b13=false;
-}
-else
-{
-if(g_pairStratLots[g_pairIdx]>SymbolInfoDouble(g_tradeSymbol,SYMBOL_VOLUME_MAX))
-{
-Print("Volume is greater than the maximal allowed SYMBOL_VOLUME_MAX="+string(SymbolInfoDouble(g_tradeSymbol,SYMBOL_VOLUME_MAX)));
-tmp_b13=false;
-}
-else
-{
-if(MathAbs(NormalizeDouble(g_pairStratLots[g_pairIdx]/SymbolInfoDouble(g_tradeSymbol,SYMBOL_VOLUME_STEP),0)*SymbolInfoDouble(g_tradeSymbol,SYMBOL_VOLUME_STEP)-g_pairStratLots[g_pairIdx])>0.0000001)
-{
-Print("Volume"+string(g_pairStratLots[g_pairIdx])+" is not a multiple of the minimal step SYMBOL_VOLUME_STEP="+string(SymbolInfoDouble(g_tradeSymbol,SYMBOL_VOLUME_STEP)));
-tmp_b13=false;
-}
-else
-{
-tmp_b13=true;
-}
-}
-}
-
-tmp_i14 = (int)AccountInfoInteger(ACCOUNT_LIMIT_ORDERS);
-if(tmp_i14==0)
-{
-tmp_b15=true;
-}
-else
-{
-tmp_b15=OrdersTotal()<tmp_i14;
-}
-if((!(tmp_b13)||!(tmp_b15)))
-{
-return(false);
-}
-if(MarketInfo(g_tradeSymbol,MODE_BID)>g_stopLevelPts*g_pointSize+lv_d4&&MarketInfo(g_tradeSymbol,MODE_BID)>g_minStopLevel*g_pointSize+lv_d4)
-{
-if(!(setSL_TP_After_Entry))
-{
-g_lastError=OrderSend(g_tradeSymbol,OP_SELLSTOP,g_pairStratLots[g_pairIdx],lv_d4,int(g_maxVolatility*g_pointSize),lv_d5,lv_d6,g_currentSymbol,g_magicMain,g_lastTradeTime,Red);
-}
-else
-{
-g_lastError=OrderSend(g_tradeSymbol,OP_SELLSTOP,g_pairStratLots[g_pairIdx],lv_d4,int(g_maxVolatility*g_pointSize),0.0,0.0,g_currentSymbol,g_magicMain,g_lastTradeTime,Red);
-}
-g_tp_hitSell=false;
-if(g_lastError<=0)
-{
-tmp_i16=GetLastError();
-if(tmp_i16==132)
-{
-ResetLastError();
-if(1==0)//false
-{
-do
-{
-Sleep((uint)2500);
-if(!(setSL_TP_After_Entry))
-{
-tmp_i16 = (int)(g_maxVolatility*g_pointSize);
-g_lastError=OrderSend(g_tradeSymbol,OP_SELLSTOP,g_pairStratLots[g_pairIdx],lv_d4,tmp_i16,lv_d5,lv_d6,g_currentSymbol,g_magicMain,g_lastTradeTime,Red);
-}
-else
-{
-g_lastError=OrderSend(g_tradeSymbol,OP_SELLSTOP,g_pairStratLots[g_pairIdx],lv_d4,int(g_maxVolatility*g_pointSize),0.0,0.0,g_currentSymbol,g_magicMain,g_lastTradeTime,Red);
-}
-g_tp_hitSell=false;
-}
-while(GetLastError()==132);
-
-}
-}
-Print("error:\'"+GetErrorDescription(GetLastError())+"\'whensettingentryorder");
-}
-else
-{
-tmp_d17=lv_d3;
-tmp_l18=g_lastError;
-for(tmp_i19=0;tmp_i19<100;tmp_i19=tmp_i19+1)
-{
-if(!(g_tradeStats[tmp_i19][0]==0.0)) continue;
-g_tradeStats[tmp_i19][0] = (double)(tmp_l18);
-g_tradeStats[tmp_i19][1]=tmp_d17;
-break;
-
-}
-}
-}
-}
-}
-}
-return(false);
-}
-// PlaceSellOrder<<==-------- --------
-bool ManageBuyTrade()
-{
-bool lv_b2=false;
-bool lv_b3=false;
-double lv_d4;
-double lv_d5;
-int lv_i6;
-double lv_d7;
-double lv_d8;
-long lv_l9;
-double lv_d10;
-string lv_s11;
-double lv_d12;
-datetime lv_dt13;
-int lv_i14;
-int lv_i15;
-string lv_s16;
-double lv_d17;
-double lv_d18;
-bool lv_b19;
-bool lv_b20;
-double lv_d21;
-bool lv_b22;
-double lv_d23;
-double lv_d24;
-double lv_d25;
-double lv_d26;
-double lv_d27;
-int lv_i28;
-double lv_d29;
-//----------
-bool _orderOK;
-int tmp_i1;
-long tmp_l2;
-int tmp_i3;
-double tmp_d4;
-double tmp_d5;
-long tmp_l6;
-int tmp_i7;
-long tmp_l8;
-int tmp_i9;
-int tmp_i10;
-string tmp_s11;
-double tmp_d12;
-int tmp_i13;
-long tmp_l14;
-double tmp_d15;
-int tmp_i16;
-long tmp_l17;
-long tmp_l18;
-int tmp_i19;
-int tmp_i20;
-int tmp_i21;
-string tmp_s22;
-long tmp_l23;
-double tmp_d24;
-double tmp_d25;
-int tmp_i26;
-double tmp_d27;
-bool tmp_b28 = false;
-int tmp_i29;
-int tmp_i30;
-double tmp_d31;
-long tmp_l32;
-int tmp_i33;
-long tmp_l34;
-double tmp_d35;
-double tmp_d36;
-int tmp_i37;
-double tmp_d38;
-bool tmp_b39 = false;
-int tmp_i40;
-int tmp_i41;
-double tmp_d42;
-long tmp_l43;
-int tmp_i44;
-
-lv_d4=0.0;
-lv_d5=0.0;
-for(lv_i6=0;lv_i6<OrdersTotal();lv_i6++)
-{
-if(OrderSelect(lv_i6,0,0)==true)
-{
-lv_b2=false;
-lv_d7=NormalizeDouble(OrderStopLoss(),g_digits);
-lv_d8=NormalizeDouble(OrderTakeProfit(),g_digits);
-lv_l9=OrderTicket();
-lv_d10=NormalizeDouble(OrderOpenPrice(),g_digits);
-lv_s11=OrderComment();
-lv_d12=OrderLots();
-lv_dt13=OrderOpenTime();
-lv_i14=OrderType();
-lv_i15=OrderMagicNumber();
-lv_s16=OrderSymbol();
-if((lv_i14==4||lv_i14==2)&&g_entryMode==2&&(g_strat2_type==0||(g_strat2_type==1&&lv_s16==g_tradeSymbol))&&(lv_i15==g_magicStrat2||g_magicStrat2==0)&&(lv_s11==g_strat2_comment||g_strat2_comment==""))
-{
-if((lv_d7==0.0||lv_d7==0.0))
-{
-lv_d7=NormalizeDouble(lv_d10-g_minProfitClose*g_pointSize,g_digits);
-_orderOK = OrderModify((int)lv_l9,lv_d10,lv_d7,lv_d8,0,Green);
-}
-if((lv_d8==0.0||lv_d8==0.0))
-{
-lv_d8=NormalizeDouble(g_maxLossClose*g_pointSize+lv_d10,g_digits);
-_orderOK = OrderModify((int)lv_l9,lv_d10,lv_d7,lv_d8,0,Green);
-}
-}
-if(lv_i14==0&&((lv_i15==g_magicMain&&g_entryMode==1&&lv_s16==g_tradeSymbol)||(g_entryMode==2&&(g_strat2_type==0||(g_strat2_type==1&&lv_s16==g_tradeSymbol))&&(lv_i15==g_magicStrat2||g_magicStrat2==0)&&(lv_s11==g_strat2_comment||g_strat2_comment==""))))
-{
-if((lv_d7==0.0||lv_d7==0.0))
-{
-lv_d7=NormalizeDouble(lv_d10-g_minProfitClose*g_pointSize,g_digits);
-_orderOK = OrderModify((int)lv_l9,lv_d10,lv_d7,lv_d8,0,Green);
-}
-if((lv_d8==0.0||lv_d8==0.0))
-{
-lv_d8=NormalizeDouble(g_maxLossClose*g_pointSize+lv_d10,g_digits);
-_orderOK = OrderModify((int)lv_l9,lv_d10,lv_d7,lv_d8,0,Green);
-}
-if(g_use5minFilter&&iTime(g_tradeSymbol,g_maxTotalTrades,g_maxTradesPerDir)<=lv_dt13&&iTime(g_tradeSymbol,g_maxTotalTrades,0)> lv_dt13&&iClose(g_tradeSymbol,g_maxTotalTrades,1)<iOpen(g_tradeSymbol,g_maxTotalTrades,1)&&iClose(g_tradeSymbol,g_maxTotalTrades,1)<lv_d10)
-{
-_orderOK = OrderClose((int)lv_l9,lv_d12,MarketInfo(g_tradeSymbol,MODE_BID),0,Red);
-Print("closingcandleconfirmation");
-}
-if(g_use15minFilter&&iTime(g_tradeSymbol,g_filter5minPeriod,g_maxTradesPerDir)<=lv_dt13&&iTime(g_tradeSymbol,g_filter5minPeriod,0)> lv_dt13&&iClose(g_tradeSymbol,g_filter5minPeriod,1)<iOpen(g_tradeSymbol,g_filter5minPeriod,1)&&iClose(g_tradeSymbol,g_filter5minPeriod,1)<lv_d10)
-{
-_orderOK = OrderClose((int)lv_l9,lv_d12,MarketInfo(g_tradeSymbol,MODE_BID),0,Red);
-Print("closingcandleconfirmation");
-}
-if(g_use30minFilter&&iTime(g_tradeSymbol,g_filter15minPeriod,g_maxTradesPerDir)<=lv_dt13&&iTime(g_tradeSymbol,g_filter15minPeriod,0)> lv_dt13&&iClose(g_tradeSymbol,g_filter15minPeriod,1)<iOpen(g_tradeSymbol,g_filter15minPeriod,1)&&iClose(g_tradeSymbol,g_filter15minPeriod,1)<lv_d10)
-{
-_orderOK = OrderClose((int)lv_l9,lv_d12,MarketInfo(g_tradeSymbol,MODE_BID),0,Red);
-Print("closingcandleconfirmation");
-}
-if(g_use1hrFilter&&iTime(g_tradeSymbol,g_filter30minPeriod,g_maxTradesPerDir)<=lv_dt13&&iTime(g_tradeSymbol,g_filter30minPeriod,0)> lv_dt13&&iClose(g_tradeSymbol,g_filter30minPeriod,1)<iOpen(g_tradeSymbol,g_filter30minPeriod,1)&&iClose(g_tradeSymbol,g_filter30minPeriod,1)<lv_d10)
-{
-_orderOK = OrderClose((int)lv_l9,lv_d12,MarketInfo(g_tradeSymbol,MODE_BID),0,Red);
-Print("closingcandleconfirmation");
-}
-if(g_useNewsFilter&&iTime(g_tradeSymbol,g_filter1hrPeriod,g_maxTradesPerDir)<=lv_dt13&&iTime(g_tradeSymbol,g_filter1hrPeriod,0)> lv_dt13&&iClose(g_tradeSymbol,g_filter1hrPeriod,1)<iOpen(g_tradeSymbol,g_filter1hrPeriod,1)&&iClose(g_tradeSymbol,g_filter1hrPeriod,1)<lv_d10)
-{
-_orderOK = OrderClose((int)lv_l9,lv_d12,MarketInfo(g_tradeSymbol,MODE_BID),0,Red);
-Print("closingcandleconfirmation");
-}
-g_st2_entryHigh=g_magicTrailStep;
-if(g_magicTrailShift> 0&&TimeCurrent()> lv_dt13+g_magicTrailShift*60)
-{
-g_st2_entryHigh=g_magicTrailOffset;
-}
-tmp_i1=g_digits;
-tmp_l2=lv_l9;
-for(tmp_i3=0;tmp_i3<100;tmp_i3=tmp_i3+1)
-{
-if(!(g_tradeStats[tmp_i3][0]==tmp_l2)) continue;
-tmp_d4=g_tradeStats[tmp_i3][1];
-break;
-
-}
-tmp_d4=0.0;
-lv_d17=NormalizeDouble(tmp_d4,tmp_i1);
-if(lv_d17==0.0)
-{
-tmp_d5=lv_d10;
-tmp_l6=lv_l9;
-for(tmp_i7=0;tmp_i7<100;tmp_i7=tmp_i7+1)
-{
-if(!(g_tradeStats[tmp_i7][0]==0.0)) continue;
-g_tradeStats[tmp_i7][0] = (double)(tmp_l6);
-g_tradeStats[tmp_i7][1]=tmp_d5;
-break;
-
-}
-lv_d17=lv_d10;
-}
-else
-{
-lv_d17=lv_d17-g_breakEvenOffset*g_pointSize;
-}
-lv_d18=lv_d10-lv_d17;
-lv_b19=false;
-if(lv_d17>0.0-g_breakEvenOffset*g_pointSize&&lv_d18>g_maxVolatility*g_pointSize)
-{
-lv_b19=true;
-if(g_volPeriod==2)
-{
-g_st2_entryHigh=-1000.0;
-Print("Slippage Mode 2 active");
-}
-}
-if(g_useVirtualSL)
-{
-lv_d5=lv_d17;
-}
-else
-{
-lv_d5=lv_d10;
-}
-if(lv_d7<NormalizeDouble(lv_d10-(g_minProfitClose+g_newsImpactLevel)*g_pointSize-g_spread,g_digits))
-{
-lv_d7=NormalizeDouble(lv_d10-(g_minProfitClose+g_newsImpactLevel)*g_pointSize-g_spread,g_digits);
-_orderOK = OrderModify((int)lv_l9,lv_d10,lv_d7,lv_d8,0,clrNONE);
-}
-if(MarketInfo(g_tradeSymbol,MODE_BID)<lv_d10-(g_minProfitClose+g_newsImpactLevel)*g_pointSize-g_spread)
-{
-RefreshRates();
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_BID),(int)g_spread,Red);
-return(true);
-}
-lv_b20=false;
-if(g_zrEnabled)
-{
-tmp_l8=lv_l9;
-tmp_i9=0;
-for(tmp_i10=OrdersTotal();tmp_i10>=0;tmp_i10=tmp_i10-1)
-{
-if(OrderSelect(tmp_i10,0,0)!=true||OrderMagicNumber()!=g_zrBuyMagic||OrderSymbol()!=g_tradeSymbol) continue;
-tmp_s11=OrderComment();
-if(tmp_s11!=IntegerToString(tmp_l8,0,32)) continue;
-tmp_i9=tmp_i9+1;
-
-}
-lv_d21=tmp_i9;
-lv_b22=false;
-if(!(g_hasBuyOrder))
-{
-g_hasBuyOrder=true;
-g_openBuyCount=0;
-}
-if(lv_d21==0.0)
-{
-g_openBuyCount=0;
-}
-if(MathFloor(lv_d21/2.0)==lv_d21/2.0)
-{
-g_openBuyCount=0;
-}
-else
-{
-g_openBuyCount=1;
-}
-if(g_hasBuyOrder)
-{
-if(lv_d21>0.0)
-{
-tmp_d12=AccountEquity();
-if(tmp_d12>AccountBalance()+g_zrMaxStep)
-{
-for(tmp_i13=OrdersTotal();tmp_i13>=0;tmp_i13=tmp_i13-1)
-{
-if(OrderSelect(tmp_i13,0,0)!=true) continue;
-
-if((OrderMagicNumber()!=g_magicMain&&OrderMagicNumber()!=g_zrSellMagic&&OrderMagicNumber()!=g_zrBuyMagic)) continue;
-
-if(OrderType()==0)
-{
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_BID),(int)g_maxVolatility,Red);
-}
-if(OrderType()!=1) continue;
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_ASK),(int)g_maxVolatility,Red);
-
-}
-}
-}
-if(lv_d21>0.0)
-{
-tmp_l14=lv_l9;
-tmp_d15=0.0;
-for(tmp_i16=OrdersTotal();tmp_i16>=0;tmp_i16=tmp_i16-1)
-{
-if(OrderSelect(tmp_i16,0,0)!=true) continue;
-tmp_l17=OrderTicket();
-if(tmp_l17!=tmp_l14)
-{
-tmp_s11=OrderComment();
-if(tmp_s11!=IntegerToString(tmp_l14,0,32)) continue;
-}
-tmp_d15=tmp_d15+OrderProfit();
-
-}
-if(tmp_d15>g_zrMaxStep)
-{
-Print("Closingzone");
-tmp_l18=lv_l9;
-for(tmp_i19=OrdersTotal();tmp_i19>=0;tmp_i19=tmp_i19-1)
-{
-if(OrderSelect(tmp_i19,0,0)!=true) continue;
-
-if(OrderMagicNumber()==g_magicMain&&OrderTicket()==tmp_l18)
-{
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_BID),3,Red);
-}
-if(OrderMagicNumber()!=g_zrBuyMagic) continue;
-tmp_s11=OrderComment();
-if(tmp_s11!=IntegerToString(tmp_l18,0,32)) continue;
-
-if(OrderType()==0)
-{
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_BID),(int)g_maxVolatility,Red);
-}
-if(OrderType()!=1) continue;
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_ASK),(int)g_maxVolatility,Red);
-
-}
-g_hasBuyOrder=false;
-lv_b20=true;
-}
-}
-else
-{
-lv_d23=lv_d12*g_zrLotMultiplier;
-if(g_zrMaxOrders==2)
-{
-lv_d23=(lv_d21+1.0)*lv_d12+lv_d12;
-}
-if(g_zrMaxOrders==3)
-{
-lv_d23=lv_d12*(MathPow(g_zrLotMultiplier,lv_d21+1.0));
-}
-if(g_openBuyCount==0)
-{
-lv_d24=lv_d21*g_zrStep*g_pointSize+(lv_d17-g_zrZoneSize*g_pointSize);
-if(lv_d24>lv_d17-g_zrMinStep*g_pointSize)
-{
-lv_d24=lv_d17-g_zrMinStep*g_pointSize;
-}
-if(MarketInfo(g_tradeSymbol,MODE_BID)<lv_d24)
-{
-if(lv_d21>=g_zrMaxMagic)
-{
-for(tmp_i20=OrdersTotal();tmp_i20>=0;tmp_i20=tmp_i20-1)
-{
-if(OrderSelect(tmp_i20,0,0)!=true) continue;
-
-if(OrderMagicNumber()==g_magicMain&&OrderTicket()==lv_l9)
-{
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_BID),3,Red);
-}
-if(OrderMagicNumber()!=g_zrBuyMagic) continue;
-tmp_s11=OrderComment();
-if(tmp_s11!=IntegerToString(lv_l9,0,32)) continue;
-
-if(OrderType()==0)
-{
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_BID),(int)g_maxVolatility,Red);
-}
-if(OrderType()!=1) continue;
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_ASK),(int)g_maxVolatility,Red);
-
-}
-}
-else
-{
-_orderOK = OrderSend(g_tradeSymbol,OP_SELL,lv_d23,MarketInfo(g_tradeSymbol,MODE_BID),(int)g_maxVolatility,0.0,0.0,IntegerToString(lv_l9,0,32),g_zrBuyMagic,0,Green);
-g_openBuyCount=1;
-lv_b22=true;
-}
-}
-}
-else
-{
-lv_d25=lv_d17;
-if(MarketInfo(g_tradeSymbol,MODE_ASK)>lv_d17)
-{
-if(lv_d21>=g_zrMaxMagic)
-{
-for(tmp_i21=OrdersTotal();tmp_i21>=0;tmp_i21=tmp_i21-1)
-{
-if(OrderSelect(tmp_i21,0,0)!=true) continue;
-
-if(OrderMagicNumber()==g_magicMain&&OrderTicket()==lv_l9)
-{
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_BID),3,Red);
-}
-if(OrderMagicNumber()!=g_zrBuyMagic) continue;
-tmp_s22=OrderComment();
-if(tmp_s22!=IntegerToString(lv_l9,0,32)) continue;
-
-if(OrderType()==0)
-{
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_BID),(int)g_maxVolatility,Red);
-}
-if(OrderType()!=1) continue;
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_ASK),(int)g_maxVolatility,Red);
-
-}
-}
-else
-{
-_orderOK = OrderSend(g_tradeSymbol,OP_BUY,lv_d23,MarketInfo(g_tradeSymbol,MODE_ASK),(int)g_maxVolatility,0.0,0.0,IntegerToString(lv_l9,0,32),g_zrBuyMagic,0,Green);
-g_openBuyCount=0;
-lv_b22=true;
-}
-}
-}
-}
-}
-if((lv_d21>0.0||lv_b22))
-{
-lv_b20=true;
-}
-}
-if(!(lv_b20))
-{
-if((g_newsFilterMode==1||(g_newsFilterMode!=3&&g_newsFilterMode!=2)))
-{
-tmp_l23=lv_l9;
-tmp_d24=g_minProfitClose;
-tmp_d25=lv_d10;
-tmp_i26=1;
-tmp_d27=0.0;
-tmp_b28=false;
-for(tmp_i29=0;tmp_i29<g_panelX;tmp_i29=tmp_i29+1)
-{
-if(g_perfMatrix[tmp_i29][0]==tmp_l23)
-{
-tmp_d27=g_perfMatrix[tmp_i29][1];
-tmp_b28=true;
-break;
-}
-}
-if(!(tmp_b28))
-{
-if(tmp_i26==1)
-{
-tmp_d27=NormalizeDouble(tmp_d25-tmp_d24*g_pointSize,g_digits);
-}
-if(tmp_i26==2)
-{
-tmp_d27=NormalizeDouble(tmp_d24*g_pointSize+tmp_d25,g_digits);
-}
-for(tmp_i30=0;tmp_i30<g_panelX;tmp_i30=tmp_i30+1)
-{
-if(g_perfMatrix[tmp_i30][0]==0.0)
-{
-g_perfMatrix[tmp_i30][0] = (double)(tmp_l23);
-g_perfMatrix[tmp_i30][1]=tmp_d27;
-break;
-}
-}
-}
-g_ask=tmp_d27;
-lv_d4=g_ask;
-if(MarketInfo(g_tradeSymbol,MODE_BID)<lv_d4)
-{
-Print("Closing with virtual SL");
-RefreshRates();
-_orderOK = OrderClose((int)lv_l9,lv_d12,MarketInfo(g_tradeSymbol,MODE_BID),(int)g_spread,clrNONE);
-return(true);
-}
-if(g_recovTrailStart>0.0&&TimeCurrent()>=lv_dt13+g_initRetries&&MarketInfo(g_tradeSymbol,MODE_BID)>NormalizeDouble(g_recovTrailStep*g_pointSize+(lv_d7+g_point),g_digits)&&MarketInfo(g_tradeSymbol,MODE_BID)<lv_d8-g_stopLevelPts)
-{
-lv_d7=NormalizeDouble(MarketInfo(g_tradeSymbol,MODE_BID)-g_recovTrailStep*g_pointSize,g_digits);
-if(lv_d7<MarketInfo(g_tradeSymbol,MODE_BID)-g_minStopLevel)
-{
-g_lastError=OrderModify((int)lv_l9,lv_d10,lv_d7,lv_d8,0,clrNONE);
-if(g_lastError<=0)
-{
-Print("TrailStoperror:\'"+GetErrorDescription(GetLastError())+"\'whensettingtrailingExit_TrailSL_after_X_Minutes_sizeloss. Tryingagain!");
-}
-lv_b2=true;
-}
-}
-if(g_trailStep>0.0&&MarketInfo(g_tradeSymbol,MODE_BID)>NormalizeDouble((g_trailStep+g_trailOffset)*g_pointSize+(lv_d7+g_point),g_digits)&&MarketInfo(g_tradeSymbol,MODE_BID)>NormalizeDouble(g_trailStart*g_pointSize+lv_d5,g_digits)&&MarketInfo(g_tradeSymbol,MODE_BID)<lv_d8-g_stopLevelPts&&lv_d7<NormalizeDouble(g_trailStop*g_pointSize+lv_d10,g_digits))
-{
-lv_d7=NormalizeDouble(MarketInfo(g_tradeSymbol,MODE_BID)-g_trailStep*g_pointSize,g_digits);
-if(lv_d7<MarketInfo(g_tradeSymbol,MODE_BID)-g_minStopLevel)
-{
-g_lastError=OrderModify((int)lv_l9,lv_d10,lv_d7,lv_d8,0,clrNONE);
-if(g_lastError<=0)
-{
-Print("TrailStoperror:\'"+GetErrorDescription(GetLastError())+"\'whensettingtrailingExit_stoploss. Tryingagain!");
-}
-else
-{
-lv_d26=NormalizeDouble(g_trailMin/100.0*g_pairStratLots[g_pairIdx],2);
-if(lv_d26<lv_d12&&lv_d26>=MarketInfo(g_tradeSymbol,MODE_LOTSTEP))
-{
-_orderOK = OrderClose((int)lv_l9,lv_d26,MarketInfo(g_tradeSymbol,MODE_BID),(int)g_maxVolatility,Red);
-return(true);
-}
-}
-lv_b2=true;
-}
-}
-if(g_trailMax>0.0&&MarketInfo(g_tradeSymbol,MODE_ASK)<NormalizeDouble(lv_d8-g_point-g_trailMax*g_pointSize,g_digits)&&MarketInfo(g_tradeSymbol,MODE_ASK)<NormalizeDouble(lv_d5-g_trailFactor*g_pointSize,g_digits)&&MarketInfo(g_tradeSymbol,MODE_BID)<lv_d8-g_stopLevelPts)
-{
-lv_d8=NormalizeDouble(MarketInfo(g_tradeSymbol,MODE_BID)+g_trailMax*g_pointSize,g_digits);
-if(lv_d8>MarketInfo(g_tradeSymbol,MODE_ASK)+g_minStopLevel)
-{
-g_lastError=OrderModify((int)lv_l9,lv_d10,lv_d7,lv_d8,0,clrNONE);
-if(g_lastError<=0)
-{
-Print("TrailStoperror:\'"+GetErrorDescription(GetLastError())+"\'whensettingtrailingExit_TP. Tryingagain!");
-}
-else
-{
-lv_d27=NormalizeDouble(g_trailMin/100.0*g_pairStratLots[g_pairIdx],2);
-if(lv_d27<lv_d12&&lv_d27>=SymbolInfoDouble(g_tradeSymbol,SYMBOL_VOLUME_MIN))
-{
-_orderOK = OrderClose((int)lv_l9,lv_d27,MarketInfo(g_tradeSymbol,MODE_BID),(int)g_maxVolatility,Red);
-return(true);
-}
-}
-lv_b2=true;
-}
-}
-if(lv_b19&&g_volPeriod==1&&g_exitRange>0.0&&MarketInfo(g_tradeSymbol,MODE_BID)>NormalizeDouble(g_exitRange*g_pointSize+(lv_d7+g_point),g_digits)&&MarketInfo(g_tradeSymbol,MODE_BID)>NormalizeDouble(g_entryRange*g_pointSize+lv_d17,g_digits)&&MarketInfo(g_tradeSymbol,MODE_BID)<lv_d8-g_stopLevelPts&&lv_d7<NormalizeDouble(g_filterRange*g_pointSize+lv_d10,g_digits))
-{
-lv_d7=NormalizeDouble(MarketInfo(g_tradeSymbol,MODE_BID)-g_exitRange*g_pointSize,g_digits);
-if(lv_d7<MarketInfo(g_tradeSymbol,MODE_BID)-g_minStopLevel)
-{
-g_lastError=OrderModify((int)lv_l9,lv_d10,lv_d7,lv_d8,0,clrNONE);
-if(g_lastError<=0)
-{
-Print("TrailStoperror:\'"+GetErrorDescription(GetLastError())+"\'whensettingSlipTL. Tryingagain!");
-}
-else
-{
-Print("Slippagecontrolactive");
-}
-lv_b2=true;
-}
-}
-if(g_hlTrailShift> 0&&g_hlTrailMode>=0&&UseHL_TrailingSL&&g_pairClosedProfit[g_pairIdx]>NormalizeDouble(lv_d7+g_minStopLevel+g_point,g_digits)&&g_pairClosedProfit[g_pairIdx]<MarketInfo(g_tradeSymbol,MODE_BID)-g_hlTrailBars*g_pointSize&&(g_pairClosedProfit[g_pairIdx]<lv_d10||!(g_useHLTrail))&&g_pairClosedProfit[g_pairIdx]<NormalizeDouble(MarketInfo(g_tradeSymbol,MODE_BID)-g_hlTrailOffset*g_pointSize-g_minStopLevel-g_point,g_digits)&&MarketInfo(g_tradeSymbol,MODE_BID)<lv_d8-g_stopLevelPts)
-{
-lv_d7=NormalizeDouble(g_pairClosedProfit[g_pairIdx],g_digits);
-if(lv_d7<MarketInfo(g_tradeSymbol,MODE_BID)-g_minStopLevel)
-{
-g_lastError=OrderModify((int)lv_l9,lv_d10,lv_d7,lv_d8,0,clrNONE);
-if(g_lastError<=0)
-{
-Print("error:\'"+GetErrorDescription(GetLastError())+"\'whenmodifyingstoploss");
-}
-lv_b2=true;
-}
-}
-if(g_beProfitTrigger>0.0&&MarketInfo(g_tradeSymbol,MODE_BID)>NormalizeDouble(g_beProfitTrigger*g_pointSize+lv_d10,g_digits)&&NormalizeDouble(g_beOffset*g_pointSize+lv_d10,g_digits)>lv_d7+g_point&&MarketInfo(g_tradeSymbol,MODE_BID)>NormalizeDouble(g_beOffset*g_pointSize+lv_d10+g_minStopLevel,g_digits)&&MarketInfo(g_tradeSymbol,MODE_BID)<lv_d8-g_stopLevelPts)
-{
-lv_d7=NormalizeDouble(g_beOffset*g_pointSize+lv_d10,g_digits);
-if(lv_d7<MarketInfo(g_tradeSymbol,MODE_BID)-g_minStopLevel)
-{
-g_lastError=OrderModify((int)lv_l9,lv_d10,lv_d7,lv_d8,0,clrNONE);
-if(g_lastError<=0)
-{
-Print("errorwhensettingbreakeven:\'"+GetErrorDescription(GetLastError())+"\'..\'Exit_BE_start\'tocloseto\'Exit_BE_extra_pips\'..tryingagain!");
-}
-lv_b2=true;
-}
-}
-if(!(lv_b2)&&(g_magicTrailMode==1||(g_magicTrailMode==2&&g_magicTrailFast*g_pointSize+lv_d7<=g_magicTrailSlow*g_pointSize+(lv_d5+g_spread))))
-{
-g_st2_TP++;
-if(MarketInfo(g_tradeSymbol,MODE_BID)>g_magicTrailFast*g_pointSize+lv_d7+g_minStopLevel&&MarketInfo(g_tradeSymbol,MODE_BID)<lv_d8-g_stopLevelPts&&(g_magicTrailStep==0.0||MarketInfo(g_tradeSymbol,MODE_BID)>g_st2_entryHigh*g_pointSize+lv_d5)&&g_st2_TP>=g_magicTrailPeriod&&NormalizeDouble(g_magicTrailFast*g_pointSize+lv_d7,g_digits)>lv_d7)
-{
-g_st2_TP=0;
-lv_d7=NormalizeDouble(g_magicTrailFast*g_pointSize+lv_d7,g_digits);
-_orderOK = OrderModify((int)lv_l9,lv_d10,lv_d7,lv_d8,0,clrNONE);
-lv_b2=true;
-}
-}
-g_ask=lv_d7;
-if(MarketInfo(g_tradeSymbol,MODE_BID)<lv_d7)
-{
-Print("Closing with virtual SL");
-RefreshRates();
-_orderOK = OrderClose((int)lv_l9,lv_d12,MarketInfo(g_tradeSymbol,MODE_BID),(int)g_spread,clrNONE);
-return(true);
-}
-if(NormalizeDouble(lv_d4,g_digits)!=NormalizeDouble(g_ask,g_digits))
-{
-tmp_d31=NormalizeDouble(g_ask,g_digits);
-tmp_l32=lv_l9;
-for(tmp_i33=0;tmp_i33<g_panelX;tmp_i33=tmp_i33+1)
-{
-if(g_perfMatrix[tmp_i33][0]==tmp_l32)
-{
-g_perfMatrix[tmp_i33][1]=tmp_d31;
-break;
-}
-}
-}
-if(lv_b2&&g_useCompound)
-{
-return(true);
-}
-}
-if((g_newsFilterMode==2||g_newsFilterMode==3))
-{
-tmp_l34=lv_l9;
-tmp_d35=g_minProfitClose;
-tmp_d36=lv_d10;
-tmp_i37=1;
-tmp_d38=0.0;
-tmp_b39=false;
-for(tmp_i40=0;tmp_i40<g_panelX;tmp_i40=tmp_i40+1)
-{
-if(g_perfMatrix[tmp_i40][0]==tmp_l34)
-{
-tmp_d38=g_perfMatrix[tmp_i40][1];
-tmp_b39=true;
-break;
-}
-}
-if(!(tmp_b39))
-{
-if(tmp_i37==1)
-{
-tmp_d38=NormalizeDouble(tmp_d36-tmp_d35*g_pointSize,g_digits);
-}
-if(tmp_i37==2)
-{
-tmp_d38=NormalizeDouble(tmp_d35*g_pointSize+tmp_d36,g_digits);
-}
-for(tmp_i41=0;tmp_i41<g_panelX;tmp_i41=tmp_i41+1)
-{
-if(g_perfMatrix[tmp_i41][0]==0.0)
-{
-g_perfMatrix[tmp_i41][0] = (double)(tmp_l34);
-g_perfMatrix[tmp_i41][1]=tmp_d38;
-break;
-}
-}
-}
-g_ask=tmp_d38;
-lv_d4=g_ask;
-if(MarketInfo(g_tradeSymbol,MODE_BID)<=lv_d4)
-{
-RefreshRates();
-_orderOK = OrderClose((int)lv_l9,lv_d12,MarketInfo(g_tradeSymbol,MODE_BID),(int)g_spread,clrNONE);
-return(true);
-}
-lv_i28 = (int)(TimeCurrent()-g_dailyResetTime);
-if(lv_i28>=g_maxSpreadFilter)
-{
-if(NormalizeDouble(g_ask,g_digits)>lv_d7+g_point)
-{
-_orderOK = OrderModify((int)lv_l9,lv_d10,NormalizeDouble(g_ask,g_digits),lv_d8,0,clrNONE);
-}
-g_dailyResetTime=TimeCurrent();
-}
-if(g_recovTrailStart>0.0&&TimeCurrent()>=lv_dt13+g_initRetries&&MarketInfo(g_tradeSymbol,MODE_BID)>g_recovTrailStep*g_pointSize+(g_ask+g_point)&&MarketInfo(g_tradeSymbol,MODE_BID)<lv_d8-g_stopLevelPts)
-{
-lv_b2=true;
-g_ask=MarketInfo(g_tradeSymbol,MODE_BID)-g_recovTrailStep*g_pointSize;
-}
-if(g_trailStep>0.0&&MarketInfo(g_tradeSymbol,MODE_BID)>(g_trailStep+g_trailOffset)*g_pointSize+(g_ask+g_point)&&MarketInfo(g_tradeSymbol,MODE_BID)>g_trailStart*g_pointSize+lv_d5&&g_ask<g_trailStop*g_pointSize+lv_d10)
-{
-lv_b2=true;
-g_ask=MarketInfo(g_tradeSymbol,MODE_BID)-g_trailStep*g_pointSize;
-lv_d29=NormalizeDouble(g_trailMin/100.0*g_pairStratLots[g_pairIdx],2);
-if(lv_d29<lv_d12&&lv_d29>=MarketInfo(g_tradeSymbol,MODE_LOTSTEP))
-{
-_orderOK = OrderClose((int)lv_l9,lv_d29,MarketInfo(g_tradeSymbol,MODE_BID),(int)g_maxVolatility,Red);
-return(true);
-}
-}
-if(lv_b19&&g_volPeriod==1&&g_exitRange>0.0&&MarketInfo(g_tradeSymbol,MODE_BID)>g_exitRange*g_pointSize+(g_ask+g_point)&&MarketInfo(g_tradeSymbol,MODE_BID)>g_entryRange*g_pointSize+lv_d17&&MarketInfo(g_tradeSymbol,MODE_BID)<lv_d8-g_stopLevelPts&&g_ask<g_filterRange*g_pointSize+lv_d10)
-{
-Print("Slippagecontrolactive");
-lv_b2=true;
-g_ask=MarketInfo(g_tradeSymbol,MODE_BID)-g_exitRange*g_pointSize;
-}
-if(g_hlTrailShift> 0&&g_hlTrailMode>=0&&g_pairClosedProfit[g_pairIdx]>g_ask+g_minStopLevel+g_point&&(g_pairClosedProfit[g_pairIdx]<lv_d10||!(g_useHLTrail))&&g_pairClosedProfit[g_pairIdx]<MarketInfo(g_tradeSymbol,MODE_BID)-g_hlTrailOffset*g_pointSize-g_minStopLevel-g_point&&MarketInfo(g_tradeSymbol,MODE_BID)<lv_d8-g_stopLevelPts)
-{
-g_ask=g_pairClosedProfit[g_pairIdx];
-lv_b2=true;
-}
-if(g_beProfitTrigger>0.0&&g_newsFilterMode==3&&MarketInfo(g_tradeSymbol,MODE_BID)>g_beProfitTrigger*g_pointSize+lv_d10&&g_beOffset*g_pointSize+lv_d10>lv_d7+g_point&&MarketInfo(g_tradeSymbol,MODE_BID)>g_beOffset*g_pointSize+lv_d10+g_minStopLevel&&MarketInfo(g_tradeSymbol,MODE_BID)<lv_d8-g_stopLevelPts&&NormalizeDouble(g_beOffset*g_pointSize+lv_d10,g_digits)>OrderStopLoss())
-{
-g_ask=NormalizeDouble(g_beOffset*g_pointSize+lv_d10,g_digits);
-g_lastError=OrderModify((int)lv_l9,lv_d10,g_ask,lv_d8,0,clrNONE);
-if(g_lastError<=0)
-{
-Print("errorwhensettingbreakeven:\'"+GetErrorDescription(GetLastError())+"\'..\'Exit_BE_start\'tocloseto\'Exit_BE_extra_pips\'..tryingagain!");
-}
-lv_b2=true;
-}
-if(g_beProfitTrigger>0.0&&g_newsFilterMode==2&&MarketInfo(g_tradeSymbol,MODE_BID)>g_beProfitTrigger*g_pointSize+lv_d10&&g_beOffset*g_pointSize+lv_d10>g_ask+g_point&&MarketInfo(g_tradeSymbol,MODE_BID)>g_beOffset*g_pointSize+lv_d10+g_minStopLevel&&MarketInfo(g_tradeSymbol,MODE_BID)<lv_d8-g_stopLevelPts)
-{
-g_ask=g_beOffset*g_pointSize+lv_d10;
-lv_b2=true;
-}
-if(!(lv_b2)&&(g_magicTrailMode==1||(g_magicTrailMode==2&&g_magicTrailFast*g_pointSize+g_ask<=g_magicTrailSlow*g_pointSize+(lv_d5+g_spread))))
-{
-g_st2_TP++;
-if(MarketInfo(g_tradeSymbol,MODE_BID)>g_magicTrailFast*g_pointSize+g_ask+g_minStopLevel&&MarketInfo(g_tradeSymbol,MODE_BID)<lv_d8-g_stopLevelPts&&(g_magicTrailStep==0.0||MarketInfo(g_tradeSymbol,MODE_BID)>g_st2_entryHigh*g_pointSize+lv_d5)&&g_st2_TP>=g_magicTrailPeriod)
-{
-g_st2_TP=0;
-g_ask=g_magicTrailFast*g_pointSize+g_ask;
-lv_b2=true;
-}
-}
-if(MarketInfo(g_tradeSymbol,MODE_BID)<=g_ask)
-{
-RefreshRates();
-_orderOK = OrderClose((int)lv_l9,lv_d12,MarketInfo(g_tradeSymbol,MODE_BID),(int)g_spread,clrNONE);
-return(true);
-}
-if(NormalizeDouble(lv_d4,g_digits)!=NormalizeDouble(g_ask,g_digits))
-{
-tmp_d42=NormalizeDouble(g_ask,g_digits);
-tmp_l43=lv_l9;
-for(tmp_i44=0;tmp_i44<g_panelX;tmp_i44=tmp_i44+1)
-{
-if(g_perfMatrix[tmp_i44][0]==tmp_l43)
-{
-g_perfMatrix[tmp_i44][1]=tmp_d42;
-break;
-}
-}
-}
-}
-}
-}
-if(lv_b2)
-{
-lv_b3=true;
-}
-}
-if(lv_b2)
-{
-lv_b3=true;
-}
-}
-return(lv_b3);
-}
-// ManageBuyTrade<<==-------- --------
-bool ManageSellTrade()
-{
-bool lv_b2=false;
-bool lv_b3=false;
-double lv_d4;
-double lv_d5;
-int lv_i6;
-double lv_d7;
-double lv_d8;
-long lv_l9;
-double lv_d10;
-string lv_s11;
-double lv_d12;
-datetime lv_dt13;
-int lv_i14;
-int lv_i15;
-string lv_s16;
-double lv_d17;
-double lv_d18;
-bool lv_b19;
-bool lv_b20;
-double lv_d21;
-bool lv_b22;
-double lv_d23;
-double lv_d24;
-double lv_d25;
-double lv_d26;
-double lv_d27;
-int lv_i28;
-double lv_d29;
-//----------
-bool _orderOK;
-int tmp_i1;
-long tmp_l2;
-int tmp_i3;
-double tmp_d4;
-double tmp_d5;
-long tmp_l6;
-int tmp_i7;
-long tmp_l8;
-int tmp_i9;
-int tmp_i10;
-string tmp_s11;
-double tmp_d12;
-int tmp_i13;
-long tmp_l14;
-double tmp_d15;
-int tmp_i16;
-long tmp_l17;
-long tmp_l18;
-int tmp_i19;
-int tmp_i20;
-int tmp_i21;
-string tmp_s22;
-long tmp_l23;
-double tmp_d24;
-double tmp_d25;
-int tmp_i26;
-double tmp_d27;
-bool tmp_b28 = false;
-int tmp_i29;
-int tmp_i30;
-double tmp_d31;
-long tmp_l32;
-int tmp_i33;
-long tmp_l34;
-double tmp_d35;
-double tmp_d36;
-int tmp_i37;
-double tmp_d38;
-bool tmp_b39 = false;
-int tmp_i40;
-int tmp_i41;
-double tmp_d42;
-long tmp_l43;
-int tmp_i44;
-
-lv_d4=0.0;
-lv_d5=0.0;
-for(lv_i6=0;lv_i6<OrdersTotal();lv_i6++)
-{
-if(OrderSelect(lv_i6,0,0)==true)
-{
-lv_b2=false;
-lv_d7=NormalizeDouble(OrderStopLoss(),g_digits);
-lv_d8=NormalizeDouble(OrderTakeProfit(),g_digits);
-lv_l9=OrderTicket();
-lv_d10=NormalizeDouble(OrderOpenPrice(),g_digits);
-lv_s11=OrderComment();
-lv_d12=OrderLots();
-lv_dt13=OrderOpenTime();
-lv_i14=OrderType();
-lv_i15=OrderMagicNumber();
-lv_s16=OrderSymbol();
-if((lv_i14==5||lv_i14==3)&&g_entryMode==2&&(g_strat2_type==0||(g_strat2_type==1&&lv_s16==g_tradeSymbol))&&(lv_i15==g_magicStrat2||g_magicStrat2==0)&&(lv_s11==g_strat2_comment||g_strat2_comment==""))
-{
-if((lv_d7==0.0||lv_d7==0.0))
-{
-lv_d7=NormalizeDouble(g_minProfitClose*g_pointSize+lv_d10,g_digits);
-_orderOK = OrderModify((int)lv_l9,lv_d10,lv_d7,lv_d8,0,Green);
-}
-if((lv_d8==0.0||lv_d8==0.0))
-{
-lv_d8=NormalizeDouble(lv_d10-g_maxLossClose*g_pointSize,g_digits);
-_orderOK = OrderModify((int)lv_l9,lv_d10,lv_d7,lv_d8,0,Green);
-}
-}
-if(lv_i14==1&&((lv_i15==g_magicMain&&g_entryMode==1&&lv_s16==g_tradeSymbol)||(g_entryMode==2&&(g_strat2_type==0||(g_strat2_type==1&&lv_s16==g_tradeSymbol))&&(lv_i15==g_magicStrat2||g_magicStrat2==0)&&(lv_s11==g_strat2_comment||g_strat2_comment==""))))
-{
-if((lv_d7==0.0||lv_d7==0.0))
-{
-lv_d7=NormalizeDouble(g_minProfitClose*g_pointSize+lv_d10,g_digits);
-_orderOK = OrderModify((int)lv_l9,lv_d10,lv_d7,lv_d8,0,Green);
-}
-if((lv_d8==0.0||lv_d8==0.0))
-{
-lv_d8=NormalizeDouble(lv_d10-g_maxLossClose*g_pointSize,g_digits);
-_orderOK = OrderModify((int)lv_l9,lv_d10,lv_d7,lv_d8,0,Green);
-}
-if(g_use5minFilter&&iTime(g_tradeSymbol,g_maxTotalTrades,g_maxTradesPerDir)<=lv_dt13&&iTime(g_tradeSymbol,g_maxTotalTrades,0)> lv_dt13&&iClose(g_tradeSymbol,g_maxTotalTrades,1)>iOpen(g_tradeSymbol,g_maxTotalTrades,1)&&iClose(g_tradeSymbol,g_maxTotalTrades,1)>lv_d10)
-{
-_orderOK = OrderClose((int)lv_l9,lv_d12,MarketInfo(g_tradeSymbol,MODE_ASK),0,Red);
-Print("closingcandleconfirmation");
-}
-if(g_use15minFilter&&iTime(g_tradeSymbol,g_filter5minPeriod,g_maxTradesPerDir)<=lv_dt13&&iTime(g_tradeSymbol,g_filter5minPeriod,0)> lv_dt13&&iClose(g_tradeSymbol,g_filter5minPeriod,1)>iOpen(g_tradeSymbol,g_filter5minPeriod,1)&&iClose(g_tradeSymbol,g_filter5minPeriod,1)>lv_d10)
-{
-_orderOK = OrderClose((int)lv_l9,lv_d12,MarketInfo(g_tradeSymbol,MODE_ASK),0,Red);
-Print("closingcandleconfirmation");
-}
-if(g_use30minFilter&&iTime(g_tradeSymbol,g_filter15minPeriod,g_maxTradesPerDir)<=lv_dt13&&iTime(g_tradeSymbol,g_filter15minPeriod,0)> lv_dt13&&iClose(g_tradeSymbol,g_filter15minPeriod,1)>iOpen(g_tradeSymbol,g_filter15minPeriod,1)&&iClose(g_tradeSymbol,g_filter15minPeriod,1)>lv_d10)
-{
-_orderOK = OrderClose((int)lv_l9,lv_d12,MarketInfo(g_tradeSymbol,MODE_ASK),0,Red);
-Print("closingcandleconfirmation");
-}
-if(g_use1hrFilter&&iTime(g_tradeSymbol,g_filter30minPeriod,g_maxTradesPerDir)<=lv_dt13&&iTime(g_tradeSymbol,g_filter30minPeriod,0)> lv_dt13&&iClose(g_tradeSymbol,g_filter30minPeriod,1)>iOpen(g_tradeSymbol,g_filter30minPeriod,1)&&iClose(g_tradeSymbol,g_filter30minPeriod,1)>lv_d10)
-{
-_orderOK = OrderClose((int)lv_l9,lv_d12,MarketInfo(g_tradeSymbol,MODE_ASK),0,Red);
-Print("closingcandleconfirmation");
-}
-if(g_useNewsFilter&&iTime(g_tradeSymbol,g_filter1hrPeriod,g_maxTradesPerDir)<=lv_dt13&&iTime(g_tradeSymbol,g_filter1hrPeriod,0)> lv_dt13&&iClose(g_tradeSymbol,g_filter1hrPeriod,1)>iOpen(g_tradeSymbol,g_filter1hrPeriod,1)&&iClose(g_tradeSymbol,g_filter1hrPeriod,1)>lv_d10)
-{
-_orderOK = OrderClose((int)lv_l9,lv_d12,MarketInfo(g_tradeSymbol,MODE_ASK),0,Red);
-Print("closingcandleconfirmation");
-}
-g_st2_entryHigh=g_magicTrailStep;
-if(g_magicTrailShift> 0&&TimeCurrent()> lv_dt13+g_magicTrailShift*60)
-{
-g_st2_entryHigh=g_magicTrailOffset;
-}
-tmp_i1=g_digits;
-tmp_l2=lv_l9;
-for(tmp_i3=0;tmp_i3<100;tmp_i3=tmp_i3+1)
-{
-if(!(g_tradeStats[tmp_i3][0]==tmp_l2)) continue;
-tmp_d4=g_tradeStats[tmp_i3][1];
-break;
-
-}
-tmp_d4=0.0;
-lv_d17=NormalizeDouble(tmp_d4,tmp_i1);
-if(lv_d17==0.0)
-{
-tmp_d5=lv_d10;
-tmp_l6=lv_l9;
-for(tmp_i7=0;tmp_i7<100;tmp_i7=tmp_i7+1)
-{
-if(!(g_tradeStats[tmp_i7][0]==0.0)) continue;
-g_tradeStats[tmp_i7][0] = (double)(tmp_l6);
-g_tradeStats[tmp_i7][1]=tmp_d5;
-break;
-
-}
-lv_d17=lv_d10;
-}
-else
-{
-lv_d17=lv_d17-g_breakEvenOffset*g_pointSize;
-}
-lv_d18=lv_d17-lv_d10;
-lv_b19=false;
-if(lv_d17>g_breakEvenOffset*g_pointSize&&lv_d18>g_maxVolatility*g_pointSize)
-{
-lv_b19=true;
-if(g_volPeriod==2)
-{
-g_st2_entryHigh=-1000.0;
-Print("Slippage Mode 2 active");
-}
-}
-if(g_useVirtualSL)
-{
-lv_d5=lv_d17;
-}
-else
-{
-lv_d5=lv_d10;
-}
-if(lv_d7>NormalizeDouble((g_minProfitClose+g_newsImpactLevel)*g_pointSize+lv_d10+g_spread,g_digits))
-{
-lv_d7=NormalizeDouble((g_minProfitClose+g_newsImpactLevel)*g_pointSize+lv_d10+g_spread,g_digits);
-_orderOK = OrderModify((int)lv_l9,lv_d10,lv_d7,lv_d8,0,clrNONE);
-}
-if(MarketInfo(g_tradeSymbol,MODE_ASK)>(g_minProfitClose+g_newsImpactLevel)*g_pointSize+lv_d10+g_spread)
-{
-RefreshRates();
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_ASK),(int)g_spread,Red);
-return(true);
-}
-lv_b20=false;
-if(g_zrEnabled)
-{
-tmp_l8=lv_l9;
-tmp_i9=0;
-for(tmp_i10=OrdersTotal();tmp_i10>=0;tmp_i10=tmp_i10-1)
-{
-if(OrderSelect(tmp_i10,0,0)!=true||OrderMagicNumber()!=g_zrSellMagic||OrderSymbol()!=g_tradeSymbol) continue;
-tmp_s11=OrderComment();
-if(tmp_s11!=IntegerToString(tmp_l8,0,32)) continue;
-tmp_i9=tmp_i9+1;
-
-}
-lv_d21=tmp_i9;
-lv_b22=false;
-if(!(g_hasSellOrder))
-{
-g_hasSellOrder=true;
-g_openSellCount=1;
-}
-if(lv_d21==0.0)
-{
-g_openSellCount=1;
-}
-if(MathFloor(lv_d21/2.0)==lv_d21/2.0)
-{
-g_openSellCount=1;
-}
-else
-{
-g_openSellCount=0;
-}
-if(g_hasSellOrder)
-{
-if(lv_d21>0.0)
-{
-tmp_d12=AccountEquity();
-if(tmp_d12>AccountBalance()+g_zrMaxStep)
-{
-for(tmp_i13=OrdersTotal();tmp_i13>=0;tmp_i13=tmp_i13-1)
-{
-if(OrderSelect(tmp_i13,0,0)!=true) continue;
-
-if((OrderMagicNumber()!=g_magicMain&&OrderMagicNumber()!=g_zrSellMagic&&OrderMagicNumber()!=g_zrBuyMagic)) continue;
-
-if(OrderType()==0)
-{
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_BID),(int)g_maxVolatility,Red);
-}
-if(OrderType()!=1) continue;
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_ASK),(int)g_maxVolatility,Red);
-
-}
-}
-}
-if(lv_d21>0.0)
-{
-tmp_l14=lv_l9;
-tmp_d15=0.0;
-for(tmp_i16=OrdersTotal();tmp_i16>=0;tmp_i16=tmp_i16-1)
-{
-if(OrderSelect(tmp_i16,0,0)!=true) continue;
-tmp_l17=OrderTicket();
-if(tmp_l17!=tmp_l14)
-{
-tmp_s11=OrderComment();
-if(tmp_s11!=IntegerToString(tmp_l14,0,32)) continue;
-}
-tmp_d15=tmp_d15+OrderProfit();
-
-}
-if(tmp_d15>g_zrMaxStep)
-{
-Print("Closingzone");
-tmp_l18=lv_l9;
-for(tmp_i19=OrdersTotal();tmp_i19>=0;tmp_i19=tmp_i19-1)
-{
-if(OrderSelect(tmp_i19,0,0)!=true) continue;
-
-if(OrderMagicNumber()==g_magicMain&&OrderTicket()==tmp_l18)
-{
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_ASK),3,Red);
-}
-if(OrderMagicNumber()!=g_zrSellMagic) continue;
-tmp_s11=OrderComment();
-if(tmp_s11!=IntegerToString(tmp_l18,0,32)) continue;
-
-if(OrderType()==0)
-{
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_BID),(int)g_maxVolatility,Red);
-}
-if(OrderType()!=1) continue;
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_ASK),(int)g_maxVolatility,Red);
-
-}
-g_hasSellOrder=false;
-lv_b20=true;
-}
-}
-else
-{
-lv_d23=lv_d12*g_zrLotMultiplier;
-if(g_zrMaxOrders==2)
-{
-lv_d23=(lv_d21+1.0)*lv_d12+lv_d12;
-}
-if(g_zrMaxOrders==3)
-{
-lv_d23=lv_d12*(MathPow(g_zrLotMultiplier,lv_d21+1.0));
-}
-if(g_openSellCount==0)
-{
-lv_d24=lv_d17;
-if(MarketInfo(g_tradeSymbol,MODE_BID)<lv_d17)
-{
-if(lv_d21>=g_zrMaxMagic)
-{
-for(tmp_i20=OrdersTotal();tmp_i20>=0;tmp_i20=tmp_i20-1)
-{
-if(OrderSelect(tmp_i20,0,0)!=true) continue;
-
-if(OrderMagicNumber()==g_magicMain&&OrderTicket()==lv_l9)
-{
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_ASK),3,Red);
-}
-if(OrderMagicNumber()!=g_zrSellMagic) continue;
-tmp_s11=OrderComment();
-if(tmp_s11!=IntegerToString(lv_l9,0,32)) continue;
-
-if(OrderType()==0)
-{
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_BID),(int)g_maxVolatility,Red);
-}
-if(OrderType()!=1) continue;
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_ASK),(int)g_maxVolatility,Red);
-
-}
-}
-else
-{
-_orderOK = OrderSend(g_tradeSymbol,OP_SELL,lv_d23,MarketInfo(g_tradeSymbol,MODE_BID),(int)g_maxVolatility,0.0,0.0,IntegerToString(lv_l9,0,32),g_zrSellMagic,0,Green);
-g_openSellCount=1;
-lv_b22=true;
-}
-}
-}
-else
-{
-lv_d25=g_zrZoneSize*g_pointSize+lv_d17-lv_d21*g_zrStep*g_pointSize;
-if(lv_d25<g_zrMinStep*g_pointSize+lv_d17)
-{
-lv_d25=g_zrMinStep*g_pointSize+lv_d17;
-}
-if(MarketInfo(g_tradeSymbol,MODE_ASK)>lv_d25)
-{
-if(lv_d21>=g_zrMaxMagic)
-{
-for(tmp_i21=OrdersTotal();tmp_i21>=0;tmp_i21=tmp_i21-1)
-{
-if(OrderSelect(tmp_i21,0,0)!=true) continue;
-
-if(OrderMagicNumber()==g_magicMain&&OrderTicket()==lv_l9)
-{
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_ASK),3,Red);
-}
-if(OrderMagicNumber()!=g_zrSellMagic) continue;
-tmp_s22=OrderComment();
-if(tmp_s22!=IntegerToString(lv_l9,0,32)) continue;
-
-if(OrderType()==0)
-{
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_BID),(int)g_maxVolatility,Red);
-}
-if(OrderType()!=1) continue;
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_ASK),(int)g_maxVolatility,Red);
-
-}
-}
-else
-{
-_orderOK = OrderSend(g_tradeSymbol,OP_BUY,lv_d23,MarketInfo(g_tradeSymbol,MODE_ASK),(int)g_maxVolatility,0.0,0.0,IntegerToString(lv_l9,0,32),g_zrSellMagic,0,Green);
-g_openSellCount=0;
-lv_b22=true;
-}
-}
-}
-}
-}
-if((lv_d21>0.0||lv_b22))
-{
-lv_b20=true;
-}
-}
-if(!(lv_b20))
-{
-if((g_newsFilterMode==1||(g_newsFilterMode!=2&&g_newsFilterMode!=3)))
-{
-tmp_l23=lv_l9;
-tmp_d24=g_minProfitClose;
-tmp_d25=lv_d10;
-tmp_i26=2;
-tmp_d27=0.0;
-tmp_b28=false;
-for(tmp_i29=0;tmp_i29<g_panelX;tmp_i29=tmp_i29+1)
-{
-if(g_perfMatrix[tmp_i29][0]==tmp_l23)
-{
-tmp_d27=g_perfMatrix[tmp_i29][1];
-tmp_b28=true;
-break;
-}
-}
-if(!(tmp_b28))
-{
-if(tmp_i26==1)
-{
-tmp_d27=NormalizeDouble(tmp_d25-tmp_d24*g_pointSize,g_digits);
-}
-if(tmp_i26==2)
-{
-tmp_d27=NormalizeDouble(tmp_d24*g_pointSize+tmp_d25,g_digits);
-}
-for(tmp_i30=0;tmp_i30<g_panelX;tmp_i30=tmp_i30+1)
-{
-if(g_perfMatrix[tmp_i30][0]==0.0)
-{
-g_perfMatrix[tmp_i30][0] = (double)(tmp_l23);
-g_perfMatrix[tmp_i30][1]=tmp_d27;
-break;
-}
-}
-}
-g_ask=tmp_d27;
-lv_d4=g_ask;
-if(MarketInfo(g_tradeSymbol,MODE_ASK)>lv_d4)
-{
-Print("Closing with virtual SL");
-RefreshRates();
-_orderOK = OrderClose((int)lv_l9,lv_d12,MarketInfo(g_tradeSymbol,MODE_ASK),(int)g_spread,clrNONE);
-return(true);
-}
-if(g_recovTrailStart>0.0&&TimeCurrent()>=lv_dt13+g_initRetries&&MarketInfo(g_tradeSymbol,MODE_ASK)<lv_d7-g_point-g_recovTrailStep*g_pointSize&&MarketInfo(g_tradeSymbol,MODE_ASK)>lv_d8+g_stopLevelPts&&NormalizeDouble(MarketInfo(g_tradeSymbol,MODE_ASK)+g_recovTrailStep*g_pointSize,g_digits)<lv_d7)
-{
-lv_d7=NormalizeDouble(MarketInfo(g_tradeSymbol,MODE_ASK)+g_recovTrailStep*g_pointSize,g_digits);
-if(lv_d7>MarketInfo(g_tradeSymbol,MODE_ASK)+g_minStopLevel)
-{
-g_lastError=OrderModify((int)lv_l9,lv_d10,lv_d7,lv_d8,0,clrNONE);
-if(g_lastError<=0)
-{
-Print("TrailStoperror:\'"+GetErrorDescription(GetLastError())+"\'whensettingtrailingExit_TrailSL_after_X_Minutes_sizeloss. Tryingagain!");
-}
-lv_b2=true;
-}
-}
-if(g_trailStep>0.0&&MarketInfo(g_tradeSymbol,MODE_ASK)<lv_d7-g_point-(g_trailStep+g_trailOffset)*g_pointSize&&MarketInfo(g_tradeSymbol,MODE_ASK)<lv_d5-g_trailStart*g_pointSize&&MarketInfo(g_tradeSymbol,MODE_ASK)>lv_d8+g_stopLevelPts&&lv_d7>lv_d10-g_trailStop*g_pointSize&&NormalizeDouble(g_trailStep*g_pointSize+MarketInfo(g_tradeSymbol,MODE_ASK),g_digits)<lv_d7)
-{
-lv_d7=NormalizeDouble(MarketInfo(g_tradeSymbol,MODE_ASK)+g_trailStep*g_pointSize,g_digits);
-if(lv_d7>MarketInfo(g_tradeSymbol,MODE_ASK)+g_minStopLevel)
-{
-g_lastError=OrderModify((int)lv_l9,lv_d10,lv_d7,lv_d8,0,clrNONE);
-if(g_lastError<=0)
-{
-Print("TrailStoperror:\'"+GetErrorDescription(GetLastError())+"\'whensettingtrailingExit_stoploss. Tryingagain!");
-}
-else
-{
-lv_d26=NormalizeDouble(g_trailMin/100.0*g_pairStratLots[g_pairIdx],2);
-if(lv_d26<lv_d12&&lv_d26>=MarketInfo(g_tradeSymbol,MODE_LOTSTEP))
-{
-_orderOK = OrderClose((int)lv_l9,lv_d26,MarketInfo(g_tradeSymbol,MODE_ASK),(int)g_maxVolatility,Red);
-return(true);
-}
-}
-lv_b2=true;
-}
-}
-if(g_trailMax>0.0&&MarketInfo(g_tradeSymbol,MODE_BID)>NormalizeDouble(g_trailMax*g_pointSize+(lv_d8+g_point),g_digits)&&Bid>NormalizeDouble(g_trailFactor*g_pointSize+lv_d5,g_digits)&&MarketInfo(g_tradeSymbol,MODE_BID)>lv_d8+g_stopLevelPts)
-{
-lv_d8=NormalizeDouble(MarketInfo(g_tradeSymbol,MODE_BID)-g_trailMax*g_pointSize,g_digits);
-if(lv_d8<MarketInfo(g_tradeSymbol,MODE_BID)-g_minStopLevel)
-{
-g_lastError=OrderModify((int)lv_l9,lv_d10,lv_d7,lv_d8,0,clrNONE);
-if(g_lastError<=0)
-{
-Print("TrailStoperror:\'"+GetErrorDescription(GetLastError())+"\'whensettingtrailingExit_TP. Tryingagain!");
-}
-else
-{
-lv_d27=NormalizeDouble(g_trailMin/100.0*g_pairStratLots[g_pairIdx],2);
-if(lv_d27<lv_d12&&lv_d27>=SymbolInfoDouble(g_tradeSymbol,SYMBOL_VOLUME_MIN))
-{
-_orderOK = OrderClose((int)lv_l9,lv_d27,MarketInfo(g_tradeSymbol,MODE_ASK),(int)g_maxVolatility,Red);
-return(true);
-}
-}
-lv_b2=true;
-}
-}
-if(lv_b19&&g_volPeriod==1&&g_exitRange>0.0&&MarketInfo(g_tradeSymbol,MODE_ASK)<lv_d7-g_point-g_exitRange*g_pointSize&&MarketInfo(g_tradeSymbol,MODE_ASK)<lv_d17-g_entryRange*g_pointSize&&MarketInfo(g_tradeSymbol,MODE_ASK)>lv_d8+g_stopLevelPts&&lv_d7>lv_d10-g_filterRange*g_pointSize&&NormalizeDouble(MarketInfo(g_tradeSymbol,MODE_ASK)+g_exitRange*g_pointSize,g_digits)<lv_d7)
-{
-lv_d7=NormalizeDouble(MarketInfo(g_tradeSymbol,MODE_ASK)+g_exitRange*g_pointSize,g_digits);
-if(lv_d7>MarketInfo(g_tradeSymbol,MODE_ASK)+g_minStopLevel)
-{
-g_lastError=OrderModify((int)lv_l9,lv_d10,lv_d7,lv_d8,0,clrNONE);
-if(g_lastError<=0)
-{
-Print("TrailStoperror:\'"+GetErrorDescription(GetLastError())+"\'whensettingSlipTL. Tryingagain!");
-}
-else
-{
-Print("Slippagecontroleactive");
-}
-lv_b2=true;
-}
-}
-if(g_hlTrailShift> 0&&g_hlTrailMode>=0&&UseHL_TrailingSL&&g_pairOpenProfit[g_pairIdx]<lv_d7-g_minStopLevel-g_point&&g_pairOpenProfit[g_pairIdx]>g_hlTrailBars*g_pointSize+MarketInfo(g_tradeSymbol,MODE_ASK)&&(g_pairOpenProfit[g_pairIdx]>lv_d10||!(g_useHLTrail))&&g_pairOpenProfit[g_pairIdx]>g_hlTrailOffset*g_pointSize+MarketInfo(g_tradeSymbol,MODE_ASK)+g_minStopLevel+g_point&&MarketInfo(g_tradeSymbol,MODE_ASK)>lv_d8+g_stopLevelPts&&NormalizeDouble(g_pairOpenProfit[g_pairIdx],g_digits)<lv_d7)
-{
-lv_d7=NormalizeDouble(g_pairOpenProfit[g_pairIdx],g_digits);
-if(lv_d7>MarketInfo(g_tradeSymbol,MODE_ASK)+g_minStopLevel)
-{
-g_lastError=OrderModify((int)lv_l9,lv_d10,lv_d7,lv_d8,0,clrNONE);
-if(g_lastError<=0)
-{
-Print("error:\'"+GetErrorDescription(GetLastError())+"\'whenmodifyingstoploss");
-}
-lv_b2=true;
-}
-}
-if(g_beProfitTrigger>0.0&&MarketInfo(g_tradeSymbol,MODE_ASK)<lv_d10-g_beProfitTrigger*g_pointSize&&lv_d10-g_beOffset*g_pointSize<lv_d7-g_point&&MarketInfo(g_tradeSymbol,MODE_ASK)<lv_d10-g_beOffset*g_pointSize-g_minStopLevel&&MarketInfo(g_tradeSymbol,MODE_ASK)>lv_d8+g_stopLevelPts&&NormalizeDouble(lv_d10-g_beOffset*g_pointSize,g_digits)<lv_d7)
-{
-lv_d7=NormalizeDouble(lv_d10-g_beOffset*g_pointSize,g_digits);
-if(lv_d7>MarketInfo(g_tradeSymbol,MODE_ASK)+g_minStopLevel)
-{
-g_lastError=OrderModify((int)lv_l9,lv_d10,lv_d7,lv_d8,0,clrNONE);
-if(g_lastError<=0)
-{
-Print("errorwhensettingbreakeven:\'"+GetErrorDescription(GetLastError())+"\'..\'Exit_BE_start\'tocloseto\'Exit_BE_extra_pips\'..tryingagain!");
-}
-lv_b2=true;
-}
-}
-if(!(lv_b2)&&(g_magicTrailMode==1||(g_magicTrailMode==2&&lv_d7-g_magicTrailFast*g_pointSize>=lv_d5-g_spread-g_magicTrailSlow*g_pointSize)))
-{
-g_st2_TP++;
-if(MarketInfo(g_tradeSymbol,MODE_ASK)<lv_d7-g_magicTrailFast*g_pointSize-g_minStopLevel&&MarketInfo(g_tradeSymbol,MODE_ASK)>lv_d8+g_stopLevelPts&&(g_magicTrailStep==0.0||MarketInfo(g_tradeSymbol,MODE_ASK)<lv_d5-g_st2_entryHigh*g_pointSize)&&g_st2_TP>=g_magicTrailPeriod&&NormalizeDouble(lv_d7-g_magicTrailFast*g_pointSize,g_digits)<lv_d7)
-{
-g_st2_TP=0;
-lv_d7=NormalizeDouble(lv_d7-g_magicTrailFast*g_pointSize,g_digits);
-_orderOK = OrderModify((int)lv_l9,lv_d10,lv_d7,lv_d8,0,clrNONE);
-lv_b2=true;
-}
-}
-g_ask=lv_d7;
-if(MarketInfo(g_tradeSymbol,MODE_ASK)>lv_d7)
-{
-Print("Closing with virtual SL");
-RefreshRates();
-_orderOK = OrderClose((int)lv_l9,lv_d12,MarketInfo(g_tradeSymbol,MODE_ASK),(int)g_spread,clrNONE);
-return(true);
-}
-if(NormalizeDouble(lv_d4,g_digits)!=NormalizeDouble(g_ask,g_digits))
-{
-tmp_d31=NormalizeDouble(g_ask,g_digits);
-tmp_l32=lv_l9;
-for(tmp_i33=0;tmp_i33<g_panelX;tmp_i33=tmp_i33+1)
-{
-if(g_perfMatrix[tmp_i33][0]==tmp_l32)
-{
-g_perfMatrix[tmp_i33][1]=tmp_d31;
-break;
-}
-}
-}
-if(lv_b2&&g_useCompound)
-{
-return(true);
-}
-}
-if((g_newsFilterMode==2||g_newsFilterMode==3))
-{
-tmp_l34=lv_l9;
-tmp_d35=g_minProfitClose;
-tmp_d36=lv_d10;
-tmp_i37=2;
-tmp_d38=0.0;
-tmp_b39=false;
-for(tmp_i40=0;tmp_i40<g_panelX;tmp_i40=tmp_i40+1)
-{
-if(g_perfMatrix[tmp_i40][0]==tmp_l34)
-{
-tmp_d38=g_perfMatrix[tmp_i40][1];
-tmp_b39=true;
-break;
-}
-}
-if(!(tmp_b39))
-{
-if(tmp_i37==1)
-{
-tmp_d38=NormalizeDouble(tmp_d36-tmp_d35*g_pointSize,g_digits);
-}
-if(tmp_i37==2)
-{
-tmp_d38=NormalizeDouble(tmp_d35*g_pointSize+tmp_d36,g_digits);
-}
-for(tmp_i41=0;tmp_i41<g_panelX;tmp_i41=tmp_i41+1)
-{
-if(g_perfMatrix[tmp_i41][0]==0.0)
-{
-g_perfMatrix[tmp_i41][0] = (double)(tmp_l34);
-g_perfMatrix[tmp_i41][1]=tmp_d38;
-break;
-}
-}
-}
-g_ask=tmp_d38;
-lv_d4=g_ask;
-if(MarketInfo(g_tradeSymbol,MODE_ASK)>=lv_d4)
-{
-RefreshRates();
-_orderOK = OrderClose((int)lv_l9,lv_d12,MarketInfo(g_tradeSymbol,MODE_ASK),(int)g_spread,clrNONE);
-return(true);
-}
-lv_i28 = (int)(TimeCurrent()-g_dailyResetTime);
-if(lv_i28>=g_maxSpreadFilter)
-{
-if(NormalizeDouble(g_ask,g_digits)<lv_d7-g_point)
-{
-_orderOK = OrderModify((int)lv_l9,lv_d10,NormalizeDouble(g_ask,g_digits),lv_d8,0,clrNONE);
-}
-g_dailyResetTime=TimeCurrent();
-}
-if(g_recovTrailStart>0.0&&TimeCurrent()>=lv_dt13+g_initRetries&&MarketInfo(g_tradeSymbol,MODE_ASK)<g_ask-g_point-g_recovTrailStep*g_pointSize&&MarketInfo(g_tradeSymbol,MODE_ASK)>lv_d8+g_stopLevelPts)
-{
-g_ask=MarketInfo(g_tradeSymbol,MODE_ASK)+g_recovTrailStep*g_pointSize;
-lv_b2=true;
-}
-if(g_trailStep>0.0&&MarketInfo(g_tradeSymbol,MODE_ASK)<g_ask-g_point-(g_trailStep+g_trailOffset)*g_pointSize&&MarketInfo(g_tradeSymbol,MODE_ASK)<lv_d5-g_trailStart*g_pointSize&&g_ask>lv_d10-g_trailStop*g_pointSize)
-{
-g_ask=g_trailStep*g_pointSize+MarketInfo(g_tradeSymbol,MODE_ASK);
-lv_d29=NormalizeDouble(g_trailMin/100.0*g_pairStratLots[g_pairIdx],2);
-if(lv_d29<lv_d12&&lv_d29>=MarketInfo(g_tradeSymbol,MODE_LOTSTEP))
-{
-_orderOK = OrderClose((int)lv_l9,lv_d29,MarketInfo(g_tradeSymbol,MODE_BID),(int)g_maxVolatility,Red);
-return(true);
-}
-lv_b2=true;
-}
-if(lv_b19&&g_volPeriod==1&&g_exitRange>0.0&&MarketInfo(g_tradeSymbol,MODE_ASK)<g_ask-g_point-g_exitRange*g_pointSize&&MarketInfo(g_tradeSymbol,MODE_ASK)<lv_d17-g_entryRange*g_pointSize&&MarketInfo(g_tradeSymbol,MODE_ASK)>lv_d8+g_stopLevelPts&&g_ask>lv_d10-g_filterRange*g_pointSize)
-{
-Print("Slippagecontroleactive");
-lv_b2=true;
-g_ask=MarketInfo(g_tradeSymbol,MODE_ASK)+g_exitRange*g_pointSize;
-}
-if(g_hlTrailShift> 0&&g_hlTrailMode>=0&&g_pairOpenProfit[g_pairIdx]<g_ask-g_minStopLevel-g_point&&(g_pairOpenProfit[g_pairIdx]>lv_d10||!(g_useHLTrail))&&g_pairOpenProfit[g_pairIdx]>g_hlTrailOffset*g_pointSize+MarketInfo(g_tradeSymbol,MODE_ASK)+g_minStopLevel+g_point&&MarketInfo(g_tradeSymbol,MODE_ASK)>lv_d8+g_stopLevelPts)
-{
-g_ask=g_pairOpenProfit[g_pairIdx];
-lv_b2=true;
-}
-if(g_beProfitTrigger>0.0&&g_newsFilterMode==3&&MarketInfo(g_tradeSymbol,MODE_ASK)<lv_d10-g_beProfitTrigger*g_pointSize&&lv_d10-g_beOffset*g_pointSize<lv_d7-g_point&&MarketInfo(g_tradeSymbol,MODE_ASK)<lv_d10-g_beOffset*g_pointSize-g_minStopLevel&&MarketInfo(g_tradeSymbol,MODE_ASK)>lv_d8+g_stopLevelPts&&NormalizeDouble(lv_d10-g_beOffset*g_pointSize,g_digits)<g_ask)
-{
-g_ask=NormalizeDouble(lv_d10-g_beOffset*g_pointSize,g_digits);
-g_lastError=OrderModify((int)lv_l9,lv_d10,g_ask,lv_d8,0,clrNONE);
-if(g_lastError<=0)
-{
-Print("errorwhensettingbreakeven:\'"+GetErrorDescription(GetLastError())+"\'..\'Exit_BE_start\'tocloseto\'Exit_BE_extra_pips\'..tryingagain!");
-}
-lv_b2=true;
-}
-if(g_beProfitTrigger>0.0&&g_newsFilterMode==2&&MarketInfo(g_tradeSymbol,MODE_ASK)<lv_d10-g_beProfitTrigger*g_pointSize&&lv_d10-g_beOffset*g_pointSize<g_ask-g_point&&MarketInfo(g_tradeSymbol,MODE_ASK)<lv_d10-g_beOffset*g_pointSize-g_minStopLevel&&MarketInfo(g_tradeSymbol,MODE_ASK)>lv_d8+g_stopLevelPts)
-{
-g_ask=lv_d10-g_beOffset*g_pointSize;
-lv_b2=true;
-}
-if(!(lv_b2)&&(g_magicTrailMode==1||(g_magicTrailMode==2&&g_ask-g_magicTrailFast*g_pointSize>=lv_d5-g_spread-g_magicTrailSlow*g_pointSize)))
-{
-g_st2_TP++;
-if(MarketInfo(g_tradeSymbol,MODE_ASK)<g_ask-g_magicTrailFast*g_pointSize-g_minStopLevel&&MarketInfo(g_tradeSymbol,MODE_ASK)>lv_d8+g_stopLevelPts&&(g_magicTrailStep==0.0||MarketInfo(g_tradeSymbol,MODE_ASK)<lv_d5-g_st2_entryHigh*g_pointSize)&&g_st2_TP>=g_magicTrailPeriod)
-{
-g_st2_TP=0;
-g_ask=g_ask-g_magicTrailFast*g_pointSize;
-lv_b2=true;
-}
-}
-if(MarketInfo(g_tradeSymbol,MODE_ASK)>=g_ask)
-{
-RefreshRates();
-_orderOK = OrderClose((int)lv_l9,lv_d12,MarketInfo(g_tradeSymbol,MODE_ASK),(int)g_spread,clrNONE);
-return(true);
-}
-if(NormalizeDouble(lv_d4,g_digits)!=NormalizeDouble(g_ask,g_digits))
-{
-tmp_d42=NormalizeDouble(g_ask,g_digits);
-tmp_l43=lv_l9;
-for(tmp_i44=0;tmp_i44<g_panelX;tmp_i44=tmp_i44+1)
-{
-if(g_perfMatrix[tmp_i44][0]==tmp_l43)
-{
-g_perfMatrix[tmp_i44][1]=tmp_d42;
-break;
-}
-}
-}
-}
-}
-}
-if(lv_b2)
-{
-lv_b3=true;
-}
-}
-if(lv_b2)
-{
-lv_b3=true;
-}
-}
-return(lv_b3);
-}
-// ManageSellTrade<<==-------- --------
-bool CheckTradingHours()
-{
-bool lv_b2;
-datetime lv_dt3;
-int lv_i4;
-//----------
-bool tmp_b1 = false;
-bool tmp_b2 = false;
-bool tmp_b3 = false;
-bool tmp_b4 = false;
-bool tmp_b5 = false;
-bool tmp_b6 = false;
-
-if(!(g_useTradingHours))
-{
-return(true);
-}
-lv_b2=false;
-lv_dt3=0;
-if(g_tradingHoursMode==2)
-{
-lv_dt3=TimeCurrent();
-}
-if(g_tradingHoursMode==0)
-{
-TimeGMT();
-}
-if(g_tradingHoursMode==1)
-{
-TimeLocal();
-}
-lv_i4=TimeHour(lv_dt3);
-if(TimeDayOfWeek(lv_dt3)==0)
-{
-if(g_monStart< g_monEnd&&(lv_i4<g_monStart||lv_i4>=g_monEnd))
-{
-tmp_b1=false;
-}
-else
-{
-if(g_monStart> g_monEnd&&lv_i4< g_monStart&&lv_i4>=g_monEnd)
-{
-tmp_b1=false;
-}
-else
-{
-if(g_monStart==g_monEnd)
-{
-tmp_b1=false;
-}
-else
-{
-tmp_b1=true;
-}
-}
-}
-if(tmp_b1)
-{
-lv_b2=true;
-}
-}
-if(TimeDayOfWeek(lv_dt3)==1)
-{
-if(g_tueStart< g_tueEnd&&(lv_i4<g_tueStart||lv_i4>=g_tueEnd))
-{
-tmp_b2=false;
-}
-else
-{
-if(g_tueStart> g_tueEnd&&lv_i4< g_tueStart&&lv_i4>=g_tueEnd)
-{
-tmp_b2=false;
-}
-else
-{
-if(g_tueStart==g_tueEnd)
-{
-tmp_b2=false;
-}
-else
-{
-tmp_b2=true;
-}
-}
-}
-if(tmp_b2)
-{
-lv_b2=true;
-}
-}
-if(TimeDayOfWeek(lv_dt3)==2)
-{
-if(g_wedStart< g_wedEnd&&(lv_i4<g_wedStart||lv_i4>=g_wedEnd))
-{
-tmp_b3=false;
-}
-else
-{
-if(g_wedStart> g_wedEnd&&lv_i4< g_wedStart&&lv_i4>=g_wedEnd)
-{
-tmp_b3=false;
-}
-else
-{
-if(g_wedStart==g_wedEnd)
-{
-tmp_b3=false;
-}
-else
-{
-tmp_b3=true;
-}
-}
-}
-if(tmp_b3)
-{
-lv_b2=true;
-}
-}
-if(TimeDayOfWeek(lv_dt3)==3)
-{
-if(g_thuStart< g_thuEnd&&(lv_i4<g_thuStart||lv_i4>=g_thuEnd))
-{
-tmp_b4=false;
-}
-else
-{
-if(g_thuStart> g_thuEnd&&lv_i4< g_thuStart&&lv_i4>=g_thuEnd)
-{
-tmp_b4=false;
-}
-else
-{
-if(g_thuStart==g_thuEnd)
-{
-tmp_b4=false;
-}
-else
-{
-tmp_b4=true;
-}
-}
-}
-if(tmp_b4)
-{
-lv_b2=true;
-}
-}
-if(TimeDayOfWeek(lv_dt3)==4)
-{
-if(g_friStart< g_friEnd&&(lv_i4<g_friStart||lv_i4>=g_friEnd))
-{
-tmp_b5=false;
-}
-else
-{
-if(g_friStart> g_friEnd&&lv_i4< g_friStart&&lv_i4>=g_friEnd)
-{
-tmp_b5=false;
-}
-else
-{
-if(g_friStart==g_friEnd)
-{
-tmp_b5=false;
-}
-else
-{
-tmp_b5=true;
-}
-}
-}
-if(tmp_b5)
-{
-lv_b2=true;
-}
-}
-if(TimeDayOfWeek(lv_dt3)==5)
-{
-if(g_satStart< g_satEnd&&(lv_i4<g_satStart||lv_i4>=g_satEnd))
-{
-tmp_b6=false;
-}
-else
-{
-if(g_satStart> g_satEnd&&lv_i4< g_satStart&&lv_i4>=g_satEnd)
-{
-tmp_b6=false;
-}
-else
-{
-if(g_satStart==g_satEnd)
-{
-tmp_b6=false;
-}
-else
-{
-tmp_b6=true;
-}
-}
-}
-if(tmp_b6)
-{
-lv_b2=true;
-}
-}
-return(lv_b2);
-}
-// CheckTradingHours<<==-------- --------
-string GetErrorDescription(int param0)
-{
-string errorStr;
-//----------
-
-g_tradeErrCount++;
-switch(param0)
-{
-case 0:case 1:
-errorStr="no error";
-break;
-case 2:
-errorStr="common error";
-break;
-case 3:
-errorStr="invalid trade parameters";
-break;
-case 4:
-errorStr="trade server is busy";
-break;
-case 5:
-errorStr="oldversionoftheclientterminal";
-break;
-case 6:
-errorStr="noconnectionwithtradeserver";
-break;
-case 7:
-errorStr="notenoughrights";
-break;
-case 8:
-errorStr="toofrequentrequests";
-break;
-case 9:
-errorStr="malfunctionaltradeoperation(neverreturnederror)";
-break;
-case 64:
-errorStr="accountdisabled";
-break;
-case 65:
-errorStr="invalidaccount";
-break;
-case 128:
-errorStr="tradetimeout";
-break;
-case 129:
-errorStr="invalidprice";
-break;
-case 130:
-errorStr="invalidstops";
-break;
-case 131:
-errorStr="invalidtradevolume";
-break;
-case 132:
-errorStr="marketisclosed";
-break;
-case 133:
-errorStr="tradeisdisabled";
-break;
-case 134:
-errorStr="notenoughmoney";
-break;
-case 135:
-errorStr="pricechanged";
-break;
-case 136:
-errorStr="off quotes";
-break;
-case 137:
-errorStr="brokerisbusy(neverreturnederror)";
-break;
-case 138:
-errorStr="requote";
-break;
-case 139:
-errorStr="orderislocked";
-break;
-case 140:
-errorStr="long positionsonlyallowed";
-break;
-case 141:
-errorStr="toomanyrequests";
-break;
-case 145:
-errorStr="modificationdeniedbecauseordertooclosetomarket";
-break;
-case 146:
-errorStr="tradecontextisbusy";
-break;
-case 147:
-errorStr="expirationsaredeniedbybroker";
-break;
-case 148:
-errorStr="amount of open and pending orders has reached the Exit_limit";
-break;
-case 149:
-errorStr="hedgingisprohibited";
-break;
-case 150:
-errorStr="prohibited by FIFO rules";
-break;
-case 4000:
-errorStr="noerror(nevergeneratedcode)";
-break;
-case 4001:
-errorStr="wrongfunctionpointer";
-break;
-case 4002:
-errorStr="arrayindexisoutofrange";
-break;
-case 4003:
-errorStr="nomemoryforfunctioncallstack";
-break;
-case 4004:
-errorStr="recursivestackoverflow";
-break;
-case 4005:
-errorStr="notenoughstackforparameter";
-break;
-case 4006:
-errorStr="nomemoryforparameter string";
-break;
-case 4007:
-errorStr="nomemoryfortemp string";
-break;
-case 4008:
-errorStr="notinitialized string";
-break;
-case 4009:
-errorStr="notinitializedstringinarray";
-break;
-case 4010:
-errorStr="nomemoryforarray\'string";
-break;
-case 4011:
-errorStr="too long string";
-break;
-case 4012:
-errorStr="remainderfromzerodivide";
-break;
-case 4013:
-errorStr="zerodivide";
-break;
-case 4014:
-errorStr="unknowncommand";
-break;
-case 4015:
-errorStr="wrongjump(nevergeneratederror)";
-break;
-case 4016:
-errorStr="notinitializedarray";
-break;
-case 4017:
-errorStr="dllcallsarenotallowed";
-break;
-case 4018:
-errorStr="cannotloadlibrary";
-break;
-case 4019:
-errorStr="cannotcallfunction";
-break;
-case 4020:
-errorStr="expertfunctioncallsarenotallowed";
-break;
-case 4021:
-errorStr="notenoughmemoryfortempstringreturnedfromfunction";
-break;
-case 4022:
-errorStr="systemisbusy(nevergeneratederror)";
-break;
-case 4050:
-errorStr="invalidfunctionparameterscount";
-break;
-case 4051:
-errorStr="invalidfunctionparametervalue";
-break;
-case 4052:
-errorStr="string function internal error";
-break;
-case 4053:
-errorStr="somearrayerror";
-break;
-case 4054:
-errorStr="incorrectseriesarrayusing";
-break;
-case 4055:
-errorStr="customindicatorerror";
-break;
-case 4056:
-errorStr="arraysareincompatible";
-break;
-case 4057:
-errorStr="globalvariablesprocessingerror";
-break;
-case 4058:
-errorStr="globalvariablenotfound";
-break;
-case 4059:
-errorStr="functionisnotallowedintestingmode";
-break;
-case 4060:
-errorStr="functionisnotconfirmed";
-break;
-case 4061:
-errorStr="sendmailerror";
-break;
-case 4062:
-errorStr="string parameter expected";
-break;
-case 4063:
-errorStr="integer parameter expected";
-break;
-case 4064:
-errorStr="double parameter expected";
-break;
-case 4065:
-errorStr="arrayasparameterexpected";
-break;
-case 4066:
-errorStr="requestedhistorydatainupdatestate";
-break;
-case 4099:
-errorStr="endoffile";
-break;
-case 4100:
-errorStr="somefileerror";
-break;
-case 4101:
-errorStr="wrongfilename";
-break;
-case 4102:
-errorStr="toomanyopenedfiles";
-break;
-case 4103:
-errorStr="cannotopenfile";
-break;
-case 4104:
-errorStr="incompatibleaccesstoafile";
-break;
-case 4105:
-errorStr="noorderselected";
-break;
-case 4106:
-errorStr="unknownsymbol";
-break;
-case 4107:
-errorStr="invalidpriceparameterfortradefunction";
-break;
-case 4108:
-errorStr="invalidticket";
-break;
-case 4109:
-errorStr="tradeisnotallowedintheexpertproperties";
-break;
-case 4110:
-errorStr="long sarenotallowedintheexpertproperties";
-break;
-case 4111:
-errorStr="short sarenotallowedintheexpertproperties";
-break;
-case 4200:
-errorStr="objectisalreadyexist";
-break;
-case 4201:
-errorStr="unknownobjectproperty";
-break;
-case 4202:
-errorStr="objectisnotexist";
-break;
-case 4203:
-errorStr="unknownobjecttype";
-break;
-case 4204:
-errorStr="noobjectname";
-break;
-case 4205:
-errorStr="objectcoordinateserror";
-break;
-case 4206:
-errorStr="nospecifiedsubwindow";
-break;
-default:
-errorStr="unknownerror";
-}
-return(errorStr);
-}
-// GetErrorDescription<<==-------- --------
-void DrawInfoPanel(bool bParam0)
-{
-double lv_d1;
-int lv_i2;
-int lv_i3;
-double lv_d4;
-long lv_l5;
-double lv_d6;
-double lv_d7;
-datetime lv_dt8;
-string lv_s9;
-int lv_i10;
-double lv_d11;
-long lv_l12;
-double lv_d13;
-double lv_d14;
-datetime lv_dt15;
-string lv_s16;
-int lv_i17;
-//----------
-bool _orderOK;
-long tmp_l1;
-long tmp_l2;
-int tmp_i3;
-long tmp_l4;
-long tmp_l5;
-int tmp_i6;
-
-lv_d1=g_zrMinDist/100.0+1.0;
-if((!(AccountBalance()!=g_dailyStartBal)&&!(bParam0))) return;
-
-if((!(AccountBalance()>g_dailyStartBal*lv_d1)&&!(AccountBalance()<g_dailyStartBal/lv_d1)&&!(bParam0))) return;
-CalcLotSize(g_minProfitClose,g_strategyMask);
-lv_i2=OrdersTotal();
-for(lv_i3=lv_i2;lv_i3>=0;lv_i3--)
-{
-if(OrderSelect(lv_i3,0,0)!=true||OrderMagicNumber()!=g_magicMain||OrderSymbol()!=g_tradeSymbol) continue;
-
-if(OrderType()==4&&OrderLots()!=g_pairStratLots[g_pairIdx])
-{
-lv_d4=OrderStopLoss();
-lv_l5=OrderTicket();
-lv_d6=OrderTakeProfit();
-lv_d7=OrderOpenPrice();
-lv_dt8=OrderExpiration();
-lv_s9=OrderComment();
-_orderOK = OrderDelete((int)lv_l5,Red);
-lv_i10=OrderSend(g_tradeSymbol,OP_BUYSTOP,g_pairStratLots[g_pairIdx],lv_d7,(int)g_maxVolatility,lv_d4,lv_d6,lv_s9,g_magicMain,lv_dt8,Green);
-tmp_l1=lv_i10;
-tmp_l2=lv_l5;
-for(tmp_i3=0;tmp_i3<100;tmp_i3=tmp_i3+1)
-{
-if(!(g_tradeStats[tmp_i3][0]==tmp_l2)) continue;
-g_tradeStats[tmp_i3][0] = (double)(tmp_l1);
-break;
-
-}
-Print("Lotsizechangedmorethan"+string(g_zrMinDist)+"%...adjustinglotsizeofpendingorders");
-Sleep(1000);
-}
-if(OrderType()!=5||!(OrderLots()!=g_pairStratLots[g_pairIdx])) continue;
-lv_d11=OrderStopLoss();
-lv_l12=OrderTicket();
-lv_d13=OrderTakeProfit();
-lv_d14=OrderOpenPrice();
-lv_dt15=OrderExpiration();
-lv_s16=OrderComment();
-_orderOK = OrderDelete((int)lv_l12,Red);
-lv_i17=OrderSend(g_tradeSymbol,OP_SELLSTOP,g_pairStratLots[g_pairIdx],lv_d14,(int)g_maxVolatility,lv_d11,lv_d13,lv_s16,g_magicMain,lv_dt15,Green);
-tmp_l4=lv_i17;
-tmp_l5=lv_l12;
-for(tmp_i6=0;tmp_i6<100;tmp_i6=tmp_i6+1)
-{
-if(!(g_tradeStats[tmp_i6][0]==tmp_l5)) continue;
-g_tradeStats[tmp_i6][0] = (double)(tmp_l4);
-break;
-
-}
-Print("Lotsizechangedmorethan"+string(g_zrMinDist)+"%...adjustinglotsizeofpendingorders");
-Sleep(1000);
-
-}
-}
-
-void UpdateInfoPanel()
-{
-int lv_i1=0;
-int lv_i2=0;
-int lv_i3;
-int lv_i4;
-int lv_i5;
-double lv_d6;
-int lv_i7;
-int lv_i8;
-int lv_i9;
-int lv_i10;
-int lv_i11;
-int lv_i12;
-int lv_i13;
-uint lv_u14;
-bool lv_b15;
-int lv_i16;
-string lv_s17;
-int lv_i18;
-int lv_i19;
-int lv_i20;
-string lv_s21;
-int lv_i22;
-int lv_i23;
-int lv_i24;
-//----------
-
-lv_i3=20;
-lv_i4=300;
-lv_i5=7;
-lv_d6=InfoPanelSizeAdjust;
-lv_i7=6;
-lv_i8=4;
-lv_i9=350;
-lv_i10=350;
-lv_i11=0;
-lv_i12=5;
-lv_i13=20;
-lv_u14=LightSteelBlue;
-lv_b15=false;
-lv_i16=0;
-if(g_useSymbolFilter)
-{
-lv_i16 = (int)((g_activePairs+3)*g_panelRowPx);
-}
-ObjectCreate(0,"infopanel_rectangle",OBJ_RECTANGLE_LABEL,0,0,0.0);
-ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_XDISTANCE,lv_i12);
-ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_YDISTANCE,lv_i13);
-ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_XSIZE,long(lv_i9*InfoPanelSizeAdjust));
-ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_YSIZE,long(lv_i10*InfoPanelSizeAdjust+lv_i16));
-ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_CORNER,0);
-ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_COLOR,C'0,0,255'/*Blue_BGR*/);
-ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_BGCOLOR,lv_u14);
-ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_BACK,0);
-ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_BORDER_COLOR,C'0,0,255'/*Blue_BGR*/);
-ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_COLOR,C'0,0,255'/*Blue_BGR*/);
-ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_BORDER_TYPE,0);
-ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_STYLE,0);
-ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_WIDTH,0x2);
-ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_SELECTABLE,0);
-ObjectCreate(0,"line1",OBJ_LABEL,0,0,0.0);
-ObjectSetInteger(0,"line1",OBJPROP_CORNER,lv_i11);
-ObjectSetInteger(0,"line1",OBJPROP_YDISTANCE,lv_i13+lv_i8);
-ObjectSetInteger(0,"line1",OBJPROP_XDISTANCE,lv_i12+lv_i7);
-if(!(g_useSymbolFilter))
-{
-ObjectSetString(0,"line1",OBJPROP_TEXT,"The Gold Reaper V4.1");
-}
-else
-{
-ObjectSetString(0,"line1",OBJPROP_TEXT,"The Gold Reaper V4.1 - One Chart Setup");
-}
-ObjectSetInteger(0,"line1",OBJPROP_COLOR,g_panelFgColor);
-ObjectCreate(0,"linec",OBJ_LABEL,0,0,0.0);
-ObjectSetInteger(0,"linec",OBJPROP_CORNER,lv_i11);
-ObjectSetInteger(0,"linec",OBJPROP_YDISTANCE,long(lv_i13+InfoPanelSizeAdjust*20.0+lv_i8));
-ObjectSetInteger(0,"linec",OBJPROP_XDISTANCE,lv_i12+lv_i7);
-ObjectSetString(0,"linec",OBJPROP_TEXT,"EA Developed by Wim Schrynemakers - 2024");
-ObjectSetInteger(0,"linec",OBJPROP_COLOR,g_panelFgColor);
-ObjectCreate(0,"line2",OBJ_LABEL,0,0,0.0);
-ObjectSetInteger(0,"line2",OBJPROP_CORNER,lv_i11);
-ObjectSetInteger(0,"line2",OBJPROP_YDISTANCE,long(lv_i13+InfoPanelSizeAdjust*32.0+lv_i8));
-ObjectSetInteger(0,"line2",OBJPROP_XDISTANCE,lv_i12+lv_i7);
-ObjectSetString(0,"line2",OBJPROP_TEXT,"------------------------------------------------------");
-ObjectSetInteger(0,"line2",OBJPROP_COLOR,g_panelFgColor);
-ObjectCreate(0,"lines",OBJ_LABEL,0,0,0.0);
-ObjectSetInteger(0,"lines",OBJPROP_CORNER,lv_i11);
-ObjectSetInteger(0,"lines",OBJPROP_YDISTANCE,long(lv_i13+InfoPanelSizeAdjust*44.0+lv_i8));
-ObjectSetInteger(0,"lines",OBJPROP_XDISTANCE,lv_i12+lv_i7);
-if(g_minBarsBetween==1)
-{
-lv_s17="conservative";
-}
-else
-{
-if(g_minBarsBetween==2)
-{
-lv_s17="moderate";
-}
-else
-{
-if(g_minBarsBetween==3)
-{
-lv_s17="Intense";
-}
-else
-{
-if(g_minBarsBetween==4)
-{
-lv_s17="extreme";
-}
-else
-{
-if(g_minBarsBetween==0)
-{
-lv_s17="extreme conservative";
-}
-else
-{
-lv_s17="manual strategy selection";
-}
-}
-}
-}
-}
-ObjectSetString(0,"lines",OBJPROP_TEXT,"Trade Frequency: "+lv_s17);
-ObjectSetInteger(0,"lines",OBJPROP_COLOR,g_panelFgColor);
-if(Risk==1234)
-{
-ObjectCreate(0,"linet",OBJ_LABEL,0,0,0.0);
-ObjectSetInteger(0,"linet",OBJPROP_CORNER,lv_i11);
-ObjectSetInteger(0,"linet",OBJPROP_YDISTANCE,long(lv_i13+InfoPanelSizeAdjust*60.0+lv_i8));
-ObjectSetInteger(0,"linet",OBJPROP_XDISTANCE,lv_i12+lv_i7);
-ObjectSetString(0,"linet",OBJPROP_TEXT,"Max allowed DD: "+string(MaxAllowedDD)+"%");
-ObjectSetInteger(0,"linet",OBJPROP_COLOR,g_panelFgColor);
-}
-else
-{
-if(Risk==3)
-{
-ObjectCreate(0,"linet",OBJ_LABEL,0,0,0.0);
-ObjectSetInteger(0,"linet",OBJPROP_CORNER,lv_i11);
-ObjectSetInteger(0,"linet",OBJPROP_YDISTANCE,long(lv_i13+InfoPanelSizeAdjust*60.0+lv_i8));
-ObjectSetInteger(0,"linet",OBJPROP_XDISTANCE,lv_i12+lv_i7);
-ObjectSetString(0,"linet",OBJPROP_TEXT,"Max risk per strategy: "+string(MaxRiskPerStrategy_)+"%");
-ObjectSetInteger(0,"linet",OBJPROP_COLOR,g_panelFgColor);
-}
-else
-{
-ObjectCreate(0,"linet",OBJ_LABEL,0,0,0.0);
-ObjectSetInteger(0,"linet",OBJPROP_CORNER,lv_i11);
-ObjectSetInteger(0,"linet",OBJPROP_YDISTANCE,long(lv_i13+InfoPanelSizeAdjust*60.0+lv_i8));
-ObjectSetInteger(0,"linet",OBJPROP_XDISTANCE,lv_i12+lv_i7);
-ObjectSetString(0,"linet",OBJPROP_TEXT,"Manual lot size: "+string(StartLots)+"lots");
-ObjectSetInteger(0,"linet",OBJPROP_COLOR,g_panelFgColor);
-}
-}
-ObjectCreate(0,"lineopl"+IntegerToString(0,0,32),OBJ_LABEL,0,0,0.0);
-ObjectSetInteger(0,"lineopl"+IntegerToString(0,0,32),OBJPROP_CORNER,lv_i11);
-ObjectSetInteger(0,"lineopl"+IntegerToString(0,0,32),OBJPROP_YDISTANCE,(int)(lv_i13+InfoPanelSizeAdjust*76.0+lv_i8));
-ObjectSetInteger(0,"lineopl"+IntegerToString(0,0,32),OBJPROP_XDISTANCE,lv_i12+lv_i7);
-ObjectSetString(0,"lineopl"+IntegerToString(0,0,32),OBJPROP_TEXT,"Open P/L: -");
-ObjectSetInteger(0,"lineopl"+IntegerToString(0,0,32),OBJPROP_COLOR,g_panelFgColor);
-ObjectCreate(0,"linea"+IntegerToString(0,0,32),OBJ_LABEL,0,0,0.0);
-ObjectSetInteger(0,"linea"+IntegerToString(0,0,32),OBJPROP_CORNER,lv_i11);
-ObjectSetInteger(0,"linea"+IntegerToString(0,0,32),OBJPROP_YDISTANCE,(int)(lv_i13+InfoPanelSizeAdjust*92.0+lv_i8));
-ObjectSetInteger(0,"linea"+IntegerToString(0,0,32),OBJPROP_XDISTANCE,lv_i12+lv_i7);
-ObjectSetString(0,"linea"+IntegerToString(0,0,32),OBJPROP_TEXT,"Account Balance: -");
-ObjectSetInteger(0,"linea"+IntegerToString(0,0,32),OBJPROP_COLOR,g_panelFgColor);
-ObjectCreate(0,"linetp"+IntegerToString(0,0,32),OBJ_LABEL,0,0,0.0);
-ObjectSetInteger(0,"linetp"+IntegerToString(0,0,32),OBJPROP_CORNER,lv_i11);
-ObjectSetInteger(0,"linetp"+IntegerToString(0,0,32),OBJPROP_YDISTANCE,(int)(lv_i13+InfoPanelSizeAdjust*108.0+lv_i8));
-ObjectSetInteger(0,"linetp"+IntegerToString(0,0,32),OBJPROP_XDISTANCE,lv_i12+lv_i7);
-ObjectSetString(0,"linetp"+IntegerToString(0,0,32),OBJPROP_TEXT,"Total P/L so far: -");
-ObjectSetInteger(0,"linetp"+IntegerToString(0,0,32),OBJPROP_COLOR,g_panelFgColor);
-if(EnableNFP_Filter)
-{
-ObjectCreate(0,"linenfp"+IntegerToString(0,0,32),OBJ_LABEL,0,0,0.0);
-ObjectSetInteger(0,"linenfp"+IntegerToString(0,0,32),OBJPROP_CORNER,lv_i11);
-ObjectSetInteger(0,"linenfp"+IntegerToString(0,0,32),OBJPROP_YDISTANCE,(int)(lv_i13+InfoPanelSizeAdjust*124.0+lv_i8));
-ObjectSetInteger(0,"linenfp"+IntegerToString(0,0,32),OBJPROP_XDISTANCE,lv_i12+lv_i7);
-ObjectSetString(0,"linenfp"+IntegerToString(0,0,32),OBJPROP_TEXT,"Next NFP: -");
-ObjectSetInteger(0,"linenfp"+IntegerToString(0,0,32),OBJPROP_COLOR,g_panelFgColor);
-}
-lv_i18=0;
-lv_i19=0;
-lv_i20=0;
-lv_i22=lv_i12+lv_i7;
-lv_i23 = (int)(lv_i13+InfoPanelSizeAdjust*160.0+lv_i8);
-lv_s21="Strategy";
-CreateInfoLabel(lv_i22,lv_i23,0,"Strategy",0,0,1,0,1.0);
-lv_i18=1;
-lv_i19=1;
-lv_s21="ClosedPL";
-if(g_perfSortMode==1)
-{
-lv_s21="Closed PL*";
-}
-CreateInfoLabel(lv_i22,lv_i23,lv_i18,lv_s21,lv_i20,lv_i19,1,0,1.0);
-lv_i18++;
-lv_i19++;
-lv_s21="PL per trade";
-if(g_perfSortMode==2)
-{
-lv_s21="PLpertrade*";
-}
-CreateInfoLabel(lv_i22,lv_i23,lv_i18,lv_s21,lv_i20,lv_i19,1,0,1.0);
-lv_i18++;
-lv_i19++;
-lv_s21="Lotsize";
-CreateInfoLabel(lv_i22,lv_i23,lv_i18,"Lotsize",lv_i20,lv_i19,1,0,1.0);
-lv_i18++;
-lv_i19=0;
-lv_i20++;
-g_labelIdx=lv_i18;
-for(lv_i24=0;lv_i24<9;lv_i24++)
-{
-lv_s21="Strategy"+IntegerToString(lv_i24+1,0,32);
-CreateInfoLabel(lv_i22,lv_i23,lv_i18,lv_s21,lv_i20,lv_i19,1,0,1.0);
-lv_i18++;
-lv_i19++;
-lv_s21=DoubleToString(NormalizeDouble(g_stratScores[lv_i24],2),2);
-CreateInfoLabel(lv_i22,lv_i23,lv_i18,lv_s21,lv_i20,lv_i19,1,0,1.0);
-lv_i18++;
-lv_i19++;
-lv_s21=DoubleToString(NormalizeDouble(g_pairBuyPrice[lv_i24],2),2);
-CreateInfoLabel(lv_i22,lv_i23,lv_i18,lv_s21,lv_i20,lv_i19,1,0,1.0);
-lv_i18++;
-lv_i19++;
-lv_s21=DoubleToString(NormalizeDouble(g_pairStratLots[lv_i24],2),2);
-CreateInfoLabel(lv_i22,lv_i23,lv_i18,lv_s21,lv_i20,lv_i19,1,0,1.0);
-lv_i18++;
-lv_i19=0;
-lv_i20++;
-}
-}
-// UpdateInfoPanel<<==-------- --------
-void CreateInfoLabel(int param0,int param1,int param2,string sParam3,int param4,int param5,int param6,uint colorParam,double dParam8)
-{
-ObjectCreate(0,"info_ea"+IntegerToString(param2,0,32),OBJ_EDIT,0,0,0.0);
-ObjectSetInteger(0,"info_ea"+IntegerToString(param2,0,32),OBJPROP_XDISTANCE,(int)(param0+param5*g_panelColW));
-ObjectSetInteger(0,"info_ea"+IntegerToString(param2,0,32),OBJPROP_YDISTANCE,(int)(param1+param4*g_panelRowPx));
-ObjectSetString(0,"info_ea"+IntegerToString(param2,0,32),OBJPROP_TEXT,sParam3);
-ObjectSetInteger(0,"info_ea"+IntegerToString(param2,0,32),OBJPROP_BACK,0);
-ObjectSetInteger(0,"info_ea"+IntegerToString(param2,0,32),OBJPROP_COLOR,colorParam);
-ObjectSetInteger(0,"info_ea"+IntegerToString(param2,0,32),OBJPROP_BGCOLOR,g_panelBgColor);
-ObjectSetInteger(0,"info_ea"+IntegerToString(param2,0,32),OBJPROP_BORDER_COLOR,0);
-ObjectSetInteger(0,"info_ea"+IntegerToString(param2,0,32),OBJPROP_FONTSIZE,(int)(g_panelFont*dParam8));
-ObjectSetInteger(0,"info_ea"+IntegerToString(param2,0,32),OBJPROP_READONLY,0x1);
-ObjectSetInteger(0,"info_ea"+IntegerToString(param2,0,32),OBJPROP_YSIZE,(int)(g_panelRowPx));
-ObjectSetInteger(0,"info_ea"+IntegerToString(param2,0,32),OBJPROP_XSIZE,(int)(g_panelColW));
-ObjectSetInteger(0,"info_ea"+IntegerToString(param2,0,32),OBJPROP_YSIZE,(int)(g_panelRowPx));
-if(param6==0)
-{
-ObjectSetInteger(0,"info_ea"+IntegerToString(param2,0,32),OBJPROP_ALIGN,0x1);
-}
-if(param6==1)
-{
-ObjectSetInteger(0,"info_ea"+IntegerToString(param2,0,32),OBJPROP_ALIGN,0x2);
-}
-if(param6!=2) return;
-ObjectSetInteger(0,"info_ea"+IntegerToString(param2,0,32),OBJPROP_ALIGN,0);
-}
-// CreateInfoLabel<<==-------- --------
-void DeleteChartObjects()
-{
-int lv_i1;
-int lv_i2;
-int lv_i3;
-int lv_i4;
-//----------
-
-ObjectDelete(0,"line1");
-ObjectDelete(0,"linec");
-ObjectDelete(0,"line2");
-ObjectDelete(0,"lines");
-ObjectDelete(0,"linet");
-ObjectDelete(0,"line Trade Start");
-for(lv_i1=0;lv_i1<=99;lv_i1++)
-{
-ObjectDelete(0,"lineopl"+IntegerToString(lv_i1,0,32));
-ObjectDelete(0,"linea"+IntegerToString(lv_i1,0,32));
-ObjectDelete(0,"lineto"+IntegerToString(lv_i1,0,32));
-ObjectDelete(0,"linetp"+IntegerToString(lv_i1,0,32));
-ObjectDelete(0,"linetq"+IntegerToString(lv_i1,0,32));
-ObjectDelete(0,"linenfp"+IntegerToString(lv_i1,0,32));
-for(lv_i2=0;lv_i2<10;lv_i2++)
-{
-ObjectDelete(0,"tabel_info"+IntegerToString(lv_i1*100+lv_i2,0,32));
-}
-}
-ObjectDelete(0,"infopanel_rectangle");
-for(lv_i3=0;lv_i3<10;lv_i3++)
-{
-ObjectDelete(0,"tabel_heading"+IntegerToString(lv_i3,0,32));
-ObjectDelete(0,"tabel_totals"+IntegerToString(lv_i3,0,32));
-}
-for(lv_i4=0;lv_i4<g_panelCols;lv_i4++)
-{
-ObjectDelete(0,"horizontalrect"+IntegerToString(lv_i4,0,32));
-ObjectDelete(0,"info_ea"+IntegerToString(lv_i4,0,32));
-}
-}
-// DeleteChartObjects<<==-------- --------
-string GetNextNFPText()
-{
-datetime lv_best=0;
-int lv_i;
-for(lv_i=0;lv_i<240;lv_i++)
-{
-if(g_nfpDates[lv_i]<=0) continue;
-if(g_nfpDates[lv_i]>=g_autoResetTime)
-{
-if(lv_best==0||g_nfpDates[lv_i]<lv_best) lv_best=g_nfpDates[lv_i];
-}
-}
-if(lv_best==0) return("Next NFP: -");
-return("Next NFP: "+TimeToString(lv_best+g_nfpGMTOfs*3600,TIME_DATE|TIME_SECONDS));
-}
-// GetNextNFPText<<==-------- --------
-void DrawPanelBackground()
-{
-string errorStr;
-//----------
-double tmp_d1;
-double tmp_d2;
-int tmp_i3;
-int tmp_i4;
-int tmp_i5;
-int tmp_i6;
-int tmp_i7;
-int tmp_i8;
-int tmp_i9;
-int tmp_i10;
-int tmp_i11;
-int tmp_i12;
-int tmp_i13;
-int tmp_i14;
-int tmp_i15;
-int tmp_i16;
-int tmp_i17;
-int tmp_i18;
-int tmp_i19;
-
-if(!(ShowInfoPanel)) return;
-
-if((MQLInfoInteger(MQL_TESTER)==1&&!(UpdateInfoTesting))) return;
-
-if(MQLInfoInteger(MQL_TESTER)==1&&!(UpdateInfoTesting))
-{
-tmp_d1=0.0;
-}
-else
-{
-tmp_d2=0.0;
-for(tmp_i3=OrdersTotal();tmp_i3>=0;tmp_i3=tmp_i3-1)
-{
-if(OrderSelect(tmp_i3,0,0)!=true) continue;
-
-if((OrderSymbol()!=g_tradeSymbol&&!(g_useSymbolFilter))) continue;
-tmp_i4=OrderMagicNumber();
-tmp_i5=ST1_MagicNumber+1;
-if(tmp_i4!=tmp_i5)
-{
-tmp_i5=OrderMagicNumber();
-tmp_i6=ST1_MagicNumber+2;
-if(tmp_i5!=tmp_i6)
-{
-tmp_i6=OrderMagicNumber();
-tmp_i7=ST1_MagicNumber+3;
-if(tmp_i6!=tmp_i7)
-{
-tmp_i7=OrderMagicNumber();
-tmp_i8=ST1_MagicNumber+4;
-if(tmp_i7!=tmp_i8)
-{
-tmp_i8=OrderMagicNumber();
-tmp_i9=ST1_MagicNumber+5;
-if(tmp_i8!=tmp_i9)
-{
-tmp_i9=OrderMagicNumber();
-tmp_i10=ST1_MagicNumber+6;
-if(tmp_i9!=tmp_i10)
-{
-tmp_i10=OrderMagicNumber();
-tmp_i11=ST1_MagicNumber+7;
-if(tmp_i10!=tmp_i11)
-{
-tmp_i11=OrderMagicNumber();
-tmp_i12=ST1_MagicNumber+8;
-if(tmp_i11!=tmp_i12)
-{
-tmp_i12=OrderMagicNumber();
-tmp_i13=ST1_MagicNumber+9;
-if(tmp_i12!=tmp_i13)
-{
-tmp_i13=OrderMagicNumber();
-tmp_i14=ST1_MagicNumber+10;
-if(tmp_i13!=tmp_i14)
-{
-tmp_i14=OrderMagicNumber();
-tmp_i15=ST1_MagicNumber+11;
-if(tmp_i14!=tmp_i15)
-{
-tmp_i15=OrderMagicNumber();
-tmp_i16=ST1_MagicNumber+12;
-if(tmp_i15!=tmp_i16)
-{
-tmp_i16=OrderMagicNumber();
-tmp_i17=ST1_MagicNumber+13;
-if(tmp_i16!=tmp_i17)
-{
-tmp_i17=OrderMagicNumber();
-tmp_i18=ST1_MagicNumber+14;
-if(tmp_i17!=tmp_i18)
-{
-tmp_i18=OrderMagicNumber();
-tmp_i19=ST1_MagicNumber+15;
-if(tmp_i18!=tmp_i19) continue;
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-if((OrderType()!=0&&OrderType()!=1)) continue;
-tmp_d2=OrderProfit()+OrderSwap()+OrderCommission()+tmp_d2;
-
-}
-g_hlBuyBuffer[g_pairIdx]=tmp_d2;
-tmp_d1=tmp_d2;
-}
-ObjectSetString(0,"lineopl"+IntegerToString(0,0,32),OBJPROP_TEXT,"Open P/L: "+DoubleToString(tmp_d1,2));
-ObjectSetString(0,"linea"+IntegerToString(0,0,32),OBJPROP_TEXT,"Account Balance: "+DoubleToString(AccountBalance(),2));
-if(EnableNFP_Filter)
-{
-ObjectSetString(0,"linenfp"+IntegerToString(0,0,32),OBJPROP_TEXT,GetNextNFPText());
-}
-if(g_minBarsBetween==1)
-{
-errorStr="conservative";
-}
-else
-{
-if(g_minBarsBetween==2)
-{
-errorStr="moderate";
-}
-else
-{
-if(g_minBarsBetween==3)
-{
-errorStr="Intense";
-}
-else
-{
-if(g_minBarsBetween==4)
-{
-errorStr="extreme";
-}
-else
-{
-if(g_minBarsBetween==0)
-{
-errorStr="extreme conservative";
-}
-else
-{
-errorStr="manual strategy selection";
-}
-}
-}
-}
-}
-ObjectSetString(0,"lines",OBJPROP_TEXT,"Trade Frequency: "+errorStr);
-if(Risk==1234)
-{
-ObjectSetString(0,"linet",OBJPROP_TEXT,"Max allowed DD: "+string(MaxAllowedDD)+"%");
-}
-else
-{
-if(Risk==3)
-{
-ObjectSetString(0,"linet",OBJPROP_TEXT,"Max risk per strategy: "+string(MaxRiskPerStrategy_)+"%");
-}
-else
-{
-ObjectSetString(0,"linet",OBJPROP_TEXT,"Manual lot size: "+string(StartLots)+"lots");
-}
-}
-}
-// DrawPanelBackground<<==-------- --------
-void UpdateStrategyStats()
-{
-int lv_i1;
-string lv_s2;
-int lv_i3;
-//----------
-
-if(!(ShowInfoPanel)) return;
-
-if((MQLInfoInteger(MQL_TESTER)==1&&!(UpdateInfoTesting))) return;
-lv_i1=g_labelIdx;
-for(lv_i3=0;lv_i3<9;lv_i3++)
-{
-lv_s2="Strategy"+IntegerToString(lv_i3+1,0,32);
-ObjectSetString(0,"info_ea"+IntegerToString(lv_i1,0,32),OBJPROP_TEXT,lv_s2);
-lv_i1++;
-lv_s2=DoubleToString(NormalizeDouble(g_stratScores[lv_i3],2),2);
-ObjectSetString(0,"info_ea"+IntegerToString(lv_i1,0,32),OBJPROP_TEXT,lv_s2);
-lv_i1++;
-lv_s2=DoubleToString(NormalizeDouble(g_pairBuyPrice[lv_i3],2),2);
-ObjectSetString(0,"info_ea"+IntegerToString(lv_i1,0,32),OBJPROP_TEXT,lv_s2);
-lv_i1++;
-lv_s2=DoubleToString(NormalizeDouble(g_pairStratLots[lv_i3],2),2);
-ObjectSetString(0,"info_ea"+IntegerToString(lv_i1,0,32),OBJPROP_TEXT,lv_s2);
-lv_i1++;
-}
-}
-// UpdateStrategyStats<<==-------- --------
-void DrawPanelDetails()
-{
-double tmp_d1;
-double tmp_d2;
-int tmp_i3;
-int tmp_i4;
-int tmp_i5;
-int tmp_i6;
-int tmp_i7;
-int tmp_i8;
-int tmp_i9;
-int tmp_i10;
-int tmp_i11;
-int tmp_i12;
-int tmp_i13;
-int tmp_i14;
-int tmp_i15;
-int tmp_i16;
-int tmp_i17;
-int tmp_i18;
-int tmp_i19;
-int tmp_i20;
-
-if(!(ShowInfoPanel)) return;
-
-if((MQLInfoInteger(MQL_TESTER)==1&&!(UpdateInfoTesting))) return;
-ObjectSetString(0,"lineto"+IntegerToString(0,0,32),OBJPROP_TEXT,"Total profits/losses so far: "+IntegerToString(CountBuyOrders(0,9999999),0,32)+"/"+IntegerToString(CountSellOrders(0,9999999),0,32));
-if(MQLInfoInteger(MQL_TESTER)==1&&!(UpdateInfoTesting))
-{
-tmp_d1=0.0;
-}
-else
-{
-tmp_d2=0.0;
-tmp_i3=0;
-for(tmp_i4=HistoryTotal();tmp_i4>=0;tmp_i4=tmp_i4-1)
-{
-if(OrderSelect(tmp_i4,0,1)!=true) continue;
-
-if((OrderSymbol()!=g_tradeSymbol&&!(g_useSymbolFilter))) continue;
-tmp_i5=OrderMagicNumber();
-tmp_i6=ST1_MagicNumber+1;
-if(tmp_i5!=tmp_i6)
-{
-tmp_i6=OrderMagicNumber();
-tmp_i7=ST1_MagicNumber+2;
-if(tmp_i6!=tmp_i7)
-{
-tmp_i7=OrderMagicNumber();
-tmp_i8=ST1_MagicNumber+3;
-if(tmp_i7!=tmp_i8)
-{
-tmp_i8=OrderMagicNumber();
-tmp_i9=ST1_MagicNumber+4;
-if(tmp_i8!=tmp_i9)
-{
-tmp_i9=OrderMagicNumber();
-tmp_i10=ST1_MagicNumber+5;
-if(tmp_i9!=tmp_i10)
-{
-tmp_i10=OrderMagicNumber();
-tmp_i11=ST1_MagicNumber+6;
-if(tmp_i10!=tmp_i11)
-{
-tmp_i11=OrderMagicNumber();
-tmp_i12=ST1_MagicNumber+7;
-if(tmp_i11!=tmp_i12)
-{
-tmp_i12=OrderMagicNumber();
-tmp_i13=ST1_MagicNumber+8;
-if(tmp_i12!=tmp_i13)
-{
-tmp_i13=OrderMagicNumber();
-tmp_i14=ST1_MagicNumber+9;
-if(tmp_i13!=tmp_i14)
-{
-tmp_i14=OrderMagicNumber();
-tmp_i15=ST1_MagicNumber+10;
-if(tmp_i14!=tmp_i15)
-{
-tmp_i15=OrderMagicNumber();
-tmp_i16=ST1_MagicNumber+11;
-if(tmp_i15!=tmp_i16)
-{
-tmp_i16=OrderMagicNumber();
-tmp_i17=ST1_MagicNumber+12;
-if(tmp_i16!=tmp_i17)
-{
-tmp_i17=OrderMagicNumber();
-tmp_i18=ST1_MagicNumber+13;
-if(tmp_i17!=tmp_i18)
-{
-tmp_i18=OrderMagicNumber();
-tmp_i19=ST1_MagicNumber+14;
-if(tmp_i18!=tmp_i19)
-{
-tmp_i19=OrderMagicNumber();
-tmp_i20=ST1_MagicNumber+15;
-if(tmp_i19!=tmp_i20) continue;
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-tmp_i3=tmp_i3+1;
-tmp_d2=tmp_d2+OrderProfit()+OrderSwap()+OrderCommission();
-if(tmp_i3>=1000) break;
-
-}
-g_magicSellBuffer[g_pairIdx]=tmp_d2;
-tmp_d1=tmp_d2;
-}
-ObjectSetString(0,"linetp"+IntegerToString(0,0,32),OBJPROP_TEXT,"Total P/L so far: "+DoubleToString(NormalizeDouble(tmp_d1,2),2));
-}
-// DrawPanelDetails<<==-------- --------
-int CountBuyOrders(int param0,int param1)
-{
-double lv_d2;
-int lv_i3;
-int lv_i4;
-int lv_i5;
-//----------
-int tmp_i1;
-int tmp_i2;
-int tmp_i3;
-int tmp_i4;
-int tmp_i5;
-int tmp_i6;
-int tmp_i7;
-int tmp_i8;
-int tmp_i9;
-int tmp_i10;
-int tmp_i11;
-int tmp_i12;
-int tmp_i13;
-int tmp_i14;
-int tmp_i15;
-int tmp_i16;
-
-if(MQLInfoInteger(MQL_TESTER)==1&&!(UpdateInfoTesting))
-{
-return(0);
-}
-lv_d2=0.0;
-lv_i3=0;
-lv_i4=0;
-for(lv_i5=HistoryTotal();lv_i5>=0;lv_i5--)
-{
-if(OrderSelect(lv_i5,0,1)!=true) continue;
-
-if((OrderSymbol()!=g_tradeSymbol&&!(g_useSymbolFilter))) continue;
-tmp_i1=OrderMagicNumber();
-tmp_i2=ST1_MagicNumber+1;
-if(tmp_i1!=tmp_i2)
-{
-tmp_i2=OrderMagicNumber();
-tmp_i3=ST1_MagicNumber+2;
-if(tmp_i2!=tmp_i3)
-{
-tmp_i3=OrderMagicNumber();
-tmp_i4=ST1_MagicNumber+3;
-if(tmp_i3!=tmp_i4)
-{
-tmp_i4=OrderMagicNumber();
-tmp_i5=ST1_MagicNumber+4;
-if(tmp_i4!=tmp_i5)
-{
-tmp_i5=OrderMagicNumber();
-tmp_i6=ST1_MagicNumber+5;
-if(tmp_i5!=tmp_i6)
-{
-tmp_i6=OrderMagicNumber();
-tmp_i7=ST1_MagicNumber+6;
-if(tmp_i6!=tmp_i7)
-{
-tmp_i7=OrderMagicNumber();
-tmp_i8=ST1_MagicNumber+7;
-if(tmp_i7!=tmp_i8)
-{
-tmp_i8=OrderMagicNumber();
-tmp_i9=ST1_MagicNumber+8;
-if(tmp_i8!=tmp_i9)
-{
-tmp_i9=OrderMagicNumber();
-tmp_i10=ST1_MagicNumber+9;
-if(tmp_i9!=tmp_i10)
-{
-tmp_i10=OrderMagicNumber();
-tmp_i11=ST1_MagicNumber+10;
-if(tmp_i10!=tmp_i11)
-{
-tmp_i11=OrderMagicNumber();
-tmp_i12=ST1_MagicNumber+11;
-if(tmp_i11!=tmp_i12)
-{
-tmp_i12=OrderMagicNumber();
-tmp_i13=ST1_MagicNumber+12;
-if(tmp_i12!=tmp_i13)
-{
-tmp_i13=OrderMagicNumber();
-tmp_i14=ST1_MagicNumber+13;
-if(tmp_i13!=tmp_i14)
-{
-tmp_i14=OrderMagicNumber();
-tmp_i15=ST1_MagicNumber+14;
-if(tmp_i14!=tmp_i15)
-{
-tmp_i15=OrderMagicNumber();
-tmp_i16=ST1_MagicNumber+15;
-if(tmp_i15!=tmp_i16) continue;
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-lv_i3++;
-if((OrderType()==0||OrderType()==1))
-{
-if(OrderType()==0)
-{
-lv_d2=OrderClosePrice()-OrderOpenPrice();
-}
-else
-{
-if(OrderType()==1)
-{
-lv_d2=OrderOpenPrice()-OrderClosePrice();
-}
-}
-if(lv_d2>0.0)
-{
-lv_i4++;
-}
-}
-if(lv_i3>=param1) break;
-
-}
-g_hlSellBuffer[g_pairIdx]=lv_i4;
-return(lv_i4);
-}
-// CountBuyOrders<<==-------- --------
-int CountSellOrders(int param0,int param1)
-{
-double lv_d2;
-int lv_i3;
-int lv_i4;
-int lv_i5;
-//----------
-int tmp_i1;
-int tmp_i2;
-int tmp_i3;
-int tmp_i4;
-int tmp_i5;
-int tmp_i6;
-int tmp_i7;
-int tmp_i8;
-int tmp_i9;
-int tmp_i10;
-int tmp_i11;
-int tmp_i12;
-int tmp_i13;
-int tmp_i14;
-int tmp_i15;
-int tmp_i16;
-
-if(MQLInfoInteger(MQL_TESTER)==1&&!(UpdateInfoTesting))
-{
-return(0);
-}
-lv_d2=0.0;
-lv_i3=0;
-lv_i4=0;
-for(lv_i5=HistoryTotal();lv_i5>=0;lv_i5--)
-{
-if(OrderSelect(lv_i5,0,1)!=true) continue;
-
-if((OrderSymbol()!=g_tradeSymbol&&!(g_useSymbolFilter))) continue;
-tmp_i1=OrderMagicNumber();
-tmp_i2=ST1_MagicNumber+1;
-if(tmp_i1!=tmp_i2)
-{
-tmp_i2=OrderMagicNumber();
-tmp_i3=ST1_MagicNumber+2;
-if(tmp_i2!=tmp_i3)
-{
-tmp_i3=OrderMagicNumber();
-tmp_i4=ST1_MagicNumber+3;
-if(tmp_i3!=tmp_i4)
-{
-tmp_i4=OrderMagicNumber();
-tmp_i5=ST1_MagicNumber+4;
-if(tmp_i4!=tmp_i5)
-{
-tmp_i5=OrderMagicNumber();
-tmp_i6=ST1_MagicNumber+5;
-if(tmp_i5!=tmp_i6)
-{
-tmp_i6=OrderMagicNumber();
-tmp_i7=ST1_MagicNumber+6;
-if(tmp_i6!=tmp_i7)
-{
-tmp_i7=OrderMagicNumber();
-tmp_i8=ST1_MagicNumber+7;
-if(tmp_i7!=tmp_i8)
-{
-tmp_i8=OrderMagicNumber();
-tmp_i9=ST1_MagicNumber+8;
-if(tmp_i8!=tmp_i9)
-{
-tmp_i9=OrderMagicNumber();
-tmp_i10=ST1_MagicNumber+9;
-if(tmp_i9!=tmp_i10)
-{
-tmp_i10=OrderMagicNumber();
-tmp_i11=ST1_MagicNumber+10;
-if(tmp_i10!=tmp_i11)
-{
-tmp_i11=OrderMagicNumber();
-tmp_i12=ST1_MagicNumber+11;
-if(tmp_i11!=tmp_i12)
-{
-tmp_i12=OrderMagicNumber();
-tmp_i13=ST1_MagicNumber+12;
-if(tmp_i12!=tmp_i13)
-{
-tmp_i13=OrderMagicNumber();
-tmp_i14=ST1_MagicNumber+13;
-if(tmp_i13!=tmp_i14)
-{
-tmp_i14=OrderMagicNumber();
-tmp_i15=ST1_MagicNumber+14;
-if(tmp_i14!=tmp_i15)
-{
-tmp_i15=OrderMagicNumber();
-tmp_i16=ST1_MagicNumber+15;
-if(tmp_i15!=tmp_i16) continue;
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-lv_i3++;
-if(OrderType()==0)
-{
-lv_d2=OrderClosePrice()-OrderOpenPrice();
-}
-else
-{
-if(OrderType()==1)
-{
-lv_d2=OrderOpenPrice()-OrderClosePrice();
-}
-}
-if(lv_d2<0.0)
-{
-lv_i4++;
-}
-if(lv_i3>=param1) break;
-
-}
-g_magicBuyBuffer[g_pairIdx]=lv_i4;
-return(lv_i4);
-}
-// CountSellOrders<<==-------- --------
-void ScanAllOrders()
-{
-int lv_i1=0;
-double lv_d2[99]={};
-double lv_d3[99]={};
-int lv_i4;
-int lv_i5;
-bool lv_b6;
-int lv_i7;
-double lv_d8;
-int lv_i9;
-int lv_i10;
-//----------
-long tmp_l1;
-long tmp_l2;
-long tmp_l3;
-long tmp_l4;
-long tmp_l5;
-
-if((MQLInfoInteger(MQL_TESTER)==1&&!(UpdateInfoTesting))) return;
-for(lv_i4=0;lv_i4<g_activePairs;lv_i4++)
-{
-lv_d2[lv_i4]=0.0;
-lv_d3[lv_i4]=0.0;
-g_pairActive[lv_i4]=false;
-g_pairBuyOpen[lv_i4]=0;
-g_pairSellOpen[lv_i4]=0;
-}
-for(lv_i5=HistoryTotal();lv_i5>=0;lv_i5--)
-{
-if(OrderSelect(lv_i5,0,1)!=true||OrderMagicNumber()!=g_magicMain) continue;
-lv_b6=true;
-for(lv_i7=0;lv_i7<g_activePairs;lv_i7++)
-{
-if(!(g_pairActive[lv_i7]))
-{
-lv_b6=false;
-}
-}
-if((OrderCloseTime()< TimeCurrent()-g_perfReduction1*24*60*60&&lv_b6)) break;
-lv_d8=OrderLots()*100.0;
-if(g_perfRankMode==1)
-{
-lv_d8=1.0;
-}
-lv_i9=0;
-if(g_activePairs<=0) continue;
-
-for(;lv_i9<g_activePairs;lv_i9++)
-{
-if(g_pairNames[lv_i9]!=OrderSymbol()) continue;
-
-if((OrderType()!=0&&OrderType()!=1)) continue;
-tmp_l1=OrderCloseTime();
-tmp_l2=TimeCurrent()-g_perfReduction1*24*60*60;
-if(tmp_l1< tmp_l2)
-{
-tmp_l2=OrderCloseTime();
-tmp_l3=TimeCurrent()-g_perfReduction1*24*60*60;
-if((tmp_l2>=tmp_l3||g_pairActive[lv_i9])) continue;
-}
-g_pairBuyOpen[lv_i9]++;
-if(g_pairBuyOpen[lv_i9]>=g_perfMinTrades)
-{
-g_pairActive[lv_i9]=true;
-}
-lv_d2[lv_i9]+=OrderProfit()/lv_d8;
-lv_d2[lv_i9]+=OrderSwap()/lv_d8;
-lv_d2[lv_i9]+=OrderCommission()/lv_d8;
-tmp_l4=OrderCloseTime();
-tmp_l5=TimeCurrent()-g_perfReduction2*24*60*60;
-if(tmp_l4<tmp_l5) continue;
-lv_d3[lv_i9]+=OrderProfit()/lv_d8;
-lv_d3[lv_i9]+=OrderSwap()/lv_d8;
-lv_d3[lv_i9]+=OrderCommission()/lv_d8;
-g_pairSellOpen[lv_i9]++;
-
-}
-
-}
-for(lv_i10=0;lv_i10<g_activePairs;lv_i10++)
-{
-g_pairBuySL[lv_i10]=lv_d2[lv_i10];
-if(g_pairBuyOpen[lv_i10]> 0)
-{
-g_pairBuyPrice[lv_i10]=NormalizeDouble(lv_d2[lv_i10]/g_pairBuyOpen[lv_i10],2);
-}
-else
-{
-g_pairBuyPrice[lv_i10]=0.0;
-}
-g_pairSellSL[lv_i10]=lv_d3[lv_i10];
-if(g_pairSellOpen[lv_i10]> 0)
-{
-g_pairSellPrice[lv_i10]=NormalizeDouble(lv_d3[lv_i10]/g_pairSellOpen[lv_i10],2);
-}
-else
-{
-g_pairSellPrice[lv_i10]=0.0;
-}
-}
-}
-// ScanAllOrders<<==-------- --------
-void ProcessBuyStrategies()
-{
-int lv_i1;
-double lv_d2;
-int lv_i3;
-int lv_i4;
-int lv_i5;
-int lv_i6;
-bool lv_b7;
-int lv_i8;
-int lv_i9;
-int lv_i10;
-int lv_i11;
-//----------
-
-ScanAllOrders();
-for(lv_i1=0;lv_i1<g_activePairs;lv_i1++)
-{
-lv_d2=g_pairBuySL[lv_i1];
-lv_i3=1;
-for(lv_i4=0;lv_i4<g_activePairs;lv_i4++)
-{
-if(lv_i4==lv_i1||!(g_pairBuySL[lv_i4]>lv_d2)) continue;
-lv_i3++;
-
-}
-g_pairBarCount[lv_i1]=lv_i3;
-}
-for(lv_i5=0;lv_i5<g_activePairs;lv_i5++)
-{
-lv_i6=g_pairBarCount[lv_i5];
-lv_b7=true;
-do
-{
-lv_b7=false;
-lv_i8=0;
-if(g_activePairs<=0) continue;
-
-for(;lv_i8<g_activePairs;lv_i8++)
-{
-if(lv_i8==lv_i5||g_pairBarCount[lv_i8]!=g_pairBarCount[lv_i5]) continue;
-g_pairBarCount[lv_i8]++;
-lv_b7=true;
-
-}
-
-}
-while(lv_b7);
-
-}
-for(lv_i9=0;lv_i9<g_activePairs;lv_i9++)
-{
-g_pairSellLots[lv_i9]=1.0;
-}
-for(lv_i10=1;lv_i10<=g_activePairs;lv_i10++)
-{
-for(lv_i11=0;lv_i11<g_activePairs;lv_i11++)
-{
-if(g_pairBarCount[lv_i11]==lv_i10)
-{
-g_stratMagics[lv_i10-1]=lv_i11;
-}
-}
-}
-}
-// ProcessBuyStrategies<<==-------- --------
-void ProcessSellStrategies()
-{
-int lv_i1;
-double lv_d2;
-int lv_i3;
-int lv_i4;
-int lv_i5;
-int lv_i6;
-bool lv_b7;
-int lv_i8;
-int lv_i9;
-int lv_i10;
-int lv_i11;
-//----------
-
-ScanAllOrders();
-for(lv_i1=0;lv_i1<g_activePairs;lv_i1++)
-{
-lv_d2=g_pairBuyPrice[lv_i1];
-lv_i3=1;
-for(lv_i4=0;lv_i4<g_activePairs;lv_i4++)
-{
-if(lv_i4==lv_i1||!(g_pairBuyPrice[lv_i4]>lv_d2)) continue;
-lv_i3++;
-
-}
-g_pairBarCount[lv_i1]=lv_i3;
-}
-for(lv_i5=0;lv_i5<g_activePairs;lv_i5++)
-{
-lv_i6=g_pairBarCount[lv_i5];
-lv_b7=true;
-do
-{
-lv_b7=false;
-lv_i8=0;
-if(g_activePairs<=0) continue;
-
-for(;lv_i8<g_activePairs;lv_i8++)
-{
-if(lv_i8==lv_i5||g_pairBarCount[lv_i8]!=g_pairBarCount[lv_i5]) continue;
-g_pairBarCount[lv_i8]++;
-lv_b7=true;
-
-}
-
-}
-while(lv_b7);
-
-}
-for(lv_i9=0;lv_i9<g_activePairs;lv_i9++)
-{
-g_pairSellLots[lv_i9]=1.0;
-}
-for(lv_i10=1;lv_i10<=g_activePairs;lv_i10++)
-{
-for(lv_i11=0;lv_i11<g_activePairs;lv_i11++)
-{
-if(g_pairBarCount[lv_i11]==lv_i10)
-{
-g_stratMagics[lv_i10-1]=lv_i11;
-}
-}
-}
-}
-// ProcessSellStrategies<<==-------- --------
-double ConvertToUSD_Old(double dParam0)
-{
-double lv_d2;
-string lv_s3;
-//----------
-
-lv_d2=dParam0;
-if((AccountCurrency()=="USD"||AccountCurrency()=="usd"))
-{
-lv_d2=dParam0;
-}
-if((AccountCurrency()=="EUR"||AccountCurrency()=="eur"))
-{
-lv_s3="EURUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0/iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountCurrency()=="GBP"||AccountCurrency()=="gbp"))
-{
-lv_s3="GBPUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0/iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountCurrency()=="AUD"||AccountCurrency()=="aud"))
-{
-lv_s3="AUDUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0/iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountCurrency()=="JPY"||AccountCurrency()=="jpy"||AccountCurrency()=="YEN"||AccountCurrency()=="yen"))
-{
-lv_s3="USDJPY"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0*iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountCurrency()=="CHF"||AccountCurrency()=="chf"))
-{
-lv_s3="USDCHF"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0*iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountCurrency()=="HKD"||AccountCurrency()=="hkd"))
-{
-lv_s3="USDHKD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0*iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountCurrency()=="SGD"||AccountCurrency()=="sgd"))
-{
-lv_s3="USDSGD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0*iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountCurrency()=="PLN"||AccountCurrency()=="pln"))
-{
-lv_s3="USDPLN"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0*iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountCurrency()=="RUB"||AccountCurrency()=="rub"))
-{
-lv_s3="USDRUB"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0*iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountCurrency()=="BTC"||AccountCurrency()=="btc"))
-{
-lv_s3="BTCUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0/iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountCurrency()=="ETH"||AccountCurrency()=="eth"))
-{
-lv_s3="ETHUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0/iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountCurrency()=="BCH"||AccountCurrency()=="bch"))
-{
-lv_s3="BCHUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0/iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountCurrency()=="BCC"||AccountCurrency()=="bcc"))
-{
-lv_s3="BCCUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0/iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountCurrency()=="XRP"||AccountCurrency()=="xrp"))
-{
-lv_s3="XRPUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0/iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountCurrency()=="LTC"||AccountCurrency()=="ltc"))
-{
-lv_s3="LTCUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0/iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountCurrency()=="XMR"||AccountCurrency()=="xmr"))
-{
-lv_s3="XMRUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0/iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountCurrency()=="DSH"||AccountCurrency()=="dsh"))
-{
-lv_s3="DSHUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0/iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountCurrency()=="EOS"||AccountCurrency()=="eos"))
-{
-lv_s3="EOSUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0/iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountCurrency()=="TRX"||AccountCurrency()=="trx"))
-{
-lv_s3="TRXUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0/iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountCurrency()=="ADA"||AccountCurrency()=="ada"))
-{
-lv_s3="ADAUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0/iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountCurrency()=="BSV"||AccountCurrency()=="bsv"))
-{
-lv_s3="BSVUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0/iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountCurrency()=="XLM"||AccountCurrency()=="xlm"))
-{
-lv_s3="XLMUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0/iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountCurrency()=="GLD"||AccountCurrency()=="gld"))
-{
-lv_s3="GLDUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0/iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountCurrency()=="ZEC"||AccountCurrency()=="zec"))
-{
-lv_s3="ZECUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0/iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountCurrency()=="XEM"||AccountCurrency()=="xem"))
-{
-lv_s3="XEMUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0/iClose(lv_s3,PERIOD_D1,1);
-}
-}
-return(lv_d2);
-}
-// ConvertToUSD_Old<<==-------- --------
-double ConvertToUSD(double dParam0)
-{
-double lv_d2;
-string lv_s3;
-//----------
-
-lv_d2=dParam0;
-if((AccountInfoString(ACCOUNT_CURRENCY)=="USD"||AccountInfoString(ACCOUNT_CURRENCY)=="usd"))
-{
-lv_d2=dParam0;
-}
-if((AccountInfoString(ACCOUNT_CURRENCY)=="EUR"||AccountInfoString(ACCOUNT_CURRENCY)=="eur"))
-{
-lv_s3="EURUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0*iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountInfoString(ACCOUNT_CURRENCY)=="GBP"||AccountInfoString(ACCOUNT_CURRENCY)=="gbp"))
-{
-lv_s3="GBPUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0*iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountInfoString(ACCOUNT_CURRENCY)=="AUD"||AccountInfoString(ACCOUNT_CURRENCY)=="aud"))
-{
-lv_s3="AUDUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0*iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountInfoString(ACCOUNT_CURRENCY)=="JPY"||AccountInfoString(ACCOUNT_CURRENCY)=="jpy"||AccountInfoString(ACCOUNT_CURRENCY)=="YEN"||AccountInfoString(ACCOUNT_CURRENCY)=="yen"))
-{
-lv_s3="USDJPY"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0/iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountInfoString(ACCOUNT_CURRENCY)=="CHF"||AccountInfoString(ACCOUNT_CURRENCY)=="chf"))
-{
-lv_s3="USDCHF"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0/iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountInfoString(ACCOUNT_CURRENCY)=="HKD"||AccountInfoString(ACCOUNT_CURRENCY)=="hkd"))
-{
-lv_s3="USDHKD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0/iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountInfoString(ACCOUNT_CURRENCY)=="RUB"||AccountInfoString(ACCOUNT_CURRENCY)=="rub"))
-{
-lv_s3="USDRUB"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0/iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountInfoString(ACCOUNT_CURRENCY)=="CNH"||AccountInfoString(ACCOUNT_CURRENCY)=="cnh"))
-{
-lv_s3="USDCNH"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0/iClose(lv_s3,PERIOD_D1,1);
-}
-else
-{
-lv_s3="USDCNY"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0/iClose(lv_s3,PERIOD_D1,1);
-}
-}
-}
-if((AccountInfoString(ACCOUNT_CURRENCY)=="CNY"||AccountInfoString(ACCOUNT_CURRENCY)=="cny"))
-{
-lv_s3="USDCNH"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0/iClose(lv_s3,PERIOD_D1,1);
-}
-else
-{
-lv_s3="USDCNY"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0/iClose(lv_s3,PERIOD_D1,1);
-}
-}
-}
-if((AccountInfoString(ACCOUNT_CURRENCY)=="SGD"||AccountInfoString(ACCOUNT_CURRENCY)=="sgd"))
-{
-lv_s3="USDSGD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0/iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountInfoString(ACCOUNT_CURRENCY)=="BTC"||AccountInfoString(ACCOUNT_CURRENCY)=="btc"))
-{
-lv_s3="BTCUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0*iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountInfoString(ACCOUNT_CURRENCY)=="ETH"||AccountInfoString(ACCOUNT_CURRENCY)=="eth"))
-{
-lv_s3="ETHUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0*iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountInfoString(ACCOUNT_CURRENCY)=="BCH"||AccountInfoString(ACCOUNT_CURRENCY)=="bch"))
-{
-lv_s3="BCHUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0*iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountInfoString(ACCOUNT_CURRENCY)=="BCC"||AccountInfoString(ACCOUNT_CURRENCY)=="bcc"))
-{
-lv_s3="BCCUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0*iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountInfoString(ACCOUNT_CURRENCY)=="XRP"||AccountInfoString(ACCOUNT_CURRENCY)=="xrp"))
-{
-lv_s3="XRPUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0*iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountInfoString(ACCOUNT_CURRENCY)=="LTC"||AccountInfoString(ACCOUNT_CURRENCY)=="ltc"))
-{
-lv_s3="LTCUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0*iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountInfoString(ACCOUNT_CURRENCY)=="XMR"||AccountInfoString(ACCOUNT_CURRENCY)=="xmr"))
-{
-lv_s3="XMRUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0*iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountInfoString(ACCOUNT_CURRENCY)=="DSH"||AccountInfoString(ACCOUNT_CURRENCY)=="dsh"))
-{
-lv_s3="DSHUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0*iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountInfoString(ACCOUNT_CURRENCY)=="EOS"||AccountInfoString(ACCOUNT_CURRENCY)=="eos"))
-{
-lv_s3="EOSUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0*iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountInfoString(ACCOUNT_CURRENCY)=="TRX"||AccountInfoString(ACCOUNT_CURRENCY)=="trx"))
-{
-lv_s3="TRXUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0*iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountInfoString(ACCOUNT_CURRENCY)=="ADA"||AccountInfoString(ACCOUNT_CURRENCY)=="ada"))
-{
-lv_s3="ADAUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0*iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountInfoString(ACCOUNT_CURRENCY)=="BSV"||AccountInfoString(ACCOUNT_CURRENCY)=="bsv"))
-{
-lv_s3="BSVUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0*iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountInfoString(ACCOUNT_CURRENCY)=="XLM"||AccountInfoString(ACCOUNT_CURRENCY)=="xlm"))
-{
-lv_s3="XLMUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0*iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountInfoString(ACCOUNT_CURRENCY)=="GLD"||AccountInfoString(ACCOUNT_CURRENCY)=="gld"))
-{
-lv_s3="GLDUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0*iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountInfoString(ACCOUNT_CURRENCY)=="ZEC"||AccountInfoString(ACCOUNT_CURRENCY)=="zec"))
-{
-lv_s3="ZECUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0*iClose(lv_s3,PERIOD_D1,1);
-}
-}
-if((AccountInfoString(ACCOUNT_CURRENCY)=="XEM"||AccountInfoString(ACCOUNT_CURRENCY)=="xem"))
-{
-lv_s3="XEMUSD"+g_symbolSuffix;
-if(iClose(lv_s3,PERIOD_D1,1)>0.0)
-{
-lv_d2=dParam0*iClose(lv_s3,PERIOD_D1,1);
-}
-}
-return(MathRound(lv_d2));
-}
-// ConvertToUSD<<==-------- --------
-void LoadStrategy1Params()
-{
-double tmp_d1;
-double tmp_d2;
-double tmp_d3;
-double tmp_d4;
-double tmp_d5;
-double tmp_d6;
-double tmp_d7;
-double tmp_d8;
-double tmp_d9;
-double tmp_d10;
-double tmp_d11;
-double tmp_d12;
-
-g_entryTF=1440;
-g_entryPeriod=15;
-g_entryBars=24;
-g_entryRetries=3;
-g_entryDelaySeconds=105;
-g_takeProfitPips=45.0;
-g_tpOffset=0.0;
-tmp_d1=AdjustEntry+-275.0;
-if(Randomization>0.0)
-{
-tmp_d2=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d2=0.0;
-}
-g_slOffset=tmp_d1+tmp_d2;
-tmp_d2=AdjustEntry+-160.0;
-if(Randomization>0.0)
-{
-tmp_d3=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d3=0.0;
-}
-g_breakEvenPips=tmp_d2+tmp_d3;
-g_maxConcurrent=5;
-g_lotMultiplier=30.0;
-g_expiryHours=35;
-g_exitMode=1;
-tmp_d3=AdjustSL+6100.0;
-if(Randomization>0.0)
-{
-tmp_d4=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d4=0.0;
-}
-g_minProfitClose=tmp_d3+tmp_d4;
-tmp_d4=AdjustTP+1450.0;
-if(Randomization>0.0)
-{
-tmp_d5=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d5=0.0;
-}
-g_maxLossClose=tmp_d4+tmp_d5;
-tmp_d5=AdjustTrailSL+1800.0;
-if(Randomization>0.0)
-{
-tmp_d6=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d6=0.0;
-}
-g_trailStep=tmp_d5+tmp_d6;
-if(Randomization>0.0)
-{
-tmp_d7=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d7=0.0;
-}
-g_trailStart=tmp_d7+1800.0;
-if(Randomization>0.0)
-{
-tmp_d8=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d8=0.0;
-}
-g_trailStop=tmp_d8+5000.0;
-g_trailOffset=0.1;
-g_trailMin=0.0;
-if(Randomization>0.0)
-{
-tmp_d9=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d9=0.0;
-}
-g_trailFactor=tmp_d9+1600.0;
-tmp_d9=AdjustTrailTP+700.0;
-if(Randomization>0.0)
-{
-tmp_d10=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d10=0.0;
-}
-g_trailMax=tmp_d9+tmp_d10;
-if(Randomization>0.0)
-{
-tmp_d11=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d11=0.0;
-}
-g_beProfitTrigger=tmp_d11+930.0;
-tmp_d11=AdjustBreakEven+120.0;
-if(Randomization>0.0)
-{
-tmp_d12=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d12=0.0;
-}
-g_beOffset=tmp_d11+tmp_d12;
-g_hlTrailTF=60;
-g_hlTrailPeriod=50;
-g_hlTrailShift=14;
-g_hlTrailMode=12;
-g_hlTrailBars=300;
-g_hlTrailMult=22.0;
-g_maxOrdersTotal=5;
-if(!(RemoveCommentSuffix))
-{
-g_currentSymbol=ST1_Comment+"_XAUUSD_1";
-}
-g_magicMain=ST1_MagicNumber+1;
-g_gmtOffsetFloat=ConvertToUSD_Old(145.0);
-if(!(UseVariableValues)) return;
-g_totalProfit=2000.0;
-g_gmtOffsetFloat=ConvertToUSD_Old(60.0);
-}
-// LoadStrategy1Params<<==-------- --------
-void LoadStrategy2Params()
-{
-double tmp_d1;
-double tmp_d2;
-double tmp_d3;
-double tmp_d4;
-double tmp_d5;
-double tmp_d6;
-double tmp_d7;
-double tmp_d8;
-double tmp_d9;
-double tmp_d10;
-double tmp_d11;
-double tmp_d12;
-double tmp_d13;
-
-g_entryTF=240;
-g_entryPeriod=60;
-g_entryBars=12;
-g_entryRetries=8;
-g_entryDelaySeconds=90;
-g_takeProfitPips=1050.0;
-g_tpOffset=0.0;
-tmp_d1=AdjustEntry+-40.0;
-if(Randomization>0.0)
-{
-tmp_d2=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d2=0.0;
-}
-g_slOffset=tmp_d1+tmp_d2;
-tmp_d2=AdjustEntry+-100.0;
-if(Randomization>0.0)
-{
-tmp_d3=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d3=0.0;
-}
-g_breakEvenPips=tmp_d2+tmp_d3;
-g_maxConcurrent=2;
-g_lotMultiplier=130.0;
-g_expiryHours=192;
-g_exitMode=5;
-if(!(UseHL_TrailingSL))
-{
-tmp_d3=AdjustSL+700.0;
-if(Randomization>0.0)
-{
-tmp_d4=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d4=0.0;
-}
-g_minProfitClose=tmp_d3+tmp_d4;
-}
-else
-{
-tmp_d4=AdjustSL+800.0;
-if(Randomization>0.0)
-{
-tmp_d5=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d5=0.0;
-}
-g_minProfitClose=tmp_d4+tmp_d5;
-}
-tmp_d5=AdjustTP+4900.0;
-if(Randomization>0.0)
-{
-tmp_d6=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d6=0.0;
-}
-g_maxLossClose=tmp_d5+tmp_d6;
-tmp_d6=AdjustTrailSL+1300.0;
-if(Randomization>0.0)
-{
-tmp_d7=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d7=0.0;
-}
-g_trailStep=tmp_d6+tmp_d7;
-if(Randomization>0.0)
-{
-tmp_d8=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d8=0.0;
-}
-g_trailStart=tmp_d8+1450.0;
-if(Randomization>0.0)
-{
-tmp_d9=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d9=0.0;
-}
-g_trailStop=tmp_d9+2000.0;
-g_trailOffset=0.1;
-g_trailMin=0.0;
-if(Randomization>0.0)
-{
-tmp_d10=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d10=0.0;
-}
-g_trailFactor=tmp_d10+1400.0;
-tmp_d10=AdjustTrailTP+200.0;
-if(Randomization>0.0)
-{
-tmp_d11=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d11=0.0;
-}
-g_trailMax=tmp_d10+tmp_d11;
-if(Randomization>0.0)
-{
-tmp_d12=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d12=0.0;
-}
-g_beProfitTrigger=tmp_d12+500.0;
-tmp_d12=AdjustBreakEven+200.0;
-if(Randomization>0.0)
-{
-tmp_d13=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d13=0.0;
-}
-g_beOffset=tmp_d12+tmp_d13;
-g_hlTrailTF=60;
-g_hlTrailPeriod=50;
-g_hlTrailShift=14;
-g_hlTrailMode=6;
-g_hlTrailBars=400;
-g_hlTrailMult=32.0;
-g_maxOrdersTotal=99;
-if(!(RemoveCommentSuffix))
-{
-g_currentSymbol=ST1_Comment+"_XAUUSD_4";
-}
-g_magicMain=ST1_MagicNumber+2;
-g_gmtOffsetFloat=ConvertToUSD_Old(57.0);
-if(!(UseVariableValues)) return;
-g_totalProfit=1600.0;
-g_gmtOffsetFloat=ConvertToUSD_Old(52.0);
-}
-// LoadStrategy2Params<<==-------- --------
-void LoadStrategy3Params()
-{
-double tmp_d1;
-double tmp_d2;
-double tmp_d3;
-double tmp_d4;
-double tmp_d5;
-double tmp_d6;
-double tmp_d7;
-double tmp_d8;
-double tmp_d9;
-double tmp_d10;
-double tmp_d11;
-double tmp_d12;
-
-g_entryTF=1440;
-g_entryPeriod=60;
-g_entryBars=15;
-g_entryRetries=3;
-g_entryDelaySeconds=230;
-g_takeProfitPips=550.0;
-g_tpOffset=0.0;
-tmp_d1=AdjustEntry+-170.0;
-if(Randomization>0.0)
-{
-tmp_d2=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d2=0.0;
-}
-g_slOffset=tmp_d1+tmp_d2;
-tmp_d2=AdjustEntry+-70.0;
-if(Randomization>0.0)
-{
-tmp_d3=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d3=0.0;
-}
-g_breakEvenPips=tmp_d2+tmp_d3;
-g_maxConcurrent=1;
-g_lotMultiplier=480.0;
-g_expiryHours=480;
-g_exitMode=1;
-tmp_d3=AdjustSL+1000.0;
-if(Randomization>0.0)
-{
-tmp_d4=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d4=0.0;
-}
-g_minProfitClose=tmp_d3+tmp_d4;
-tmp_d4=AdjustTP+4100.0;
-if(Randomization>0.0)
-{
-tmp_d5=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d5=0.0;
-}
-g_maxLossClose=tmp_d4+tmp_d5;
-tmp_d5=AdjustTrailSL+450.0;
-if(Randomization>0.0)
-{
-tmp_d6=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d6=0.0;
-}
-g_trailStep=tmp_d5+tmp_d6;
-if(Randomization>0.0)
-{
-tmp_d7=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d7=0.0;
-}
-g_trailStart=tmp_d7+1400.0;
-if(Randomization>0.0)
-{
-tmp_d8=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d8=0.0;
-}
-g_trailStop=tmp_d8+5000.0;
-g_trailOffset=0.1;
-g_trailMin=0.0;
-if(Randomization>0.0)
-{
-tmp_d9=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d9=0.0;
-}
-g_trailFactor=tmp_d9+1600.0;
-tmp_d9=AdjustTrailTP+400.0;
-if(Randomization>0.0)
-{
-tmp_d10=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d10=0.0;
-}
-g_trailMax=tmp_d9+tmp_d10;
-if(Randomization>0.0)
-{
-tmp_d11=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d11=0.0;
-}
-g_beProfitTrigger=tmp_d11+500.0;
-tmp_d11=AdjustBreakEven+100.0;
-if(Randomization>0.0)
-{
-tmp_d12=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d12=0.0;
-}
-g_beOffset=tmp_d11+tmp_d12;
-g_hlTrailTF=60;
-g_hlTrailPeriod=50;
-g_hlTrailShift=1;
-g_hlTrailMode=5;
-g_hlTrailBars=700;
-g_hlTrailMult=22.0;
-g_maxOrdersTotal=99;
-if(!(RemoveCommentSuffix))
-{
-g_currentSymbol=ST1_Comment+"_XAUUSD_2";
-}
-g_magicMain=ST1_MagicNumber+5;
-g_gmtOffsetFloat=ConvertToUSD_Old(30.0);
-if(!(UseVariableValues)) return;
-g_totalProfit=2000.0;
-g_gmtOffsetFloat=ConvertToUSD_Old(30.0);
-}
-// LoadStrategy3Params<<==-------- --------
-void LoadStrategy4Params()
-{
-double tmp_d1;
-double tmp_d2;
-double tmp_d3;
-double tmp_d4;
-double tmp_d5;
-double tmp_d6;
-double tmp_d7;
-double tmp_d8;
-double tmp_d9;
-double tmp_d10;
-double tmp_d11;
-double tmp_d12;
-double tmp_d13;
-
-g_entryTF=1440;
-g_entryPeriod=60;
-g_entryBars=7;
-g_entryRetries=2;
-g_entryDelaySeconds=20;
-g_takeProfitPips=250.0;
-g_tpOffset=0.0;
-tmp_d1=AdjustEntry+-130.0;
-if(Randomization>0.0)
-{
-tmp_d2=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d2=0.0;
-}
-g_slOffset=tmp_d1+tmp_d2;
-tmp_d2=AdjustEntry+-120.0;
-if(Randomization>0.0)
-{
-tmp_d3=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d3=0.0;
-}
-g_breakEvenPips=tmp_d2+tmp_d3;
-g_maxConcurrent=1;
-g_lotMultiplier=980.0;
-g_expiryHours=432;
-g_exitMode=1;
-if(!(UseHL_TrailingSL))
-{
-tmp_d3=AdjustSL+600.0;
-if(Randomization>0.0)
-{
-tmp_d4=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d4=0.0;
-}
-g_minProfitClose=tmp_d3+tmp_d4;
-}
-else
-{
-tmp_d4=AdjustSL+700.0;
-if(Randomization>0.0)
-{
-tmp_d5=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d5=0.0;
-}
-g_minProfitClose=tmp_d4+tmp_d5;
-}
-tmp_d5=AdjustTP+3300.0;
-if(Randomization>0.0)
-{
-tmp_d6=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d6=0.0;
-}
-g_maxLossClose=tmp_d5+tmp_d6;
-tmp_d6=AdjustTrailSL+500.0;
-if(Randomization>0.0)
-{
-tmp_d7=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d7=0.0;
-}
-g_trailStep=tmp_d6+tmp_d7;
-if(Randomization>0.0)
-{
-tmp_d8=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d8=0.0;
-}
-g_trailStart=tmp_d8+400.0;
-if(Randomization>0.0)
-{
-tmp_d9=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d9=0.0;
-}
-g_trailStop=tmp_d9+5000.0;
-if(Randomization>0.0)
-{
-tmp_d10=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d10=0.0;
-}
-g_trailFactor=tmp_d10+1000.0;
-tmp_d10=AdjustTrailTP+2000.0;
-if(Randomization>0.0)
-{
-tmp_d11=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d11=0.0;
-}
-g_trailMax=tmp_d10+tmp_d11;
-g_trailOffset=0.1;
-g_trailMin=0.0;
-if(Randomization>0.0)
-{
-tmp_d12=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d12=0.0;
-}
-g_beProfitTrigger=tmp_d12+400.0;
-tmp_d12=AdjustBreakEven;
-if(Randomization>0.0)
-{
-tmp_d13=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d13=0.0;
-}
-g_beOffset=tmp_d12+tmp_d13;
-g_hlTrailTF=60;
-g_hlTrailPeriod=50;
-g_hlTrailShift=7;
-g_hlTrailMode=4;
-g_hlTrailBars=100;
-g_hlTrailMult=0.0;
-g_maxOrdersTotal=99;
-if(!(RemoveCommentSuffix))
-{
-g_currentSymbol=ST1_Comment+"_XAUUSD_3";
-}
-g_magicMain=ST1_MagicNumber+8;
-g_gmtOffsetFloat=ConvertToUSD_Old(32.0);
-if(!(UseVariableValues)) return;
-g_totalProfit=2000.0;
-g_gmtOffsetFloat=ConvertToUSD_Old(35.0);
-}
-// LoadStrategy4Params<<==-------- --------
-void LoadStrategy5Params()
-{
-double tmp_d1;
-double tmp_d2;
-double tmp_d3;
-double tmp_d4;
-double tmp_d5;
-double tmp_d6;
-double tmp_d7;
-double tmp_d8;
-double tmp_d9;
-double tmp_d10;
-double tmp_d11;
-double tmp_d12;
-
-g_entryTF=60;
-g_entryPeriod=5;
-g_entryBars=26;
-g_entryRetries=24;
-g_entryDelaySeconds=140;
-g_takeProfitPips=120.0;
-g_tpOffset=0.0;
-tmp_d1=AdjustEntry+-115.0;
-if(Randomization>0.0)
-{
-tmp_d2=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d2=0.0;
-}
-g_slOffset=tmp_d1+tmp_d2;
-tmp_d2=AdjustEntry+-145.0;
-if(Randomization>0.0)
-{
-tmp_d3=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d3=0.0;
-}
-g_breakEvenPips=tmp_d2+tmp_d3;
-g_maxConcurrent=5;
-g_lotMultiplier=55.0;
-g_expiryHours=20;
-g_exitMode=1;
-tmp_d3=AdjustSL+10100.0;
-if(Randomization>0.0)
-{
-tmp_d4=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d4=0.0;
-}
-g_minProfitClose=tmp_d3+tmp_d4;
-tmp_d4=AdjustTP+800.0;
-if(Randomization>0.0)
-{
-tmp_d5=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d5=0.0;
-}
-g_maxLossClose=tmp_d4+tmp_d5;
-tmp_d5=AdjustTrailSL+500.0;
-if(Randomization>0.0)
-{
-tmp_d6=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d6=0.0;
-}
-g_trailStep=tmp_d5+tmp_d6;
-if(Randomization>0.0)
-{
-tmp_d7=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d7=0.0;
-}
-g_trailStart=tmp_d7+1200.0;
-if(Randomization>0.0)
-{
-tmp_d8=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d8=0.0;
-}
-g_trailStop=tmp_d8+5000.0;
-g_trailOffset=0.1;
-g_trailMin=0.0;
-if(Randomization>0.0)
-{
-tmp_d9=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d9=0.0;
-}
-g_trailFactor=tmp_d9+1950.0;
-tmp_d9=AdjustTrailTP+350.0;
-if(Randomization>0.0)
-{
-tmp_d10=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d10=0.0;
-}
-g_trailMax=tmp_d9+tmp_d10;
-if(Randomization>0.0)
-{
-tmp_d11=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d11=0.0;
-}
-g_beProfitTrigger=tmp_d11+330.0;
-tmp_d11=AdjustBreakEven+80.0;
-if(Randomization>0.0)
-{
-tmp_d12=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d12=0.0;
-}
-g_beOffset=tmp_d11+tmp_d12;
-g_hlTrailTF=60;
-g_hlTrailPeriod=50;
-g_hlTrailShift=0;
-g_hlTrailMode=0;
-g_hlTrailBars=100;
-g_hlTrailMult=0.0;
-g_maxOrdersTotal=5;
-if(!(RemoveCommentSuffix))
-{
-g_currentSymbol=ST1_Comment+"_XAUUSD_6";
-}
-g_magicMain=ST1_MagicNumber+9;
-g_gmtOffsetFloat=ConvertToUSD_Old(348.0);
-if(!(UseVariableValues)) return;
-g_totalProfit=2400.0;
-g_gmtOffsetFloat=ConvertToUSD_Old(140.0);
-}
-// LoadStrategy5Params<<==-------- --------
-void LoadStrategy6Params()
-{
-double tmp_d1;
-double tmp_d2;
-double tmp_d3;
-double tmp_d4;
-double tmp_d5;
-double tmp_d6;
-double tmp_d7;
-double tmp_d8;
-double tmp_d9;
-double tmp_d10;
-double tmp_d11;
-double tmp_d12;
-
-g_entryTF=60;
-g_entryPeriod=15;
-g_entryBars=30;
-g_entryRetries=19;
-g_entryDelaySeconds=110;
-g_takeProfitPips=160.0;
-g_tpOffset=0.0;
-tmp_d1=AdjustEntry+-120.0;
-if(Randomization>0.0)
-{
-tmp_d2=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d2=0.0;
-}
-g_slOffset=tmp_d1+tmp_d2;
-tmp_d2=AdjustEntry+-110.0;
-if(Randomization>0.0)
-{
-tmp_d3=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d3=0.0;
-}
-g_breakEvenPips=tmp_d2+tmp_d3;
-g_maxConcurrent=3;
-g_lotMultiplier=55.0;
-g_expiryHours=30;
-g_exitMode=1;
-tmp_d3=AdjustSL+5300.0;
-if(Randomization>0.0)
-{
-tmp_d4=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d4=0.0;
-}
-g_minProfitClose=tmp_d3+tmp_d4;
-tmp_d4=AdjustTP+900.0;
-if(Randomization>0.0)
-{
-tmp_d5=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d5=0.0;
-}
-g_maxLossClose=tmp_d4+tmp_d5;
-tmp_d5=AdjustTrailSL+495.0;
-if(Randomization>0.0)
-{
-tmp_d6=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d6=0.0;
-}
-g_trailStep=tmp_d5+tmp_d6;
-if(Randomization>0.0)
-{
-tmp_d7=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d7=0.0;
-}
-g_trailStart=tmp_d7+400.0;
-if(Randomization>0.0)
-{
-tmp_d8=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d8=0.0;
-}
-g_trailStop=tmp_d8+5000.0;
-g_trailOffset=0.1;
-g_trailMin=0.0;
-if(Randomization>0.0)
-{
-tmp_d9=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d9=0.0;
-}
-g_trailFactor=tmp_d9+1900.0;
-tmp_d9=AdjustTrailTP+250.0;
-if(Randomization>0.0)
-{
-tmp_d10=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d10=0.0;
-}
-g_trailMax=tmp_d9+tmp_d10;
-if(Randomization>0.0)
-{
-tmp_d11=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d11=0.0;
-}
-g_beProfitTrigger=tmp_d11+260.0;
-tmp_d11=AdjustBreakEven+80.0;
-if(Randomization>0.0)
-{
-tmp_d12=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d12=0.0;
-}
-g_beOffset=tmp_d11+tmp_d12;
-g_hlTrailTF=60;
-g_hlTrailPeriod=50;
-g_hlTrailShift=0;
-g_hlTrailMode=0;
-g_hlTrailBars=100;
-g_hlTrailMult=0.0;
-g_maxOrdersTotal=99;
-if(!(RemoveCommentSuffix))
-{
-g_currentSymbol=ST1_Comment+"_XAUUSD_5";
-}
-g_magicMain=ST1_MagicNumber+12;
-g_gmtOffsetFloat=ConvertToUSD_Old(281.0);
-if(!(UseVariableValues)) return;
-g_totalProfit=2600.0;
-g_gmtOffsetFloat=ConvertToUSD_Old(110.0);
-}
-// LoadStrategy6Params<<==-------- --------
-void LoadStrategy7Params()
-{
-double tmp_d1;
-double tmp_d2;
-double tmp_d3;
-double tmp_d4;
-double tmp_d5;
-double tmp_d6;
-double tmp_d7;
-double tmp_d8;
-double tmp_d9;
-double tmp_d10;
-double tmp_d11;
-double tmp_d12;
-
-g_entryTF=60;
-g_entryPeriod=15;
-g_entryBars=7;
-g_entryRetries=5;
-g_entryDelaySeconds=200;
-g_takeProfitPips=40.0;
-g_tpOffset=0.0;
-tmp_d1=AdjustEntry+-150.0;
-if(Randomization>0.0)
-{
-tmp_d2=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d2=0.0;
-}
-g_slOffset=tmp_d1+tmp_d2;
-tmp_d2=AdjustEntry+-145.0;
-if(Randomization>0.0)
-{
-tmp_d3=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d3=0.0;
-}
-g_breakEvenPips=tmp_d2+tmp_d3;
-g_maxConcurrent=3;
-g_lotMultiplier=5.0;
-g_expiryHours=15;
-g_exitMode=1;
-tmp_d3=AdjustSL+3900.0;
-if(Randomization>0.0)
-{
-tmp_d4=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d4=0.0;
-}
-g_minProfitClose=tmp_d3+tmp_d4;
-tmp_d4=AdjustTP+1350.0;
-if(Randomization>0.0)
-{
-tmp_d5=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d5=0.0;
-}
-g_maxLossClose=tmp_d4+tmp_d5;
-tmp_d5=AdjustTrailSL+445.0;
-if(Randomization>0.0)
-{
-tmp_d6=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d6=0.0;
-}
-g_trailStep=tmp_d5+tmp_d6;
-if(Randomization>0.0)
-{
-tmp_d7=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d7=0.0;
-}
-g_trailStart=tmp_d7+355.0;
-if(Randomization>0.0)
-{
-tmp_d8=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d8=0.0;
-}
-g_trailStop=tmp_d8+5000.0;
-g_trailOffset=0.1;
-g_trailMin=0.0;
-if(Randomization>0.0)
-{
-tmp_d9=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d9=0.0;
-}
-g_trailFactor=tmp_d9+1850.0;
-tmp_d9=AdjustTrailTP+250.0;
-if(Randomization>0.0)
-{
-tmp_d10=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d10=0.0;
-}
-g_trailMax=tmp_d9+tmp_d10;
-if(Randomization>0.0)
-{
-tmp_d11=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d11=0.0;
-}
-g_beProfitTrigger=tmp_d11+160.0;
-tmp_d11=AdjustBreakEven+50.0;
-if(Randomization>0.0)
-{
-tmp_d12=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d12=0.0;
-}
-g_beOffset=tmp_d11+tmp_d12;
-g_hlTrailTF=60;
-g_hlTrailPeriod=50;
-g_hlTrailShift=1;
-g_hlTrailMode=9;
-g_hlTrailBars=1500;
-g_hlTrailMult=46.0;
-g_maxOrdersTotal=99;
-if(!(RemoveCommentSuffix))
-{
-g_currentSymbol=ST1_Comment+"_XAUUSD_9";
-}
-g_magicMain=ST1_MagicNumber+13;
-g_gmtOffsetFloat=ConvertToUSD_Old(968.0);
-if(!(UseVariableValues)) return;
-g_totalProfit=1900.0;
-g_gmtOffsetFloat=ConvertToUSD_Old(700.0);
-}
-// LoadStrategy7Params<<==-------- --------
-void LoadStrategy8Params()
-{
-double tmp_d1;
-double tmp_d2;
-double tmp_d3;
-double tmp_d4;
-double tmp_d5;
-double tmp_d6;
-double tmp_d7;
-double tmp_d8;
-double tmp_d9;
-double tmp_d10;
-double tmp_d11;
-double tmp_d12;
-
-g_entryTF=60;
-g_entryPeriod=15;
-g_entryBars=25;
-g_entryRetries=23;
-g_entryDelaySeconds=145;
-g_takeProfitPips=10.0;
-g_tpOffset=0.0;
-tmp_d1=AdjustEntry+-60.0;
-if(Randomization>0.0)
-{
-tmp_d2=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d2=0.0;
-}
-g_slOffset=tmp_d1+tmp_d2;
-tmp_d2=AdjustEntry+-145.0;
-if(Randomization>0.0)
-{
-tmp_d3=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d3=0.0;
-}
-g_breakEvenPips=tmp_d2+tmp_d3;
-g_maxConcurrent=5;
-g_lotMultiplier=90.0;
-g_expiryHours=60;
-g_exitMode=1;
-tmp_d3=AdjustSL+2250.0;
-if(Randomization>0.0)
-{
-tmp_d4=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d4=0.0;
-}
-g_minProfitClose=tmp_d3+tmp_d4;
-tmp_d4=AdjustTP+1450.0;
-if(Randomization>0.0)
-{
-tmp_d5=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d5=0.0;
-}
-g_maxLossClose=tmp_d4+tmp_d5;
-tmp_d5=AdjustTrailSL+450.0;
-if(Randomization>0.0)
-{
-tmp_d6=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d6=0.0;
-}
-g_trailStep=tmp_d5+tmp_d6;
-if(Randomization>0.0)
-{
-tmp_d7=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d7=0.0;
-}
-g_trailStart=tmp_d7+900.0;
-if(Randomization>0.0)
-{
-tmp_d8=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d8=0.0;
-}
-g_trailStop=tmp_d8+5000.0;
-g_trailOffset=0.1;
-g_trailMin=0.0;
-if(Randomization>0.0)
-{
-tmp_d9=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d9=0.0;
-}
-g_trailFactor=tmp_d9+2800.0;
-tmp_d9=AdjustTrailTP+350.0;
-if(Randomization>0.0)
-{
-tmp_d10=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d10=0.0;
-}
-g_trailMax=tmp_d9+tmp_d10;
-if(Randomization>0.0)
-{
-tmp_d11=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d11=0.0;
-}
-g_beProfitTrigger=tmp_d11+340.0;
-tmp_d11=AdjustBreakEven+30.0;
-if(Randomization>0.0)
-{
-tmp_d12=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d12=0.0;
-}
-g_beOffset=tmp_d11+tmp_d12;
-g_hlTrailTF=60;
-g_hlTrailPeriod=50;
-g_hlTrailShift=12;
-g_hlTrailMode=17;
-g_hlTrailBars=1000;
-g_hlTrailMult=45.0;
-g_maxOrdersTotal=5;
-if(!(RemoveCommentSuffix))
-{
-g_currentSymbol=ST1_Comment+"_XAUUSD_7";
-}
-g_magicMain=ST1_MagicNumber+14;
-g_gmtOffsetFloat=ConvertToUSD_Old(149.0);
-if(!(UseVariableValues)) return;
-g_totalProfit=2600.0;
-g_gmtOffsetFloat=ConvertToUSD_Old(90.0);
-}
-// LoadStrategy8Params<<==-------- --------
-void LoadStrategy9Params()
-{
-double tmp_d1;
-double tmp_d2;
-double tmp_d3;
-double tmp_d4;
-double tmp_d5;
-double tmp_d6;
-double tmp_d7;
-double tmp_d8;
-double tmp_d9;
-double tmp_d10;
-double tmp_d11;
-double tmp_d12;
-
-g_entryTF=60;
-g_entryPeriod=15;
-g_entryBars=26;
-g_entryRetries=20;
-g_entryDelaySeconds=235;
-g_takeProfitPips=80.0;
-g_tpOffset=0.0;
-tmp_d1=AdjustEntry+-140.0;
-if(Randomization>0.0)
-{
-tmp_d2=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d2=0.0;
-}
-g_slOffset=tmp_d1+tmp_d2;
-tmp_d2=AdjustEntry+-170.0;
-if(Randomization>0.0)
-{
-tmp_d3=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d3=0.0;
-}
-g_breakEvenPips=tmp_d2+tmp_d3;
-g_maxConcurrent=5;
-g_lotMultiplier=5.0;
-g_expiryHours=55;
-g_exitMode=1;
-tmp_d3=AdjustSL+1900.0;
-if(Randomization>0.0)
-{
-tmp_d4=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d4=0.0;
-}
-g_minProfitClose=tmp_d3+tmp_d4;
-tmp_d4=AdjustTP+1200.0;
-if(Randomization>0.0)
-{
-tmp_d5=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d5=0.0;
-}
-g_maxLossClose=tmp_d4+tmp_d5;
-tmp_d5=AdjustTrailSL+1250.0;
-if(Randomization>0.0)
-{
-tmp_d6=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d6=0.0;
-}
-g_trailStep=tmp_d5+tmp_d6;
-if(Randomization>0.0)
-{
-tmp_d7=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d7=0.0;
-}
-g_trailStart=tmp_d7+650.0;
-if(Randomization>0.0)
-{
-tmp_d8=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d8=0.0;
-}
-g_trailStop=tmp_d8+5000.0;
-g_trailOffset=0.1;
-g_trailMin=0.0;
-if(Randomization>0.0)
-{
-tmp_d9=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d9=0.0;
-}
-g_trailFactor=tmp_d9+1950.0;
-tmp_d9=AdjustTrailTP+250.0;
-if(Randomization>0.0)
-{
-tmp_d10=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d10=0.0;
-}
-g_trailMax=tmp_d9+tmp_d10;
-if(Randomization>0.0)
-{
-tmp_d11=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d11=0.0;
-}
-g_beProfitTrigger=tmp_d11+270.0;
-tmp_d11=AdjustBreakEven;
-if(Randomization>0.0)
-{
-tmp_d12=Randomization*2.0*MathRand()/32768.0+(0.0-Randomization);
-}
-else
-{
-tmp_d12=0.0;
-}
-g_beOffset=tmp_d11+tmp_d12;
-g_hlTrailTF=60;
-g_hlTrailPeriod=50;
-g_hlTrailShift=15;
-g_hlTrailMode=3;
-g_hlTrailBars=1200;
-g_hlTrailMult=16.0;
-g_maxOrdersTotal=20;
-if(!(RemoveCommentSuffix))
-{
-g_currentSymbol=ST1_Comment+"_XAUUSD_8";
-}
-g_magicMain=ST1_MagicNumber+15;
-g_gmtOffsetFloat=ConvertToUSD_Old(276.0);
-if(!(UseVariableValues)) return;
-g_totalProfit=2800.0;
-g_gmtOffsetFloat=ConvertToUSD_Old(130.0);
-}
-// LoadStrategy9Params<<==-------- --------
-void CalcPerformanceStats()
-{
-double lv_d1;
-int lv_i2;
-double lv_d3;
-double lv_d4;
-double lv_d5;
-//----------
-bool _orderOK;
-double tmp_d1;
-long tmp_l2;
-int tmp_i3;
-int tmp_i4;
-int tmp_i5;
-int tmp_i6;
-int tmp_i7;
-int tmp_i8;
-int tmp_i9;
-int tmp_i10;
-int tmp_i11;
-int tmp_i12;
-int tmp_i13;
-int tmp_i14;
-int tmp_i15;
-int tmp_i16;
-int tmp_i17;
-int tmp_i18;
-int tmp_i19;
-
-tmp_d1=AccountEquity();
-if(tmp_d1==AccountBalance()) return;
-lv_d1=0.0;
-if(AccountEquity()>g_prevEquity)
-{
-g_prevEquity=AccountEquity();
-}
-for(lv_i2=HistoryTotal();lv_i2>=0;lv_i2--)
-{
-if(OrderSelect(lv_i2,0,1)!=true) continue;
-tmp_l2=OrderCloseTime();
-if(tmp_l2<iTime(g_tradeSymbol,PERIOD_D1,0)) continue;
-lv_d3=OrderProfit()+OrderSwap()+OrderCommission();
-lv_d1=lv_d3+lv_d1;
-
-}
-lv_d4=AccountEquity()-AccountBalance();
-lv_d5=lv_d4+lv_d1;
-if(!(-(lv_d5)>g_prevEquity*PropFirmMaxDailyDD/100.0)) return;
-
-if(!(g_panelCreated))
-{
-Print("Max Daily Drawdown reached, closing trades and skipping rest of the day");
-}
-for(tmp_i3=OrdersTotal();tmp_i3>=0;tmp_i3=tmp_i3-1)
-{
-if(OrderSelect(tmp_i3,0,0)!=true||OrderSymbol()!=g_tradeSymbol) continue;
-tmp_i4=OrderMagicNumber();
-tmp_i5=ST1_MagicNumber+1;
-if(tmp_i4!=tmp_i5)
-{
-tmp_i5=OrderMagicNumber();
-tmp_i6=ST1_MagicNumber+2;
-if(tmp_i5!=tmp_i6)
-{
-tmp_i6=OrderMagicNumber();
-tmp_i7=ST1_MagicNumber+3;
-if(tmp_i6!=tmp_i7)
-{
-tmp_i7=OrderMagicNumber();
-tmp_i8=ST1_MagicNumber+4;
-if(tmp_i7!=tmp_i8)
-{
-tmp_i8=OrderMagicNumber();
-tmp_i9=ST1_MagicNumber+5;
-if(tmp_i8!=tmp_i9)
-{
-tmp_i9=OrderMagicNumber();
-tmp_i10=ST1_MagicNumber+6;
-if(tmp_i9!=tmp_i10)
-{
-tmp_i10=OrderMagicNumber();
-tmp_i11=ST1_MagicNumber+7;
-if(tmp_i10!=tmp_i11)
-{
-tmp_i11=OrderMagicNumber();
-tmp_i12=ST1_MagicNumber+8;
-if(tmp_i11!=tmp_i12)
-{
-tmp_i12=OrderMagicNumber();
-tmp_i13=ST1_MagicNumber+9;
-if(tmp_i12!=tmp_i13)
-{
-tmp_i13=OrderMagicNumber();
-tmp_i14=ST1_MagicNumber+10;
-if(tmp_i13!=tmp_i14)
-{
-tmp_i14=OrderMagicNumber();
-tmp_i15=ST1_MagicNumber+11;
-if(tmp_i14!=tmp_i15)
-{
-tmp_i15=OrderMagicNumber();
-tmp_i16=ST1_MagicNumber+12;
-if(tmp_i15!=tmp_i16)
-{
-tmp_i16=OrderMagicNumber();
-tmp_i17=ST1_MagicNumber+13;
-if(tmp_i16!=tmp_i17)
-{
-tmp_i17=OrderMagicNumber();
-tmp_i18=ST1_MagicNumber+14;
-if(tmp_i17!=tmp_i18)
-{
-tmp_i18=OrderMagicNumber();
-tmp_i19=ST1_MagicNumber+15;
-if(tmp_i18!=tmp_i19) continue;
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-if(OrderType()==0)
-{
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_BID),(int)g_maxVolatility,Red);
-}
-if(OrderType()==1)
-{
-_orderOK = OrderClose(OrderTicket(),OrderLots(),MarketInfo(g_tradeSymbol,MODE_ASK),(int)g_maxVolatility,Red);
-}
-if((OrderType()!=4&&OrderType()!=5)) continue;
-_orderOK = OrderDelete(OrderTicket(),Red);
-
-}
-g_panelCreated=true;
-g_prevEquity=0.0;
-}
-// CalcPerformanceStats<<==-------- --------
-int GetGMT_Offset()
-{
-string lv_s2;
-int lv_i3;
-string lv_s4;
-long lv_l5;
-int lv_i6;
-char lv_httpReqBuf[];
-char lv_httpRespBuf[];
-//----------
-string tmp_s1;
-string tmp_s2;
-
-ResetLastError();
-if(WebRequest("GET","https://www.worldtimeserver.com/time-zones/utc/",NULL,NULL,10000,lv_httpReqBuf,0,lv_httpRespBuf,tmp_s1)==-1)
-{
-Print("Error when reading GMT URL. Error code =",GetLastError());
-MessageBox("Add the address 'https://www.worldtimeserver.com/' in the list of allowed URLs on tab 'Expert Advisors'","Error",64);
-tmp_s2="999";
-}
-else
-{
-tmp_s2=CharArrayToString(lv_httpRespBuf,0,0,0);
-}
-lv_s2=tmp_s2;
-if(lv_s2=="999")
-{
-return(999);
-}
-lv_i3=StringFind(lv_s2,"\"serverTimeStamp\" value=",0);
-lv_s4=StringSubstr(lv_s2,lv_i3+25,10);
-lv_l5 = ulong(lv_s4);
-Print("GMT time = ",lv_l5);
-Print("Broker time = ",TimeCurrent());
-lv_i6=TimeHour(TimeCurrent())-TimeHour(lv_l5);
-if(lv_i6< -12)
-{
-lv_i6+=24;
-}
-if(lv_i6> 12)
-{
-lv_i6-=24;
-}
-Print("GMT_Offset detected: "+string(lv_i6));
-if((lv_i6<-12||lv_i6> 12))
-{
-Print("Error in detecting GMT offset with URL");
-return(999);
-}
-if(lv_l5< TimeCurrent()-86400/*=1 ngay*/)
-{
-Print("Error in detecting GMT time with URL");
-return(999);
-}
-return(lv_i6);
-}
-// GetGMT_Offset<<==-------- --------
-bool IsAmericanDST()
-{
-int lv_i2;
-datetime lv_dt3;
-datetime lv_dt4;
-int lv_i5;
-int lv_i6;
-//----------
-
-lv_i2=TimeYear(TimeCurrent());
-lv_dt3=0;
-lv_dt4=0;
-if(lv_i2< 1987)
-{
-Print("AmericanDST(): Invalid year.");
-return(false);
-}
-lv_i5=0;
-lv_i6=0;
-if(lv_i2>=1987&&lv_i2<=2006)
-{
-lv_i5 = (int)(MathMod(lv_i2*6+2-lv_i2/4,7.0)+1.0);
-lv_i6 = (int)(31.0-(MathMod(lv_i2*5/4+1,7.0)));
-lv_dt3=StringToTime(StringConcatenate(lv_i2,".04.01"))+(lv_i5-1)*86400+7200/*=2 gio*/;
-lv_dt4=StringToTime(StringConcatenate(lv_i2,".10.01"))+(lv_i6-1)*86400+7200/*=2 gio*/;
-}
-else
-{
-if(lv_i2>=2007)
-{
-lv_i5 = (int)(14.0-(MathMod(lv_i2*5/4+1,7.0)));
-lv_i6 = (int)(7.0-(MathMod(lv_i2*5/4+1,7.0)));
-lv_dt3=StringToTime(StringConcatenate(lv_i2,".03.01"))+(lv_i5-1)*86400+7200/*=2 gio*/;
-lv_dt4=StringToTime(StringConcatenate(lv_i2,".11.01"))+(lv_i6-1)*86400+7200/*=2 gio*/;
-}
-}
-if(TimeDayOfYear(TimeCurrent())> TimeDayOfYear(lv_dt3)&&TimeDayOfYear(TimeCurrent())< TimeDayOfYear(lv_dt4))
-{
-return(true);
-}
-return(false);
-}
-//<<==IsAmericanDST<<==
+extern bool UseVariableValues=true  ;   
+extern bool AdjustLotsizeToVariableValues=true  ;   
+extern bool ShowInfoPanel=true  ;   
+extern double InfoPanelSizeAdjust=1  ;    //Adjustment for Infopanel size
+extern bool UpdateInfoTesting=false ;    //update infopanel during testing
+extern string spreadfilter="------------------------------ Settings ------------------------------"  ;   //- - -
+extern bool AllowBuyTrades=true  ;    //Allow Buy Trades
+extern bool AllowSellTrades=true  ;    //Allow Sell Trades
+extern  enum_TradeFrequency  TradeFrequency=5  ;   
+extern double MaxSpread=500  ;    //Maximum allowed spread
+extern bool UseHL_TrailingSL=true  ;   
+extern int   FridayStopHour=25  ;    //Friday stop hour (brokertime; close all trades)
+extern bool setSL_TP_After_Entry=false ;   
+extern bool Virtual_expiration=true  ;    //Use Virtual Expiration
+extern double Randomization=0  ;    //Randomization (entries and exit) in pips
+extern  FakeoutFilters  FakeOutFilter=2  ;    //Fake Breakout Filter
+extern int   ST1_MagicNumber=8000  ;    //BaseMagicnumber
+extern string ST1_Comment="The Gold Reaper"  ;   //Comment for trades
+extern bool RemoveCommentSuffix=false ;   
+extern string NFP_FILTER="----------------------- NFP Filter -----------------------"  ;  
+extern bool EnableNFP_Filter=true  ;   
+extern bool AutoGMT=true  ;   
+extern int   Broker_GMT_OFFSET_Winter=2  ;    //GMT_OFFSET_Winter (AutoGMT=false or backtesting)
+extern int   Broker_GMT_OFFSET_Summer=3  ;    //MT_OFFSET_Summer (AutoGMT=false or backtesting)
+extern bool NFP_CloseOpenTrades=true  ;   
+extern bool NFP_ClosePendingOrders=true  ;   
+extern int   NFP_MinutesBefore=100  ;   
+extern int   NFP_MinutesAfter=60  ;   
+extern string propfirmsettings="----------------------- Propfirm unique trades settings -----------------------"  ;   //- - -
+extern double AdjustEntry=0  ;   
+extern double AdjustSL=0  ;   
+extern double AdjustTP=0  ;   
+extern double AdjustTrailSL=0  ;   
+extern double AdjustTrailTP=0  ;   
+extern double AdjustBreakEven=0  ;   
+extern string LotSizeSettings="----------------------- LotSize Settings -----------------------"  ;   //- - -
+extern double ForceBalanceToUse=0  ;    //manually set balance to use (if > 0)
+extern  e_Risk  Risk=1234  ;    //Lotsize Calculation method
+extern double StartLots=0.01  ;   
+extern double MaxAllowedDD=30  ;    //Max Allowed TOTAL Drawdown
+extern bool UseWeightedLots=true  ;    //Weighted Lotsize
+extern double MaxRiskPerStrategy_=1  ;    //Max Risk Per Strat
+extern double PropFirmMaxDailyDD=0  ;    //Set Max DAILY Drawdown (Prop Firms)
+extern bool UseEquity=false ;    //Use Equity Instead of Balance
+extern bool OnlyUp=true  ;   
+extern bool CheckMargin=true  ;    //check for free margin before setting trades
+extern string ManualStratSelect="------------------------- Manual Strategy Selection -------------------------"  ;   //- - -
+extern string ManStratWarn="!! DO NOT RUN MANUAL STRATEGIES WHILE USING \'MAX ALLOWED TOTAL DD\' OPTION !! "  ;   //- - -
+extern bool RunStrat1=true  ;    //Run Strategy 1 (low risk)
+extern bool RunStrat2=true  ;    //Run Strategy 2 (low risk)
+extern bool RunStrat3=true  ;    //Run Strategy 3 (low risk)
+extern bool RunStrat4=true  ;    //Run Strategy 4 (med risk)
+extern bool RunStrat5=true  ;    //Run Strategy 5 (med risk)
+extern bool RunStrat6=true  ;    //Run Strategy 6 (med risk)
+extern bool RunStrat7=true  ;    //Run Strategy 7 (med risk)
+extern bool RunStrat8=true  ;    //Run Strategy 8 (high risk)
+extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
+  double    总_1_do_0 = 0.0;
+  double    总_2_do_8 = 0.0;
+  int       总_3_in_10 = 30;
+  int       总_4_in_14 = 1440;
+  int       总_5_in_18 = 0;
+  double    总_6_do_1C_ko[];
+  double    总_7_do_50 = 0.0;
+  double    总_8_do_58 = 0.0;
+  double    总_9_do_60 = 0.0;
+  bool      总_10_bo_68 = false;
+  int       总_11_in_6C = 3;
+  int       总_12_in_70 = 2;
+  bool      总_13_bo_74 = false;
+  bool      总_14_bo_75 = false;
+  int       总_15_in_78 = 0;
+  string    总_16_st_80 = "------------------------------ trading filters ------------------------------";
+  bool      总_17_bo_8C = false;
+  string    总_18_st_90 = "EURUSD;GBPUSD;USDJPY;AUDJPY;AUDUSD;EURAUD;EURCAD;EURGBP;EURJPY;GBPJPY;USDCAD;USDCHF;";
+  int       总_19_in_9C = 5;
+  bool      总_20_bo_A0 = true;
+  bool      总_21_bo_A1 = false;
+  bool      总_22_bo_A2 = false;
+  bool      总_23_bo_A3 = true;
+  bool      总_24_bo_A4 = false;
+  bool      总_25_bo_A5 = false;
+  bool      总_26_bo_A6 = true;
+  bool      总_27_bo_A7 = false;
+  bool      总_28_bo_A8 = false;
+  bool      总_29_bo_A9 = false;
+  bool      总_30_bo_AA = false;
+  bool      总_31_bo_AB = false;
+  bool      总_32_bo_AC = false;
+  bool      总_33_bo_AD = false;
+  bool      总_34_bo_AE = false;
+  bool      总_35_bo_AF = true;
+  int       总_36_in_B0 = 2;
+  double    总_37_do_B8 = 0.0;
+  double    总_38_do_C0 = 5000.0;
+  int       总_39_in_C8 = 1;
+  double    总_40_do_D0 = 400.0;
+  double    总_41_do_D8 = 100.0;
+  double    总_42_do_E0 = 300.0;
+  bool      总_43_bo_E8 = true;
+  string    总_44_st_F0 = "------------------------------ time filters ------------------------------";
+  bool      总_45_bo_FC = false;
+  bool      总_46_bo_FD = false;
+  bool      总_47_bo_FE = false;
+  int       总_48_in_100 = 14;
+  int       总_49_in_104 = 17;
+  string    总_50_st_108 = "------------------------------ other filters ------------------------------";
+  int       总_51_in_114 = 1;
+  int       总_52_in_118 = 1;
+  bool      总_53_bo_11C = false;
+  int       总_54_in_120 = 5;
+  bool      总_55_bo_124 = false;
+  int       总_56_in_128 = 15;
+  bool      总_57_bo_12C = false;
+  int       总_58_in_130 = 30;
+  bool      总_59_bo_134 = false;
+  int       总_60_in_138 = 60;
+  bool      总_61_bo_13C = false;
+  bool      总_62_bo_13D = false;
+  int       总_63_in_140 = 1;
+  double    总_64_do_148 = 0.0;
+  int       总_65_in_150 = 99;
+  int       总_66_in_154 = 5;
+  bool      总_67_bo_158 = false;
+  int       总_68_in_15C = 5;
+  int       总_69_in_160 = 1;
+  string    总_70_st_168 = "------------------------------ Trade Entry management ------------------------------";
+  int       总_71_in_174 = 0;
+  int       总_72_in_178 = 60;
+  int       总_73_in_17C = 10;
+  int       总_74_in_180 = 3;
+  bool      总_75_bo_184 = false;
+  bool      总_76_bo_185 = false;
+  int       总_77_in_188 = 120;
+  int       总_78_in_18C = 0;
+  int       总_79_in_190 = 0;
+  double    总_80_do_198 = 30.0;
+  double    总_81_do_1A0 = 0.0;
+  double    总_82_do_1A8 = 25.0;
+  double    总_83_do_1B0 = 0.5;
+  double    总_84_do_1B8 = 0.0;
+  double    总_85_do_1C0 = 0.0;
+  int       总_86_in_1C8 = 1;
+  int       总_87_in_1CC = 99;
+  double    总_88_do_1D0 = 1.0;
+  int       总_89_in_1D8 = 24;
+  double    总_90_do_1E0 = 3.0;
+  int       总_91_in_1E8 = 0;
+  int       总_92_in_1EC = 100;
+  int       总_93_in_1F0 = 0;
+  string    总_94_st_1F8 = "------------------------------ Strategy 2 - Manual Trade settings ------------------------------";
+  int       总_95_in_204 = 1;
+  int       总_96_in_208 = 1991199118;
+  string    总_97_st_210 = "";
+  string    总_98_st_220 = "------------------------------ Trade Exit management ------------------------------";
+  int       总_99_in_22C = 0;
+  double    总_100_do_230 = 20.0;
+  double    总_101_do_238 = 100.0;
+  string    总_102_st_240 = "------------------------------ Trailing SL settings ------------------------------";
+  double    总_103_do_250 = 10.0;
+  double    总_104_do_258 = 10.0;
+  double    总_105_do_260 = 100.0;
+  double    总_106_do_268 = 0.1;
+  double    总_107_do_270 = 0.0;
+  double    总_108_do_278 = 0.0;
+  double    总_109_do_280 = 0.0;
+  double    总_110_do_288 = 0.0;
+  double    总_111_do_290 = 0.0;
+  string    总_112_st_298 = "------------------------------ Break-even SL management ------------------------------";
+  double    总_113_do_2A8 = 0.0;
+  double    总_114_do_2B0 = 0.0;
+  string    总_115_st_2B8 = "------------------------------ HIGH/LOW Trailing SL settings ------------------------------";
+  bool      总_116_bo_2C4 = false;
+  int       总_117_in_2C8 = 0;
+  int       总_118_in_2CC = 0;
+  int       总_119_in_2D0 = 0;
+  int       总_120_in_2D4 = 0;
+  int       总_121_in_2D8 = 0;
+  int       总_122_in_2DC = 0;
+  double    总_123_do_2E0 = 2.0;
+  string    总_124_st_2E8 = "------------------------------ recovery Trailing SL based on time ------------------------------";
+  double    总_125_do_2F8 = 0.0;
+  double    总_126_do_300 = 0.0;
+  string    总_127_st_308 = "------------------------------ MagicTrail SL settings ------------------------------";
+  int       总_128_in_314 = 0;
+  double    总_129_do_318 = 0.1;
+  int       总_130_in_320 = 1;
+  double    总_131_do_328 = 0.1;
+  double    总_132_do_330 = 1.0;
+  int       总_133_in_338 = 0;
+  double    总_134_do_340 = 0.0;
+  bool      总_135_bo_348 = false;
+  bool      总_136_bo_349 = false;
+  int       总_137_in_34C = 2024;
+  datetime  总_138_da_384_si13[13];
+  bool      总_139_bo_3EC = false;
+  double    总_140_do_3F0 = 5.0;
+  double    总_141_do_3F8 = 99.0;
+  int       总_142_in_400 = 999;
+  int       总_143_in_404 = 9999;
+  int       总_144_in_408 = 99999;
+  int       总_145_in_40C = 600;
+  double    总_146_do_410 = 1.0;
+  double    总_147_do_418 = 10.0;
+  double    总_148_do_420 = 2.0;
+  string    总_149_st_428 = "==== Performance numbers overview ====";
+  bool      总_150_bo_434 = true;
+  int       总_151_in_438 = 1;
+  int       总_152_in_43C = 1;
+  int       总_153_in_440 = 90;
+  int       总_154_in_444 = 30;
+  int       总_155_in_448 = 10;
+  int       总_156_in_44C = 50;
+  bool      总_157_bo_450 = true;
+  string    总_158_st_458 = "------------------------------ zone_recovery_settings ------------------------------";
+  bool      总_159_bo_464 = false;
+  double    总_160_do_468 = 50.0;
+  double    总_161_do_470 = 10.0;
+  double    总_162_do_478 = 5.0;
+  double    总_163_do_480 = 0.0;
+  int       总_164_in_488 = 1;
+  double    总_165_do_490 = 2.0;
+  int       总_166_in_498 = 999;
+  double    总_167_do_4A0 = 100.0;
+  int       总_168_in_4A8 = 900010;
+  int       总_169_in_4AC = 900011;
+  string    总_170_st_4B0 = "------------------------- Trading hours ST1 -------------------------";
+  bool      总_171_bo_4BC = false;
+  int       总_172_in_4C0 = 2;
+  bool      总_173_bo_4C4 = false;
+  int       总_174_in_4C8 = 0;
+  int       总_175_in_4CC = 24;
+  int       总_176_in_4D0 = 0;
+  int       总_177_in_4D4 = 24;
+  int       总_178_in_4D8 = 0;
+  int       总_179_in_4DC = 24;
+  int       总_180_in_4E0 = 0;
+  int       总_181_in_4E4 = 24;
+  int       总_182_in_4E8 = 0;
+  int       总_183_in_4EC = 24;
+  int       总_184_in_4F0 = 0;
+  int       总_185_in_4F4 = 24;
+  string    总_186_st_4F8 = "------------------------- use for backtesting only! -------------------------";
+  int       总_187_in_504 = 0;
+  double    总_188_do_508 = 0.0;
+  double    总_189_do_510 = 0.0;
+  int       总_190_in_518 = 0;
+  double    总_191_do_520 = 0.0;
+  int       总_192_in_528 = 0;
+  int       总_193_in_52C = 0;
+  bool      总_194_bo_530 = false;
+  bool      总_195_bo_531 = false;
+  double    总_196_do_568_si20si2[20][2];
+  double    总_197_do_6DC_si100si3[100][3];
+  double    总_198_do_1070_si100si2[100][2];
+  int       总_199_in_16B0 = 20;
+  int       总_200_in_16B4 = 100;
+  double    总_201_do_16B8 = 0.0;
+  double    总_202_do_16C0 = 0.0;
+  double    总_203_do_16C8 = 0.0;
+  double    总_204_do_16D0 = 0.0;
+  double    总_205_do_16D8 = 0.0;
+  double    总_206_do_16E0 = 0.0;
+  bool      总_207_bo_16E8 = false;
+  int       总_208_in_16EC = 10;
+  double    总_209_do_16F0 = 0.0;
+  double    总_210_do_16F8 = 0.0;
+  double    总_211_do_1700 = 0.0;
+  double    总_212_do_1708 = 0.0;
+  bool      总_213_bo_1710 = false;
+  int       总_214_in_1714 = 1;
+  datetime  总_215_da_174C_si99[99];
+  long      总_216_lo_1A68 = 0;
+  int       总_217_in_1A70 = 370;
+  bool      总_218_bo_1A74 = true;
+  bool      总_219_bo_1A75 = false;
+  int       总_220_in_1A78 = 0;
+  double    总_221_do_1A80 = 4.0;
+  double    总_222_do_1A88 = 0.0;
+  double    总_223_do_1AC4_si99[99];
+  double    总_224_do_1DE0 = 0.0;
+  int       总_225_in_1DE8 = 0;
+  int       总_226_in_1DEC = 0;
+  double    总_227_do_1DF0 = 0.0;
+  double    总_228_do_1DF8 = 0.0;
+  double    总_229_do_1E00 = 0.0;
+  int       总_230_in_1E08 = 0;
+  bool      总_231_bo_1E0C = false;
+  double    总_232_do_1E10 = 0.0;
+  double    总_233_do_1E18 = 0.0;
+  int       总_234_in_1E20 = 0;
+  double    总_235_do_1E28 = 0.0;
+  double    总_236_do_1E30 = 0.0;
+  double    总_237_do_1E38 = 0.0;
+  bool      总_238_bo_1E40 = false;
+  bool      总_239_bo_1E41 = false;
+  bool      总_240_bo_1E42 = false;
+  double    总_241_do_1E78_si99[99];
+  double    总_242_do_21C4_si99[99];
+  double    总_243_do_24E0 = 0.0;
+  double    总_244_do_24E8 = 0.0;
+  double    总_245_do_24F0 = 0.0;
+  double    总_246_do_24F8 = 0.0;
+  double    总_247_do_2500 = 0.0;
+  double    总_248_do_2508 = 0.0;
+  double    总_249_do_2510 = 0.0;
+  int       总_250_in_2518 = 0;
+  double    总_251_do_2520 = 0.0;
+  string    总_252_st_2528;
+  string    总_253_st_2538;
+  string    总_254_st_2548;
+  string    总_255_st_2558;
+  bool      总_256_bo_2564 = false;
+  bool      总_257_bo_2565 = false;
+  int       总_258_in_2568 = 0;
+  int       总_259_in_256C = 0;
+  double    总_260_do_2570 = 0.0;
+  double    总_261_do_2578 = 0.0;
+  double    总_262_do_2580 = 0.0;
+  double    总_263_do_2588 = 0.0;
+  double    总_264_do_2590 = 0.0;
+  int       总_265_in_2598 = 0;
+  int       总_266_in_259C = 0;
+  int       总_267_in_25A0 = 0;
+  double    总_268_do_25A8 = 0.0;
+  double    总_269_do_25B0 = 0.0;
+  double    总_270_do_25B8 = 0.0;
+  double    总_271_do_25C0 = 0.0;
+  double    总_272_do_25C8 = 0.0;
+  double    总_273_do_25D0 = 0.0;
+  int       总_274_in_25D8 = 0;
+  double    总_275_do_25E0 = 0.0;
+  double    总_276_do_25E8 = 0.0;
+  double    总_277_do_25F0 = 0.0;
+  bool      总_278_bo_25F8 = false;
+  bool      总_279_bo_25F9 = false;
+  bool      总_280_bo_25FA = false;
+  bool      总_281_bo_25FB = false;
+  bool      总_282_bo_25FC = false;
+  bool      总_283_bo_25FD = false;
+  double    总_284_do_2600 = 0.0;
+  double    总_285_do_2608 = 0.0;
+  bool      总_286_bo_2610 = false;
+  double    总_287_do_2618 = 0.0;
+  double    总_288_do_2620 = 0.0;
+  int       总_289_in_2628 = 0;
+  int       总_290_in_262C = 0;
+  double    总_291_do_2664_si10[10];
+  double    总_292_do_26E8_si10[10];
+  double    总_293_do_276C_si10[10];
+  double    总_294_do_27F0_si10[10];
+  int       总_295_in_2840 = 0;
+  int       总_296_in_2844 = 0;
+  int       总_297_in_2848 = 0;
+  int       总_298_in_284C = 0;
+  string    总_299_st_2850;
+  double    总_300_do_2860 = 0.0;
+  double    总_301_do_2868 = 0.0;
+  datetime  总_302_da_2870 = 0;
+  bool      总_303_bo_2878 = false;
+  int       总_304_in_287C = 0;
+  bool      总_305_bo_2880 = false;
+  int       总_306_in_2884 = 0;
+  double    总_307_do_2888 = 0.0;
+  double    总_308_do_2890 = 0.0;
+  double    总_309_do_2898 = 0.0;
+  double    总_310_do_28A0 = 0.0;
+  double    总_311_do_28A8 = 0.0;
+  bool      总_312_bo_28B0 = false;
+  datetime  总_313_da_28B8 = 0;
+  datetime  总_314_da_28C0 = 0;
+  datetime  总_315_da_28C8 = 0;
+  bool      总_316_bo_28D0 = false;
+  bool      总_317_bo_28D1 = false;
+  double    总_318_do_28D8 = 0.0;
+  datetime  总_319_da_28E0 = 0;
+  bool      总_320_bo_28E8 = false;
+  int       总_321_in_2920_si99[99];
+  int       总_322_in_2AE0_si99[99];
+  double    总_323_do_2CA0_si30[30];
+  double    总_324_do_2DC4_si30[30];
+  double    总_325_do_2EE8_si30[30];
+  double    总_326_do_300C_si30[30];
+  int       总_327_in_30FC = 1;
+  int       总_328_in_3100 = 0;
+  uint      总_329_ui_3104 = DarkBlue;
+  bool      总_330_bo_3108 = false;
+  long      总_331_lo_3110 = 0;
+  int       总_332_in_3118 = 5;
+  bool      总_333_bo_311C = false;
+  string    总_334_st_3120;
+  bool      总_335_bo_312C = false;
+  string    总_336_st_3130;
+  double    总_337_do_3140 = 0.0;
+  double    总_338_do_3148 = 0.0;
+  int       总_339_in_3184_si99[99];
+  int       总_340_in_3310 = 0;
+  double    总_341_do_3348_si99[99];
+  bool      总_342_bo_3694_si99[99];
+  int       总_343_in_372C_si99[99];
+  int       总_344_in_38EC_si99[99];
+  double    总_345_do_3AAC_si99[99];
+  double    总_346_do_3DF8_si99[99];
+  string    总_347_st_4144_si99[99]={};
+  bool      总_348_bo_461C_si99[99];
+  double    总_349_do_46B4_si99[99];
+  double    总_350_do_4A00_si99[99];
+  double    总_351_do_4D4C_si99[99];
+  double    总_352_do_5098_si99[99];
+  double    总_353_do_53E4_si99[99];
+  double    总_354_do_5730_si99[99];
+  bool      总_355_bo_5A7C_si99[99];
+  int       总_356_in_5B14_si99[99];
+  bool      总_357_bo_5CA0 = false;
+  double    总_358_do_5CA8 = 5.0;
+  double    总_359_do_5CB0 = 10.0;
+  int       总_360_in_5CB8 = 0;
+  double    总_361_do_5CC0 = 0.0;
+  double    总_362_do_5CC8 = 0.0;
+  int       总_363_in_5CD0 = 0;
+  uint      总_364_ui_5CD4 = LightSteelBlue;
+  bool      总_365_bo_5CD8 = true;
+  double    总_366_do_5CE0 = 12.0;
+  int       总_367_in_5CE8 = 230;
+  int       总_368_in_5CEC = 320;
+  int       总_369_in_5CF0 = 500;
+  int       总_370_in_5CF4 = 350;
+  int       总_371_in_5CF8 = 2;
+  int       总_372_in_5CFC = 7;
+  int       总_373_in_5D00 = 10;
+  int       总_374_in_5D04 = 30;
+  string    总_375_st_5D3C_si4[4]={};
+  double    总_376_do_5D70 = 0.45;
+  double    总_377_do_5D78 = 0.6;
+  int       总_378_in_5D80 = 0;
+  datetime  总_379_da_5D88 = 0;
+  bool      总_380_bo_5D90 = false;
+  int       总_381_in_5D94 = 0;
+  bool      总_382_bo_5D98 = false;
+  int       总_383_in_5D9C = 0;
+  double    总_384_do_5DA0 = 0.0;
+  int       总_385_in_5DA8 = 200;
+  int       总_386_in_5DAC = 330;
+  int       总_387_in_5DB0 = 560;
+  int       总_388_in_5DB4 = 810;
+  int       总_389_in_5DB8 = 1150;
+  datetime  总_390_da_5DC0 = 0;
+  datetime  总_391_da_5DFC_si300[300];
+  bool      总_392_bo_675C = false;
+  bool      总_393_bo_675D = false;
+  bool      总_394_bo_675E = false;
+  int       总_395_in_6760 = 0;
+  int       总_396_in_6764 = 0;
+  double    总_397_do_6768 = 0.0;
+  double    总_398_do_6770 = 0.0;
+  datetime  总_399_da_6778 = 0;
+  double    总_400_do_67B4_si99[99];
+  double    总_401_do_6AD0 = 0.0;
+  double    总_402_do_6AD8 = 0.0;
+
+
+ int init()
+ {
+  double    子_2_do;
+  double    子_3_do;
+  int       子_4_in;
+  int       子_5_in;
+  int       子_6_in;
+  int       子_7_in;
+  int       子_8_in;
+  int       子_9_in;
+//----- -----
+ bool       临_bo_1;
+
+ 总_401_do_6AD0 = AccountInfoDouble(ACCOUNT_BALANCE) ;
+ if ( UseEquity )
+ {
+   总_401_do_6AD0 = AccountInfoDouble(ACCOUNT_EQUITY) ;
+ }
+ if ( ForceBalanceToUse>0.0 )
+ {
+   总_401_do_6AD0 = ForceBalanceToUse ;
+ }
+ 总_402_do_6AD8 = 总_401_do_6AD0 ;
+ 总_392_bo_675C = false ;
+ 总_393_bo_675D = false ;
+ 总_391_da_5DFC_si300[0] = D'2026.12.04 12:30';
+ 总_391_da_5DFC_si300[1] = D'2026.11.06 12:30';
+ 总_391_da_5DFC_si300[2] = D'2026.10.02 12:30';
+ 总_391_da_5DFC_si300[3] = D'2026.09.04 12:30';
+ 总_391_da_5DFC_si300[4] = D'2026.08.07 12:30';
+ 总_391_da_5DFC_si300[5] = D'2026.07.02 12:30';
+ 总_391_da_5DFC_si300[6] = D'2026.06.05 12:30';
+ 总_391_da_5DFC_si300[7] = D'2026.05.08 12:30';
+ 总_391_da_5DFC_si300[8] = D'2026.04.03 12:30';
+ 总_391_da_5DFC_si300[9] = D'2026.03.06 12:30';
+ 总_391_da_5DFC_si300[10] = D'2026.02.11 12:30';
+ 总_391_da_5DFC_si300[11] = D'2026.01.09 12:30';
+ 总_391_da_5DFC_si300[12] = D'2025.12.16 12:30';
+ 总_391_da_5DFC_si300[13] = D'2025.11.07 12:30';
+ 总_391_da_5DFC_si300[14] = D'2025.10.03 12:30';
+ 总_391_da_5DFC_si300[15] = D'2025.09.05 12:30';
+ 总_391_da_5DFC_si300[16] = D'2025.08.01 12:30';
+ 总_391_da_5DFC_si300[17] = D'2025.07.03 12:30';
+ 总_391_da_5DFC_si300[18] = D'2025.06.06 12:30';
+ 总_391_da_5DFC_si300[19] = D'2025.05.02 12:30';
+ 总_391_da_5DFC_si300[20] = D'2025.04.04 12:30';
+ 总_391_da_5DFC_si300[21] = D'2025.03.07 12:30';
+ 总_391_da_5DFC_si300[22] = D'2025.02.07 12:30';
+ 总_391_da_5DFC_si300[23] = D'2025.01.10 12:30';
+ 总_391_da_5DFC_si300[24] = D'2024.12.06 12:30';
+ 总_391_da_5DFC_si300[25] = D'2024.11.01 12:30';
+ 总_391_da_5DFC_si300[26] = D'2024.10.04 12:30';
+ 总_391_da_5DFC_si300[27] = D'2024.09.06 12:30';
+ 总_391_da_5DFC_si300[28] = D'2024.08.02 12:30';
+ 总_391_da_5DFC_si300[29] = D'2024.07.05 12:30';
+ 总_391_da_5DFC_si300[30] = D'2024.06.07 12:30';
+ 总_391_da_5DFC_si300[31] = D'2024.05.03 12:30';
+ 总_391_da_5DFC_si300[32] = D'2024.04.05 12:30';
+ 总_391_da_5DFC_si300[33] = D'2024.03.08 12:30';
+ 总_391_da_5DFC_si300[34] = D'2024.02.02 12:30';
+ 总_391_da_5DFC_si300[35] = D'2024.01.05 12:30';
+ 总_391_da_5DFC_si300[36] = D'2023.12.08 12:30';
+ 总_391_da_5DFC_si300[37] = D'2023.11.03 12:30';
+ 总_391_da_5DFC_si300[38] = D'2023.10.06 12:30';
+ 总_391_da_5DFC_si300[39] = D'2023.09.01 12:30';
+ 总_391_da_5DFC_si300[40] = D'2023.08.04 12:30';
+ 总_391_da_5DFC_si300[41] = D'2023.07.07 12:30';
+ 总_391_da_5DFC_si300[42] = D'2023.06.02 12:30';
+ 总_391_da_5DFC_si300[43] = D'2023.05.05 12:30';
+ 总_391_da_5DFC_si300[44] = D'2023.04.07 12:30';
+ 总_391_da_5DFC_si300[45] = D'2023.03.10 12:30';
+ 总_391_da_5DFC_si300[46] = D'2023.02.03 12:30';
+ 总_391_da_5DFC_si300[47] = D'2023.01.06 12:30';
+ 总_391_da_5DFC_si300[48] = D'2022.12.02 12:30';
+ 总_391_da_5DFC_si300[49] = D'2022.11.04 12:30';
+ 总_391_da_5DFC_si300[50] = D'2022.10.07 12:30';
+ 总_391_da_5DFC_si300[51] = D'2022.09.02 12:30';
+ 总_391_da_5DFC_si300[52] = D'2022.08.05 12:30';
+ 总_391_da_5DFC_si300[53] = D'2022.07.08 12:30';
+ 总_391_da_5DFC_si300[54] = D'2022.06.03 12:30';
+ 总_391_da_5DFC_si300[55] = D'2022.05.06 12:30';
+ 总_391_da_5DFC_si300[56] = D'2022.04.01 12:30';
+ 总_391_da_5DFC_si300[57] = D'2022.03.04 12:30';
+ 总_391_da_5DFC_si300[58] = D'2022.02.04 12:30';
+ 总_391_da_5DFC_si300[59] = D'2022.01.07 12:30';
+ 总_391_da_5DFC_si300[60] = D'2021.12.03 12:30';
+ 总_391_da_5DFC_si300[61] = D'2021.11.05 12:30';
+ 总_391_da_5DFC_si300[62] = D'2021.10.08 12:30';
+ 总_391_da_5DFC_si300[63] = D'2021.09.03 12:30';
+ 总_391_da_5DFC_si300[64] = D'2021.08.06 12:30';
+ 总_391_da_5DFC_si300[65] = D'2021.07.02 12:30';
+ 总_391_da_5DFC_si300[66] = D'2021.06.04 12:30';
+ 总_391_da_5DFC_si300[67] = D'2021.05.07 12:30';
+ 总_391_da_5DFC_si300[68] = D'2021.04.02 12:30';
+ 总_391_da_5DFC_si300[69] = D'2021.03.05 12:30';
+ 总_391_da_5DFC_si300[70] = D'2021.02.05 12:30';
+ 总_391_da_5DFC_si300[71] = D'2021.01.08 12:30';
+ 总_391_da_5DFC_si300[72] = D'2020.12.04 12:30';
+ 总_391_da_5DFC_si300[73] = D'2020.11.06 12:30';
+ 总_391_da_5DFC_si300[74] = D'2020.10.02 12:30';
+ 总_391_da_5DFC_si300[75] = D'2020.09.04 12:30';
+ 总_391_da_5DFC_si300[76] = D'2020.08.07 12:30';
+ 总_391_da_5DFC_si300[77] = D'2020.07.02 12:30';
+ 总_391_da_5DFC_si300[78] = D'2020.06.05 12:30';
+ 总_391_da_5DFC_si300[79] = D'2020.05.08 12:30';
+ 总_391_da_5DFC_si300[80] = D'2020.04.03 12:30';
+ 总_391_da_5DFC_si300[81] = D'2020.03.06 12:30';
+ 总_391_da_5DFC_si300[82] = D'2020.02.07 12:30';
+ 总_391_da_5DFC_si300[83] = D'2020.01.10 12:30';
+ 总_391_da_5DFC_si300[84] = D'2019.12.06 12:30';
+ 总_391_da_5DFC_si300[85] = D'2019.11.01 12:30';
+ 总_391_da_5DFC_si300[86] = D'2019.10.04 12:30';
+ 总_391_da_5DFC_si300[87] = D'2019.09.06 12:30';
+ 总_391_da_5DFC_si300[88] = D'2019.08.02 12:30';
+ 总_391_da_5DFC_si300[89] = D'2019.07.05 12:30';
+ 总_391_da_5DFC_si300[90] = D'2019.06.07 12:30';
+ 总_391_da_5DFC_si300[91] = D'2019.05.03 12:30';
+ 总_391_da_5DFC_si300[92] = D'2019.04.05 12:30';
+ 总_391_da_5DFC_si300[93] = D'2019.03.08 12:30';
+ 总_391_da_5DFC_si300[94] = D'2019.02.01 12:30';
+ 总_391_da_5DFC_si300[95] = D'2019.01.04 12:30';
+ 总_391_da_5DFC_si300[96] = D'2018.12.07 12:30';
+ 总_391_da_5DFC_si300[97] = D'2018.11.02 12:30';
+ 总_391_da_5DFC_si300[98] = D'2018.10.05 12:30';
+ 总_391_da_5DFC_si300[99] = D'2018.09.07 12:30';
+ 总_391_da_5DFC_si300[100] = D'2018.08.03 12:30';
+ 总_391_da_5DFC_si300[101] = D'2018.07.06 12:30';
+ 总_391_da_5DFC_si300[102] = D'2018.06.01 12:30';
+ 总_391_da_5DFC_si300[103] = D'2018.05.04 12:30';
+ 总_391_da_5DFC_si300[104] = D'2018.04.06 12:30';
+ 总_391_da_5DFC_si300[105] = D'2018.03.09 12:30';
+ 总_391_da_5DFC_si300[106] = D'2018.02.02 12:30';
+ 总_391_da_5DFC_si300[107] = D'2018.01.05 12:30';
+ 总_391_da_5DFC_si300[108] = D'2017.12.08 12:30';
+ 总_391_da_5DFC_si300[109] = D'2017.11.03 12:30';
+ 总_391_da_5DFC_si300[110] = D'2017.10.06 12:30';
+ 总_391_da_5DFC_si300[111] = D'2017.09.01 12:30';
+ 总_391_da_5DFC_si300[112] = D'2017.08.04 12:30';
+ 总_391_da_5DFC_si300[113] = D'2017.07.07 12:30';
+ 总_391_da_5DFC_si300[114] = D'2017.06.02 12:30';
+ 总_391_da_5DFC_si300[115] = D'2017.05.05 12:30';
+ 总_391_da_5DFC_si300[116] = D'2017.04.07 12:30';
+ 总_391_da_5DFC_si300[117] = D'2017.03.10 12:30';
+ 总_391_da_5DFC_si300[118] = D'2017.02.03 12:30';
+ 总_391_da_5DFC_si300[119] = D'2017.01.06 12:30';
+ 总_391_da_5DFC_si300[120] = D'2016.12.02 12:30';
+ 总_391_da_5DFC_si300[121] = D'2016.11.04 12:30';
+ 总_391_da_5DFC_si300[122] = D'2016.10.07 12:30';
+ 总_391_da_5DFC_si300[123] = D'2016.09.02 12:30';
+ 总_391_da_5DFC_si300[124] = D'2016.08.05 12:30';
+ 总_391_da_5DFC_si300[125] = D'2016.07.08 12:30';
+ 总_391_da_5DFC_si300[126] = D'2016.06.03 12:30';
+ 总_391_da_5DFC_si300[127] = D'2016.05.06 12:30';
+ 总_391_da_5DFC_si300[128] = D'2016.04.01 12:30';
+ 总_391_da_5DFC_si300[129] = D'2016.03.04 12:30';
+ 总_391_da_5DFC_si300[130] = D'2016.02.05 12:30';
+ 总_391_da_5DFC_si300[131] = D'2016.01.08 12:30';
+ 总_391_da_5DFC_si300[132] = D'2015.12.04 12:30';
+ 总_391_da_5DFC_si300[133] = D'2015.11.06 12:30';
+ 总_391_da_5DFC_si300[134] = D'2015.10.02 12:30';
+ 总_391_da_5DFC_si300[135] = D'2015.09.04 12:30';
+ 总_391_da_5DFC_si300[136] = D'2015.08.07 12:30';
+ 总_391_da_5DFC_si300[137] = D'2015.07.02 12:30';
+ 总_391_da_5DFC_si300[138] = D'2015.06.05 12:30';
+ 总_391_da_5DFC_si300[139] = D'2015.05.08 12:30';
+ 总_391_da_5DFC_si300[140] = D'2015.04.03 12:30';
+ 总_391_da_5DFC_si300[141] = D'2015.03.06 12:30';
+ 总_391_da_5DFC_si300[142] = D'2015.02.06 12:30';
+ 总_391_da_5DFC_si300[143] = D'2015.01.09 12:30';
+ 总_391_da_5DFC_si300[144] = D'2014.12.05 12:30';
+ 总_391_da_5DFC_si300[145] = D'2014.11.07 12:30';
+ 总_391_da_5DFC_si300[146] = D'2014.10.03 12:30';
+ 总_391_da_5DFC_si300[147] = D'2014.09.05 12:30';
+ 总_391_da_5DFC_si300[148] = D'2014.08.01 12:30';
+ 总_391_da_5DFC_si300[149] = D'2014.07.03 12:30';
+ 总_391_da_5DFC_si300[150] = D'2014.06.06 12:30';
+ 总_391_da_5DFC_si300[151] = D'2014.05.02 12:30';
+ 总_391_da_5DFC_si300[152] = D'2014.04.04 12:30';
+ 总_391_da_5DFC_si300[153] = D'2014.03.07 12:30';
+ 总_391_da_5DFC_si300[154] = D'2014.02.07 12:30';
+ 总_391_da_5DFC_si300[155] = D'2014.01.10 12:30';
+ 总_391_da_5DFC_si300[156] = D'2013.12.06 12:30';
+ 总_391_da_5DFC_si300[157] = D'2013.11.08 12:30';
+ 总_391_da_5DFC_si300[158] = D'2013.10.22 12:30';
+ 总_391_da_5DFC_si300[159] = D'2013.09.06 12:30';
+ 总_391_da_5DFC_si300[160] = D'2013.08.02 12:30';
+ 总_391_da_5DFC_si300[161] = D'2013.07.05 12:30';
+ 总_391_da_5DFC_si300[162] = D'2013.06.07 12:30';
+ 总_391_da_5DFC_si300[163] = D'2013.05.03 12:30';
+ 总_391_da_5DFC_si300[164] = D'2013.04.05 12:30';
+ 总_391_da_5DFC_si300[165] = D'2013.03.08 12:30';
+ 总_391_da_5DFC_si300[166] = D'2013.02.01 12:30';
+ 总_391_da_5DFC_si300[167] = D'2013.01.04 12:30';
+ 总_391_da_5DFC_si300[168] = D'2012.12.07 12:30';
+ 总_391_da_5DFC_si300[169] = D'2012.11.02 12:30';
+ 总_391_da_5DFC_si300[170] = D'2012.10.05 12:30';
+ 总_391_da_5DFC_si300[171] = D'2012.09.07 12:30';
+ 总_391_da_5DFC_si300[172] = D'2012.08.03 12:30';
+ 总_391_da_5DFC_si300[173] = D'2012.07.06 12:30';
+ 总_391_da_5DFC_si300[174] = D'2012.06.01 12:30';
+ 总_391_da_5DFC_si300[175] = D'2012.05.04 12:30';
+ 总_391_da_5DFC_si300[176] = D'2012.04.06 12:30';
+ 总_391_da_5DFC_si300[177] = D'2012.03.09 12:30';
+ 总_391_da_5DFC_si300[178] = D'2012.02.03 12:30';
+ 总_391_da_5DFC_si300[179] = D'2012.01.06 12:30';
+ 总_391_da_5DFC_si300[180] = D'2011.12.02 12:30';
+ 总_391_da_5DFC_si300[181] = D'2011.11.04 12:30';
+ 总_391_da_5DFC_si300[182] = D'2011.10.07 12:30';
+ 总_391_da_5DFC_si300[183] = D'2011.09.02 12:30';
+ 总_391_da_5DFC_si300[184] = D'2011.08.05 12:30';
+ 总_391_da_5DFC_si300[185] = D'2011.07.08 12:30';
+ 总_391_da_5DFC_si300[186] = D'2011.06.03 12:30';
+ 总_391_da_5DFC_si300[187] = D'2011.05.06 12:30';
+ 总_391_da_5DFC_si300[188] = D'2011.04.01 12:30';
+ 总_391_da_5DFC_si300[189] = D'2011.03.04 12:30';
+ 总_391_da_5DFC_si300[190] = D'2011.02.04 12:30';
+ 总_391_da_5DFC_si300[191] = D'2011.01.07 12:30';
+ 总_391_da_5DFC_si300[192] = D'2010.12.03 12:30';
+ 总_391_da_5DFC_si300[193] = D'2010.11.05 12:30';
+ 总_391_da_5DFC_si300[194] = D'2010.10.08 12:30';
+ 总_391_da_5DFC_si300[195] = D'2010.09.03 12:30';
+ 总_391_da_5DFC_si300[196] = D'2010.08.06 12:30';
+ 总_391_da_5DFC_si300[197] = D'2010.07.02 12:30';
+ 总_391_da_5DFC_si300[198] = D'2010.06.04 12:30';
+ 总_391_da_5DFC_si300[199] = D'2010.05.07 12:30';
+ 总_391_da_5DFC_si300[200] = D'2010.04.02 12:30';
+ 总_391_da_5DFC_si300[201] = D'2010.03.05 12:30';
+ 总_391_da_5DFC_si300[202] = D'2010.02.05 12:30';
+ 总_391_da_5DFC_si300[203] = D'2010.01.08 12:30';
+ 总_391_da_5DFC_si300[204] = D'2009.12.04 12:30';
+ 总_391_da_5DFC_si300[205] = D'2009.11.06 12:30';
+ 总_391_da_5DFC_si300[206] = D'2009.10.02 12:30';
+ 总_391_da_5DFC_si300[207] = D'2009.09.04 12:30';
+ 总_391_da_5DFC_si300[208] = D'2009.08.07 12:30';
+ 总_391_da_5DFC_si300[209] = D'2009.07.02 12:30';
+ 总_391_da_5DFC_si300[210] = D'2009.06.05 12:30';
+ 总_391_da_5DFC_si300[211] = D'2009.05.08 12:30';
+ 总_391_da_5DFC_si300[212] = D'2009.04.03 12:30';
+ 总_391_da_5DFC_si300[213] = D'2009.03.06 12:30';
+ 总_391_da_5DFC_si300[214] = D'2009.02.06 12:30';
+ 总_391_da_5DFC_si300[215] = D'2009.01.09 12:30';
+ 总_391_da_5DFC_si300[216] = D'2008.12.05 12:30';
+ 总_391_da_5DFC_si300[217] = D'2008.11.07 12:30';
+ 总_391_da_5DFC_si300[218] = D'2008.10.03 12:30';
+ 总_391_da_5DFC_si300[219] = D'2008.09.05 12:30';
+ 总_391_da_5DFC_si300[220] = D'2008.08.01 12:30';
+ 总_391_da_5DFC_si300[221] = D'2008.07.03 12:30';
+ 总_391_da_5DFC_si300[222] = D'2008.06.06 12:30';
+ 总_391_da_5DFC_si300[223] = D'2008.05.02 12:30';
+ 总_391_da_5DFC_si300[224] = D'2008.04.04 12:30';
+ 总_391_da_5DFC_si300[225] = D'2008.03.07 12:30';
+ 总_391_da_5DFC_si300[226] = D'2008.02.01 12:30';
+ 总_391_da_5DFC_si300[227] = D'2008.01.04 12:30';
+ 总_391_da_5DFC_si300[228] = D'2007.12.07 12:30';
+ 总_391_da_5DFC_si300[229] = D'2007.11.02 12:30';
+ 总_391_da_5DFC_si300[230] = D'2007.10.05 12:30';
+ 总_391_da_5DFC_si300[231] = D'2007.09.07 12:30';
+ 总_391_da_5DFC_si300[232] = D'2007.08.03 12:30';
+ 总_391_da_5DFC_si300[233] = D'2007.07.06 12:30';
+ 总_391_da_5DFC_si300[234] = D'2007.06.01 12:30';
+ 总_391_da_5DFC_si300[235] = D'2007.05.04 12:30';
+ 总_391_da_5DFC_si300[236] = D'2007.04.06 12:30';
+ 总_391_da_5DFC_si300[237] = D'2007.03.09 12:30';
+ 总_391_da_5DFC_si300[238] = D'2007.02.02 12:30';
+ 总_391_da_5DFC_si300[239] = D'2007.01.05 12:30';
+ if ( Risk == 1234 )
+ {
+   StartLots = MarketInfo(总_336_st_3130,MODE_MINLOT) ;
+ }
+ if ( TradeFrequency == 5 && Risk == 1234 )
+ {
+   子_2_do = lizong_36(AccountInfoDouble(ACCOUNT_BALANCE)) ;
+   子_3_do = MaxAllowedDD / 100.0 * 子_2_do ;
+   if ( 子_3_do>总_388_in_5DB4 )
+   {
+     总_19_in_9C = 3 ;
+   }
+   else
+   {
+     if ( 子_3_do>总_387_in_5DB0 )
+     {
+       总_19_in_9C = 2 ;
+     }
+     else
+     {
+       if ( 子_3_do>总_386_in_5DAC )
+       {
+         总_19_in_9C = 1 ;
+       }
+       else
+       {
+         总_19_in_9C = 0 ;
+       }
+     }
+   }
+ }
+ else
+ {
+   总_19_in_9C = TradeFrequency ;
+ }
+ if ( 总_19_in_9C == 0 )
+ {
+   总_27_bo_A7 = false ;
+   总_31_bo_AB = false ;
+   总_28_bo_A8 = false ;
+   总_33_bo_AD = false ;
+   总_34_bo_AE = false ;
+   总_32_bo_AC = false ;
+   总_398_do_6770 = 2.4 ;
+   if ( UseVariableValues )
+   {
+     总_398_do_6770 = 3.0 ;
+   }
+ }
+ else
+ {
+   if ( 总_19_in_9C == 1 )
+   {
+     总_27_bo_A7 = true ;
+     总_31_bo_AB = true ;
+     总_28_bo_A8 = false ;
+     总_33_bo_AD = false ;
+     总_34_bo_AE = false ;
+     总_32_bo_AC = false ;
+     总_398_do_6770 = 3.4 ;
+     if ( UseVariableValues )
+     {
+       总_398_do_6770 = 4.0 ;
+     }
+   }
+   else
+   {
+     if ( 总_19_in_9C == 2 )
+     {
+       总_27_bo_A7 = true ;
+       总_31_bo_AB = true ;
+       总_28_bo_A8 = true ;
+       总_33_bo_AD = true ;
+       总_34_bo_AE = false ;
+       总_32_bo_AC = false ;
+       总_398_do_6770 = 4.1 ;
+       if ( UseVariableValues )
+       {
+         总_398_do_6770 = 5.0 ;
+       }
+     }
+     else
+     {
+       if ( 总_19_in_9C == 3 )
+       {
+         总_27_bo_A7 = true ;
+         总_31_bo_AB = true ;
+         总_28_bo_A8 = true ;
+         总_33_bo_AD = true ;
+         总_34_bo_AE = true ;
+         总_32_bo_AC = false ;
+         总_398_do_6770 = 4.8 ;
+         if ( UseVariableValues )
+         {
+           总_398_do_6770 = 5.6 ;
+         }
+       }
+       else
+       {
+         if ( 总_19_in_9C == 4 )
+         {
+           总_27_bo_A7 = true ;
+           总_31_bo_AB = true ;
+           总_28_bo_A8 = true ;
+           总_33_bo_AD = true ;
+           总_34_bo_AE = true ;
+           总_32_bo_AC = true ;
+           总_398_do_6770 = 5.1 ;
+           if ( UseVariableValues )
+           {
+             总_398_do_6770 = 6.0 ;
+           }
+         }
+         else
+         {
+           if ( 总_19_in_9C == 6 )
+           {
+             总_20_bo_A0 = RunStrat1 ;
+             总_23_bo_A3 = RunStrat2 ;
+             总_26_bo_A6 = RunStrat3 ;
+             总_27_bo_A7 = RunStrat4 ;
+             总_31_bo_AB = RunStrat5 ;
+             总_28_bo_A8 = RunStrat6 ;
+             总_33_bo_AD = RunStrat7 ;
+             总_34_bo_AE = RunStrat8 ;
+             总_32_bo_AC = RunStrat9 ;
+           }
+         }
+       }
+     }
+   }
+ }
+ 总_334_st_3120 = ST1_Comment ;
+ 总_384_do_5DA0 = 0.0 ;
+ 总_382_bo_5D98 = false ;
+ 总_379_da_5D88 = 0 ;
+ 总_380_bo_5D90 = true ;
+ 总_358_do_5CA8 = 5.0 ;
+ 总_359_do_5CB0 = 10.0 ;
+ 总_93_in_1F0 = ST1_MagicNumber ;
+ 总_360_in_5CB8 = 300 ;
+ 总_361_do_5CC0 = 总_372_in_5CFC * 25 * 总_376_do_5D70 * InfoPanelSizeAdjust ;
+ 总_362_do_5CC8 = 总_372_in_5CFC * 3.5 * 总_377_do_5D78 * InfoPanelSizeAdjust ;
+ 总_363_in_5CD0 = 7 ;
+ 总_328_in_3100 = 0 ;
+ 总_336_st_3130 = Symbol() ;
+ 总_337_do_3140 = SymbolInfoDouble(总_336_st_3130,16) ;
+ 总_229_do_1E00 = 总_337_do_3140 ;
+ if ( ( MarketInfo(总_336_st_3130,MODE_DIGITS)==3.0 || MarketInfo(总_336_st_3130,MODE_DIGITS)==5.0 ) )
+ {
+   总_229_do_1E00 = 总_337_do_3140 * 10.0 ;
+ }
+ if ( SymbolInfoInteger(总_336_st_3130,17) == 0x1 )
+ {
+   总_229_do_1E00 = 总_337_do_3140 / 10.0 ;
+ }
+ 总_190_in_518 = MarketInfo(总_336_st_3130,MODE_DIGITS) ;
+ if ( FridayStopHour <  0 )
+ {
+   总_45_bo_FC = false ;
+ }
+ else
+ {
+   总_45_bo_FC = true ;
+ }
+ 总_251_do_2520 = TimeCurrent() ;
+ 总_1_do_0 = MarketInfo(总_336_st_3130,MODE_ASK) - MarketInfo(总_336_st_3130,MODE_BID) ;
+ 总_223_do_1AC4_si99[总_328_in_3100] = NormalizeDouble(MathFloor(StartLots * 100.0) / 100.0,2);
+ if ( MarketInfo(总_336_st_3130,MODE_LOTSTEP)==0.1 )
+ {
+   总_223_do_1AC4_si99[总_328_in_3100] = NormalizeDouble((MathFloor(StartLots * 10.0)) / 10.0,1);
+   if ( 总_223_do_1AC4_si99[总_328_in_3100]<0.1 )
+   {
+     总_223_do_1AC4_si99[总_328_in_3100] = 0.1;
+   }
+ }
+ if ( 总_223_do_1AC4_si99[总_328_in_3100]<MarketInfo(总_336_st_3130,MODE_MINLOT) )
+ {
+   总_223_do_1AC4_si99[总_328_in_3100] = MarketInfo(总_336_st_3130,MODE_MINLOT);
+ }
+ if ( 总_223_do_1AC4_si99[总_328_in_3100]>MarketInfo(总_336_st_3130,MODE_MAXLOT) )
+ {
+   总_223_do_1AC4_si99[总_328_in_3100] = MarketInfo(总_336_st_3130,MODE_MAXLOT);
+ }
+ 总_306_in_2884 = Bars ;
+ if ( 总_131_do_328 * 总_229_do_1E00<总_337_do_3140 )
+ {
+   总_131_do_328 = 总_337_do_3140 / 总_229_do_1E00 ;
+ }
+ 总_307_do_2888 = AccountBalance() ;
+ 总_221_do_1A80 = MarketInfo(总_336_st_3130,MODE_STOPLEVEL) * 总_337_do_3140 ;
+ 总_309_do_2898 = MarketInfo(总_336_st_3130,MODE_FREEZELEVEL) * 总_337_do_3140 ;
+ 总_299_st_2850 = StringSubstr(Symbol(),6,10) ;
+ if ( 总_299_st_2850 != "" )
+ {
+   Print("Suffix detected: " + 总_299_st_2850); 
+ }
+ if ( ( StringFind(Symbol(),"XAUUSD",0) >= 0 || StringFind(Symbol(),"xauusd",0) >= 0 || StringFind(Symbol(),"GOLD",0) >= 0 || StringFind(Symbol(),"gold",0) >= 0 || StringFind(Symbol(),"Gold",0) >= 0 || StringFind(Symbol(),"GLD",0) >= 0 ) )
+ {
+   总_336_st_3130 = Symbol() ;
+   总_347_st_4144_si99[总_378_in_5D80] = Symbol();
+   lizong_37(); 
+   lizong_6(0); 
+   总_378_in_5D80 ++;
+ }
+ else
+ {
+   总_336_st_3130 = Symbol() ;
+   lizong_6(0); 
+ }
+ if ( !(总_380_bo_5D90) )
+ {
+   Print("Initialisation of pairs failed!"); 
+ }
+ if ( 总_100_do_230<=0.0 )
+ {
+   总_100_do_230 = 1.0 ;
+ }
+ if ( 总_101_do_238<=0.0 )
+ {
+   总_101_do_238 = 1.0 ;
+ }
+ if ( 总_114_do_2B0>总_113_do_2A8 )
+ {
+   总_114_do_2B0 = 总_113_do_2A8 + 0.1 ;
+ }
+ if ( 总_36_in_B0<总_309_do_2898 / 总_229_do_1E00 )
+ {
+   总_36_in_B0 = 总_309_do_2898 / 总_229_do_1E00 ;
+ }
+ if ( 总_103_do_250!=0.0 && 总_103_do_250<总_309_do_2898 / 总_229_do_1E00 )
+ {
+   总_103_do_250 = 总_309_do_2898 / 总_229_do_1E00 ;
+ }
+ if ( 总_103_do_250!=0.0 && 总_103_do_250<总_221_do_1A80 / 总_229_do_1E00 )
+ {
+   总_103_do_250 = 总_221_do_1A80 / 总_229_do_1E00 ;
+ }
+ if ( 总_125_do_2F8>0.0 && 总_126_do_300<总_309_do_2898 / 总_229_do_1E00 )
+ {
+   总_126_do_300 = 总_309_do_2898 / 总_229_do_1E00 ;
+ }
+ if ( 总_125_do_2F8>0.0 && 总_126_do_300<总_221_do_1A80 / 总_229_do_1E00 )
+ {
+   总_126_do_300 = 总_221_do_1A80 / 总_229_do_1E00 ;
+ }
+ if ( 总_100_do_230<总_221_do_1A80 * 2.0 / 总_229_do_1E00 )
+ {
+   总_100_do_230 = 总_221_do_1A80 * 2.0 / 总_229_do_1E00 ;
+ }
+ if ( 总_101_do_238<总_221_do_1A80 * 2.0 / 总_229_do_1E00 )
+ {
+   总_101_do_238 = 总_221_do_1A80 * 2.0 / 总_229_do_1E00 ;
+ }
+ if ( 总_80_do_198<总_221_do_1A80 * 2.0 / 总_229_do_1E00 )
+ {
+   总_80_do_198 = 总_221_do_1A80 * 2.0 / 总_229_do_1E00 ;
+ }
+ if ( 总_73_in_17C <  1 )
+ {
+   总_73_in_17C = 1 ;
+ }
+ if ( 总_74_in_180 <  1 )
+ {
+   总_74_in_180 = 1 ;
+ }
+ if ( 总_80_do_198<0.1 )
+ {
+   总_80_do_198 = 0.1 ;
+ }
+ 总_234_in_1E20=总_89_in_1D8 * 60 * 60;
+ if ( 总_89_in_1D8 >  0 )
+ {
+   总_302_da_2870=TimeCurrent() + 总_234_in_1E20;
+ }
+ else
+ {
+   总_302_da_2870 = 0 ;
+ }
+ if ( Virtual_expiration )
+ {
+   总_302_da_2870 = 0 ;
+ }
+ 总_320_bo_28E8 = false ;
+ 总_260_do_2570 = Seconds() ;
+ 总_319_da_28E0 = TimeCurrent() ;
+ 总_194_bo_530 = false ;
+ 总_195_bo_531 = false ;
+ 总_258_in_2568 = Month() ;
+ 总_313_da_28B8 = iTime(总_336_st_3130,PERIOD_W1,1) ;
+ 总_314_da_28C0 = iTime(总_336_st_3130,PERIOD_M1,1) ;
+ 总_315_da_28C8 = iTime(总_336_st_3130,PERIOD_M1,1) ;
+ if ( 总_37_do_B8>MaxSpread )
+ {
+   总_37_do_B8 = MaxSpread ;
+ }
+ 总_257_bo_2565 = false ;
+ lizong_11(总_71_in_174); 
+ lizong_12(总_71_in_174); 
+ 总_188_do_508 = NormalizeDouble(总_262_do_2580,总_190_in_518) ;
+ 总_189_do_510 = NormalizeDouble(总_261_do_2578,总_190_in_518) ;
+ 总_250_in_2518 = 0 ;
+ 总_256_bo_2564 = false ;
+ 总_304_in_287C = 总_125_do_2F8 * 60.0 ;
+ 总_139_bo_3EC = false ;
+ 总_303_bo_2878 = true ;
+ 总_309_do_2898 = MarketInfo(总_336_st_3130,MODE_FREEZELEVEL) * 总_337_do_3140 ;
+ if ( !(总_171_bo_4BC) )
+ {
+   总_303_bo_2878 = false ;
+ }
+ 总_191_do_520 = 0.0 ;
+ 总_201_do_16B8 = 0.0 ;
+ 总_202_do_16C0 = 0.0 ;
+ 总_240_bo_1E42 = false ;
+ 总_299_st_2850 = StringSubstr(总_336_st_3130,6,0) ;
+ if ( Risk >  0 )
+ {
+   总_139_bo_3EC = true ;
+ }
+ if ( StartLots<0.0 )
+ {
+   StartLots = 0.01 ;
+ }
+ if ( 总_141_do_3F8>MarketInfo(总_336_st_3130,MODE_MAXLOT) )
+ {
+   总_141_do_3F8 = MarketInfo(总_336_st_3130,MODE_MAXLOT) ;
+ }
+ for (子_4_in = 0 ; 子_4_in < 总_199_in_16B0 ; 子_4_in ++)
+ {
+   for (子_5_in = 0 ; 子_5_in < 2 ; 子_5_in ++)
+   {
+     总_196_do_568_si20si2[子_4_in][子_5_in] = 0.0;
+   }
+ }
+ for (子_6_in = 0 ; 子_6_in < 总_200_in_16B4 ; 子_6_in ++)
+ {
+   for (子_7_in = 0 ; 子_7_in < 3 ; 子_7_in ++)
+   {
+     总_197_do_6DC_si100si3[子_6_in][子_7_in] = 0.0;
+   }
+ }
+ for (子_8_in = 0 ; 子_8_in < 100 ; 子_8_in ++)
+ {
+   总_197_do_6DC_si100si3[子_8_in][0] = 0.0;
+   总_197_do_6DC_si100si3[子_8_in][1] = 0.0;
+ }
+ 总_305_bo_2880 = false ;
+ 总_272_do_25C8 = iFractals(总_336_st_3130,0,1,1) ;
+ 总_273_do_25D0 = iFractals(总_336_st_3130,0,2,1) ;
+ 总_270_do_25B8 = 总_272_do_25C8 ;
+ 总_271_do_25C0 = 总_273_do_25D0 ;
+ 总_275_do_25E0 = 0.0 ;
+ 总_231_bo_1E0C = false ;
+ 总_290_in_262C = Hour() ;
+ 总_289_in_2628 = 0 ;
+ 总_252_st_2528=ST1_Comment + "B1";
+ 总_253_st_2538=ST1_Comment + "B2";
+ 总_254_st_2548=ST1_Comment + "S1";
+ 总_255_st_2558=ST1_Comment + "S2";
+ 总_297_in_2848 = 0 ;
+ 总_298_in_284C = 0 ;
+ 总_267_in_25A0 = Hour() ;
+ if ( 总_67_bo_158 )
+ {
+   总_86_in_1C8 = 1 ;
+   总_278_bo_25F8 = true ;
+   总_279_bo_25F9 = true ;
+ }
+ 总_209_do_16F0 = 999.0 ;
+ 总_210_do_16F8 = 0.0 ;
+ 总_300_do_2860 = 0.0 ;
+ 总_301_do_2868 = 0.0 ;
+ for (子_9_in = 0 ; 子_9_in < 99 ; 子_9_in ++)
+ {
+   总_322_in_2AE0_si99[子_9_in] = 0;
+   总_321_in_2920_si99[子_9_in] = 0;
+   总_215_da_174C_si99[子_9_in] = iTime(总_336_st_3130,总_71_in_174,1);
+   if ( !(总_223_do_1AC4_si99[子_9_in]<StartLots) )   continue;
+   总_223_do_1AC4_si99[子_9_in] = StartLots;
+   
+ }
+ 总_216_lo_1A68 = 0 ;
+ 总_238_bo_1E40 = false ;
+ 总_239_bo_1E41 = false ;
+ if ( 总_63_in_140 == 1 )
+ {
+   总_64_do_148 = 0.0 ;
+ }
+ 总_190_in_518 = MarketInfo(总_336_st_3130,MODE_DIGITS) ;
+ 总_312_bo_28B0 = false ;
+ IsDemo(); 
+
+ if ( 临_bo_1 == true )
+ {
+   总_312_bo_28B0 = true ;
+ }
+ if ( ShowInfoPanel )
+ {
+   if ( 总_152_in_43C == 1 )
+   {
+     lizong_33(); 
+   }
+   else
+   {
+     if ( 总_152_in_43C == 2 )
+     {
+       lizong_34(); 
+     }
+   }
+   lizong_24(); 
+   lizong_27(); 
+   lizong_29(); 
+ }
+ return(0); 
+ }
+//init <<==--------   --------
+ void OnTick()
+ {
+  bool      子_1_bo;
+  double    子_2_do;
+  double    子_3_do;
+  bool      子_4_bo;
+  MqlDateTime 子_5_a_129;
+  MqlDateTime 子_6_a_129;
+//----- -----
+ bool       临_bo_1;
+ double     临_do_2;
+ double     临_do_3;
+ int        临_in_4;
+ double     临_do_5;
+ double     临_do_6;
+ int        临_in_7;
+ double     临_do_8;
+ double     临_do_9;
+ int        临_in_10;
+ double     临_do_11;
+ double     临_do_12;
+ int        临_in_13;
+ double     临_do_14;
+ double     临_do_15;
+ int        临_in_16;
+ double     临_do_17;
+ double     临_do_18;
+ int        临_in_19;
+ double     临_do_20;
+ double     临_do_21;
+ int        临_in_22;
+ double     临_do_23;
+ double     临_do_24;
+ int        临_in_25;
+ double     临_do_26;
+ double     临_do_27;
+ int        临_in_28;
+
+ 总_401_do_6AD0 = AccountInfoDouble(ACCOUNT_BALANCE) ;
+ if ( UseEquity )
+ {
+   总_401_do_6AD0 = AccountInfoDouble(ACCOUNT_EQUITY) ;
+ }
+ if ( ForceBalanceToUse>0.0 )
+ {
+   总_401_do_6AD0 = ForceBalanceToUse ;
+ }
+ if ( OnlyUp && 总_402_do_6AD8>总_401_do_6AD0 )
+ {
+   总_401_do_6AD0 = 总_402_do_6AD8 ;
+ }
+ if ( 总_401_do_6AD0>总_402_do_6AD8 )
+ {
+   总_402_do_6AD8 = 总_401_do_6AD0 ;
+ }
+ if ( FakeOutFilter == 0 )
+ {
+   总_53_bo_11C = false ;
+   总_57_bo_12C = false ;
+   总_61_bo_13C = false ;
+ }
+ else
+ {
+   if ( FakeOutFilter == 1 )
+   {
+     总_53_bo_11C = true ;
+     总_57_bo_12C = false ;
+     总_61_bo_13C = false ;
+   }
+   else
+   {
+     if ( FakeOutFilter == 2 )
+     {
+       总_53_bo_11C = true ;
+       总_57_bo_12C = true ;
+       总_61_bo_13C = false ;
+     }
+     else
+     {
+       if ( FakeOutFilter == 3 )
+       {
+         总_53_bo_11C = true ;
+         总_57_bo_12C = true ;
+         总_61_bo_13C = true ;
+       }
+     }
+   }
+ }
+ 子_1_bo = false ;
+ if ( lizong_48() )
+ {
+   总_395_in_6760 = Broker_GMT_OFFSET_Summer ;
+   if ( ( !(总_392_bo_675C) || !(总_394_bo_675E) ) && AutoGMT && !(子_1_bo) )
+   {
+     总_392_bo_675C = true ;
+     总_393_bo_675D = true ;
+     总_396_in_6764 = lizong_47() ;
+     if ( 总_396_in_6764 == 999 )
+     {
+       Print("GMT_Offset wrongly detected.  Trying againg!"); 
+       Sleep(2000); 
+       总_396_in_6764 = lizong_47() ;
+     }
+     if ( 总_396_in_6764 == 999 )
+     {
+       Print("GMT_Offset still wrong.  Using VPS time for GMT detection!"); 
+     }
+     总_394_bo_675E = true ;
+     子_1_bo = true ;
+     Print("DST_US on"); 
+   }
+ }
+ else
+ {
+   总_395_in_6760 = Broker_GMT_OFFSET_Winter ;
+   if ( ( 总_392_bo_675C || !(总_394_bo_675E) ) && AutoGMT && !(子_1_bo) )
+   {
+     总_392_bo_675C = false ;
+     总_393_bo_675D = false ;
+     总_396_in_6764 = lizong_47() ;
+     if ( 总_396_in_6764 == 999 )
+     {
+       Print("GMT_Offset wrongly detected.  Trying againg!"); 
+       Sleep(2000); 
+       总_396_in_6764 = lizong_47() ;
+     }
+     if ( 总_396_in_6764 == 999 )
+     {
+       Print("GMT_Offset still wrong.  Using VPS time for GMT detection!"); 
+     }
+     总_394_bo_675E = true ;
+     子_1_bo = true ;
+     Print("DST_US off"); 
+   }
+ }
+ TimeToStruct(StringToTime(string(TimeYear(TimeCurrent())) + ".03.31 01:00"),子_5_a_129); 
+ TimeToStruct(StringToTime(string(TimeYear(TimeCurrent())) + ".10.31 02:00"),子_6_a_129); 
+ if ( TimeDayOfYear(TimeCurrent()) >  TimeDayOfYear(StringToTime(string(TimeYear(TimeCurrent())) + ".03.31 01:00") - 子_5_a_129.day_of_week * 86400) && TimeDayOfYear(TimeCurrent()) <  TimeDayOfYear(StringToTime(string(TimeYear(TimeCurrent())) + ".10.31 02:00") - 子_6_a_129.day_of_week * 86400) )
+ {
+   临_bo_1 = true;
+ }
+ else
+ {
+   临_bo_1 = false;
+ }
+ if ( 临_bo_1 )
+ {
+   if ( ( !(总_393_bo_675D) || !(总_394_bo_675E) ) && AutoGMT && !(子_1_bo) )
+   {
+     总_393_bo_675D = true ;
+     总_396_in_6764 = lizong_47() ;
+     if ( 总_396_in_6764 == 999 )
+     {
+       Print("GMT_Offset wrongly detected.  Trying againg!"); 
+       Sleep(2000); 
+       总_396_in_6764 = lizong_47() ;
+     }
+     if ( 总_396_in_6764 == 999 )
+     {
+       Print("GMT_Offset still wrong.  Using VPS time for GMT detection!"); 
+     }
+     总_394_bo_675E = true ;
+     子_1_bo = true ;
+     Print("DST_EU on"); 
+   }
+ }
+ else
+ {
+   if ( ( 总_393_bo_675D || !(总_394_bo_675E) ) && AutoGMT && !(子_1_bo) )
+   {
+     总_393_bo_675D = false ;
+     总_396_in_6764 = lizong_47() ;
+     if ( 总_396_in_6764 == 999 )
+     {
+       Print("GMT_Offset wrongly detected.  Trying againg!"); 
+       Sleep(2000); 
+       总_396_in_6764 = lizong_47() ;
+     }
+     if ( 总_396_in_6764 == 999 )
+     {
+       Print("GMT_Offset still wrong.  Using VPS time for GMT detection!"); 
+     }
+     总_394_bo_675E = true ;
+     子_1_bo = true ;
+     Print("DST_EU off"); 
+   }
+ }
+ if ( AutoGMT && MQLInfoInteger(MQL_TESTER) != 1 )
+ {
+   if ( 总_396_in_6764 != 999 )
+   {
+     总_390_da_5DC0=TimeCurrent() - 总_396_in_6764 * 3600;
+   }
+   else
+   {
+     总_390_da_5DC0 = TimeGMT() ;
+   }
+ }
+ else
+ {
+   总_390_da_5DC0=TimeCurrent() - 总_395_in_6760 * 3600;
+ }
+ if ( TradeFrequency == 5 && Risk == 1234 )
+ {
+   子_2_do = lizong_36(AccountInfoDouble(ACCOUNT_BALANCE)) ;
+   子_3_do = MaxAllowedDD / 100.0 * 子_2_do ;
+   if ( 子_3_do>总_388_in_5DB4 )
+   {
+     总_19_in_9C = 3 ;
+   }
+   else
+   {
+     if ( 子_3_do>总_387_in_5DB0 )
+     {
+       总_19_in_9C = 2 ;
+     }
+     else
+     {
+       if ( 子_3_do>总_386_in_5DAC )
+       {
+         总_19_in_9C = 1 ;
+       }
+       else
+       {
+         总_19_in_9C = 0 ;
+       }
+     }
+   }
+ }
+ else
+ {
+   总_19_in_9C = TradeFrequency ;
+ }
+ if ( 总_19_in_9C == 0 )
+ {
+   总_27_bo_A7 = false ;
+   总_31_bo_AB = false ;
+   总_28_bo_A8 = false ;
+   总_33_bo_AD = false ;
+   总_34_bo_AE = false ;
+   总_32_bo_AC = false ;
+   总_398_do_6770 = 2.4 ;
+   if ( UseVariableValues )
+   {
+     总_398_do_6770 = 3.0 ;
+   }
+ }
+ else
+ {
+   if ( 总_19_in_9C == 1 )
+   {
+     总_27_bo_A7 = true ;
+     总_31_bo_AB = true ;
+     总_28_bo_A8 = false ;
+     总_33_bo_AD = false ;
+     总_34_bo_AE = false ;
+     总_32_bo_AC = false ;
+     总_398_do_6770 = 3.4 ;
+     if ( UseVariableValues )
+     {
+       总_398_do_6770 = 4.0 ;
+     }
+   }
+   else
+   {
+     if ( 总_19_in_9C == 2 )
+     {
+       总_27_bo_A7 = true ;
+       总_31_bo_AB = true ;
+       总_28_bo_A8 = true ;
+       总_33_bo_AD = true ;
+       总_34_bo_AE = false ;
+       总_32_bo_AC = false ;
+       总_398_do_6770 = 4.1 ;
+       if ( UseVariableValues )
+       {
+         总_398_do_6770 = 5.0 ;
+       }
+     }
+     else
+     {
+       if ( 总_19_in_9C == 3 )
+       {
+         总_27_bo_A7 = true ;
+         总_31_bo_AB = true ;
+         总_28_bo_A8 = true ;
+         总_33_bo_AD = true ;
+         总_34_bo_AE = true ;
+         总_32_bo_AC = false ;
+         总_398_do_6770 = 4.8 ;
+         if ( UseVariableValues )
+         {
+           总_398_do_6770 = 5.6 ;
+         }
+       }
+       else
+       {
+         if ( 总_19_in_9C == 4 )
+         {
+           总_27_bo_A7 = true ;
+           总_31_bo_AB = true ;
+           总_28_bo_A8 = true ;
+           总_33_bo_AD = true ;
+           总_34_bo_AE = true ;
+           总_32_bo_AC = true ;
+           总_398_do_6770 = 5.1 ;
+           if ( UseVariableValues )
+           {
+             总_398_do_6770 = 6.0 ;
+           }
+         }
+         else
+         {
+           if ( 总_19_in_9C == 6 )
+           {
+             总_20_bo_A0 = RunStrat1 ;
+             总_23_bo_A3 = RunStrat2 ;
+             总_26_bo_A6 = RunStrat3 ;
+             总_27_bo_A7 = RunStrat4 ;
+             总_31_bo_AB = RunStrat5 ;
+             总_28_bo_A8 = RunStrat6 ;
+             总_33_bo_AD = RunStrat7 ;
+             总_34_bo_AE = RunStrat8 ;
+             总_32_bo_AC = RunStrat9 ;
+           }
+         }
+       }
+     }
+   }
+ }
+ if ( iBars(总_336_st_3130,PERIOD_D1) != 总_383_in_5D9C )
+ {
+   总_383_in_5D9C = iBars(总_336_st_3130,PERIOD_D1) ;
+   总_382_bo_5D98 = false ;
+   总_384_do_5DA0 = 0.0 ;
+ }
+ if ( PropFirmMaxDailyDD>0.0 )
+ {
+   lizong_46(); 
+ }
+ if ( 总_382_bo_5D98 || !(总_380_bo_5D90) )   return;
+ 子_4_bo = false ;
+ if ( 总_399_da_6778 != iTime(总_336_st_3130,PERIOD_H1,1) )
+ {
+   子_4_bo = true ;
+   总_399_da_6778 = iTime(总_336_st_3130,PERIOD_H1,1) ;
+ }
+ if ( ( StringFind(Symbol(),"XAUUSD",0) >= 0 || StringFind(Symbol(),"xauusd",0) >= 0 || StringFind(Symbol(),"GOLD",0) >= 0 || StringFind(Symbol(),"GLD",0) >= 0 || StringFind(Symbol(),"gold",0) >= 0 || StringFind(Symbol(),"Gold",0) >= 0 ) )
+ {
+   总_336_st_3130 = Symbol() ;
+   if ( 总_20_bo_A0 )
+   {
+     lizong_37(); 
+     lizong_6(0); 
+     lizong_7(0); 
+     if ( 子_4_bo )
+     {
+       if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
+       {
+         临_do_2 = 0.0;
+       }
+       else
+       {
+         临_do_3 = 0.0;
+         总_343_in_372C_si99[总_328_in_3100] = 0;
+         for (临_in_4 = HistoryTotal() ; 临_in_4 >= 0 ; 临_in_4=临_in_4 - 1)
+         {
+           if ( OrderSelect(临_in_4,0,1) != true || OrderSymbol() != 总_336_st_3130 || OrderMagicNumber() != 总_93_in_1F0 )   continue;
+           
+           if ( ( OrderType() != 0 && OrderType() != 1 ) )   continue;
+           总_343_in_372C_si99[总_328_in_3100] ++;
+           临_do_3 = 临_do_3 + OrderProfit() + OrderSwap() + OrderCommission();
+           
+         }
+         临_do_2 = 临_do_3;
+       }
+       总_400_do_67B4_si99[0] = 临_do_2;
+       if ( 总_400_do_67B4_si99[0]!=0.0 && 总_343_in_372C_si99[0] >  0 )
+       {
+         总_345_do_3AAC_si99[0] = 总_400_do_67B4_si99[0] / 总_343_in_372C_si99[0];
+       }
+     }
+   }
+   if ( 总_27_bo_A7 )
+   {
+     lizong_38(); 
+     lizong_6(3); 
+     lizong_7(3); 
+     if ( 子_4_bo )
+     {
+       if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
+       {
+         临_do_5 = 0.0;
+       }
+       else
+       {
+         临_do_6 = 0.0;
+         总_343_in_372C_si99[总_328_in_3100] = 0;
+         for (临_in_7 = HistoryTotal() ; 临_in_7 >= 0 ; 临_in_7=临_in_7 - 1)
+         {
+           if ( OrderSelect(临_in_7,0,1) != true || OrderSymbol() != 总_336_st_3130 || OrderMagicNumber() != 总_93_in_1F0 )   continue;
+           
+           if ( ( OrderType() != 0 && OrderType() != 1 ) )   continue;
+           总_343_in_372C_si99[总_328_in_3100] ++;
+           临_do_6 = 临_do_6 + OrderProfit() + OrderSwap() + OrderCommission();
+           
+         }
+         临_do_5 = 临_do_6;
+       }
+       总_400_do_67B4_si99[3] = 临_do_5;
+       if ( 总_400_do_67B4_si99[3]!=0.0 && 总_343_in_372C_si99[3] >  0 )
+       {
+         总_345_do_3AAC_si99[3] = 总_400_do_67B4_si99[3] / 总_343_in_372C_si99[3];
+       }
+     }
+   }
+   if ( 总_23_bo_A3 )
+   {
+     lizong_39(); 
+     lizong_6(1); 
+     lizong_7(1); 
+     if ( 子_4_bo )
+     {
+       if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
+       {
+         临_do_8 = 0.0;
+       }
+       else
+       {
+         临_do_9 = 0.0;
+         总_343_in_372C_si99[总_328_in_3100] = 0;
+         for (临_in_10 = HistoryTotal() ; 临_in_10 >= 0 ; 临_in_10=临_in_10 - 1)
+         {
+           if ( OrderSelect(临_in_10,0,1) != true || OrderSymbol() != 总_336_st_3130 || OrderMagicNumber() != 总_93_in_1F0 )   continue;
+           
+           if ( ( OrderType() != 0 && OrderType() != 1 ) )   continue;
+           总_343_in_372C_si99[总_328_in_3100] ++;
+           临_do_9 = 临_do_9 + OrderProfit() + OrderSwap() + OrderCommission();
+           
+         }
+         临_do_8 = 临_do_9;
+       }
+       总_400_do_67B4_si99[1] = 临_do_8;
+       if ( 总_400_do_67B4_si99[1]!=0.0 && 总_343_in_372C_si99[1] >  0 )
+       {
+         总_345_do_3AAC_si99[1] = 总_400_do_67B4_si99[1] / 总_343_in_372C_si99[1];
+       }
+     }
+   }
+   if ( 总_26_bo_A6 )
+   {
+     lizong_40(); 
+     lizong_6(2); 
+     lizong_7(2); 
+     if ( 子_4_bo )
+     {
+       if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
+       {
+         临_do_11 = 0.0;
+       }
+       else
+       {
+         临_do_12 = 0.0;
+         总_343_in_372C_si99[总_328_in_3100] = 0;
+         for (临_in_13 = HistoryTotal() ; 临_in_13 >= 0 ; 临_in_13=临_in_13 - 1)
+         {
+           if ( OrderSelect(临_in_13,0,1) != true || OrderSymbol() != 总_336_st_3130 || OrderMagicNumber() != 总_93_in_1F0 )   continue;
+           
+           if ( ( OrderType() != 0 && OrderType() != 1 ) )   continue;
+           总_343_in_372C_si99[总_328_in_3100] ++;
+           临_do_12 = 临_do_12 + OrderProfit() + OrderSwap() + OrderCommission();
+           
+         }
+         临_do_11 = 临_do_12;
+       }
+       总_400_do_67B4_si99[2] = 临_do_11;
+       if ( 总_400_do_67B4_si99[2]!=0.0 && 总_343_in_372C_si99[2] >  0 )
+       {
+         总_345_do_3AAC_si99[2] = 总_400_do_67B4_si99[2] / 总_343_in_372C_si99[2];
+       }
+     }
+   }
+   if ( 总_28_bo_A8 )
+   {
+     lizong_41(); 
+     lizong_6(5); 
+     lizong_7(5); 
+     if ( 子_4_bo )
+     {
+       if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
+       {
+         临_do_14 = 0.0;
+       }
+       else
+       {
+         临_do_15 = 0.0;
+         总_343_in_372C_si99[总_328_in_3100] = 0;
+         for (临_in_16 = HistoryTotal() ; 临_in_16 >= 0 ; 临_in_16=临_in_16 - 1)
+         {
+           if ( OrderSelect(临_in_16,0,1) != true || OrderSymbol() != 总_336_st_3130 || OrderMagicNumber() != 总_93_in_1F0 )   continue;
+           
+           if ( ( OrderType() != 0 && OrderType() != 1 ) )   continue;
+           总_343_in_372C_si99[总_328_in_3100] ++;
+           临_do_15 = 临_do_15 + OrderProfit() + OrderSwap() + OrderCommission();
+           
+         }
+         临_do_14 = 临_do_15;
+       }
+       总_400_do_67B4_si99[5] = 临_do_14;
+       if ( 总_400_do_67B4_si99[5]!=0.0 && 总_343_in_372C_si99[5] >  0 )
+       {
+         总_345_do_3AAC_si99[5] = 总_400_do_67B4_si99[5] / 总_343_in_372C_si99[5];
+       }
+     }
+   }
+   if ( 总_31_bo_AB )
+   {
+     lizong_42(); 
+     lizong_6(4); 
+     lizong_7(4); 
+     if ( 子_4_bo )
+     {
+       if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
+       {
+         临_do_17 = 0.0;
+       }
+       else
+       {
+         临_do_18 = 0.0;
+         总_343_in_372C_si99[总_328_in_3100] = 0;
+         for (临_in_19 = HistoryTotal() ; 临_in_19 >= 0 ; 临_in_19=临_in_19 - 1)
+         {
+           if ( OrderSelect(临_in_19,0,1) != true || OrderSymbol() != 总_336_st_3130 || OrderMagicNumber() != 总_93_in_1F0 )   continue;
+           
+           if ( ( OrderType() != 0 && OrderType() != 1 ) )   continue;
+           总_343_in_372C_si99[总_328_in_3100] ++;
+           临_do_18 = 临_do_18 + OrderProfit() + OrderSwap() + OrderCommission();
+           
+         }
+         临_do_17 = 临_do_18;
+       }
+       总_400_do_67B4_si99[4] = 临_do_17;
+       if ( 总_400_do_67B4_si99[4]!=0.0 && 总_343_in_372C_si99[4] >  0 )
+       {
+         总_345_do_3AAC_si99[4] = 总_400_do_67B4_si99[4] / 总_343_in_372C_si99[4];
+       }
+     }
+   }
+   if ( 总_32_bo_AC )
+   {
+     lizong_43(); 
+     lizong_6(8); 
+     lizong_7(8); 
+     if ( 子_4_bo )
+     {
+       if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
+       {
+         临_do_20 = 0.0;
+       }
+       else
+       {
+         临_do_21 = 0.0;
+         总_343_in_372C_si99[总_328_in_3100] = 0;
+         for (临_in_22 = HistoryTotal() ; 临_in_22 >= 0 ; 临_in_22=临_in_22 - 1)
+         {
+           if ( OrderSelect(临_in_22,0,1) != true || OrderSymbol() != 总_336_st_3130 || OrderMagicNumber() != 总_93_in_1F0 )   continue;
+           
+           if ( ( OrderType() != 0 && OrderType() != 1 ) )   continue;
+           总_343_in_372C_si99[总_328_in_3100] ++;
+           临_do_21 = 临_do_21 + OrderProfit() + OrderSwap() + OrderCommission();
+           
+         }
+         临_do_20 = 临_do_21;
+       }
+       总_400_do_67B4_si99[8] = 临_do_20;
+       if ( 总_400_do_67B4_si99[8]!=0.0 && 总_343_in_372C_si99[8] >  0 )
+       {
+         总_345_do_3AAC_si99[8] = 总_400_do_67B4_si99[8] / 总_343_in_372C_si99[8];
+       }
+     }
+   }
+   if ( 总_33_bo_AD )
+   {
+     lizong_44(); 
+     lizong_6(6); 
+     lizong_7(6); 
+     if ( 子_4_bo )
+     {
+       if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
+       {
+         临_do_23 = 0.0;
+       }
+       else
+       {
+         临_do_24 = 0.0;
+         总_343_in_372C_si99[总_328_in_3100] = 0;
+         for (临_in_25 = HistoryTotal() ; 临_in_25 >= 0 ; 临_in_25=临_in_25 - 1)
+         {
+           if ( OrderSelect(临_in_25,0,1) != true || OrderSymbol() != 总_336_st_3130 || OrderMagicNumber() != 总_93_in_1F0 )   continue;
+           
+           if ( ( OrderType() != 0 && OrderType() != 1 ) )   continue;
+           总_343_in_372C_si99[总_328_in_3100] ++;
+           临_do_24 = 临_do_24 + OrderProfit() + OrderSwap() + OrderCommission();
+           
+         }
+         临_do_23 = 临_do_24;
+       }
+       总_400_do_67B4_si99[6] = 临_do_23;
+       if ( 总_400_do_67B4_si99[6]!=0.0 && 总_343_in_372C_si99[6] >  0 )
+       {
+         总_345_do_3AAC_si99[6] = 总_400_do_67B4_si99[6] / 总_343_in_372C_si99[6];
+       }
+     }
+   }
+   if ( 总_34_bo_AE )
+   {
+     lizong_45(); 
+     lizong_6(7); 
+     lizong_7(7); 
+     if ( 子_4_bo )
+     {
+       if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
+       {
+         临_do_26 = 0.0;
+       }
+       else
+       {
+         临_do_27 = 0.0;
+         总_343_in_372C_si99[总_328_in_3100] = 0;
+         for (临_in_28 = HistoryTotal() ; 临_in_28 >= 0 ; 临_in_28=临_in_28 - 1)
+         {
+           if ( OrderSelect(临_in_28,0,1) != true || OrderSymbol() != 总_336_st_3130 || OrderMagicNumber() != 总_93_in_1F0 )   continue;
+           
+           if ( ( OrderType() != 0 && OrderType() != 1 ) )   continue;
+           总_343_in_372C_si99[总_328_in_3100] ++;
+           临_do_27 = 临_do_27 + OrderProfit() + OrderSwap() + OrderCommission();
+           
+         }
+         临_do_26 = 临_do_27;
+       }
+       总_400_do_67B4_si99[7] = 临_do_26;
+       if ( 总_400_do_67B4_si99[7]!=0.0 && 总_343_in_372C_si99[7] >  0 )
+       {
+         总_345_do_3AAC_si99[7] = 总_400_do_67B4_si99[7] / 总_343_in_372C_si99[7];
+       }
+     }
+   }
+ }
+ else
+ {
+   总_336_st_3130 = Symbol() ;
+   lizong_7(0); 
+ }
+ lizong_27(); 
+ if ( iTime(Symbol(),PERIOD_M5,1) != 总_379_da_5D88 )
+ {
+   总_379_da_5D88 = iTime(Symbol(),PERIOD_M5,1) ;
+   lizong_28(); 
+   lizong_29(); 
+ }
+ 总_381_in_5D94 ++;
+ if ( 总_381_in_5D94 < 2 )   return;
+ 总_318_do_28D8 = AccountBalance() ;
+ 总_381_in_5D94 = 0 ;
+ }
+//OnTick <<==--------   --------
+ int deinit()
+ {
+ lizong_26(); 
+ return(0); 
+ }
+//deinit <<==--------   --------
+ void lizong_6( int 木_0_in)
+ {
+ 总_328_in_3100 = 木_0_in ;
+ 总_337_do_3140 = SymbolInfoDouble(总_336_st_3130,16) ;
+ 总_229_do_1E00 = 总_337_do_3140 ;
+ if ( ( MarketInfo(总_336_st_3130,MODE_DIGITS)==3.0 || MarketInfo(总_336_st_3130,MODE_DIGITS)==5.0 ) )
+ {
+   总_229_do_1E00 = 总_337_do_3140 * 10.0 ;
+ }
+ if ( SymbolInfoInteger(总_336_st_3130,17) == 0x1 )
+ {
+   总_229_do_1E00 = 总_337_do_3140 / 10.0 ;
+ }
+ 总_190_in_518 = MarketInfo(总_336_st_3130,MODE_DIGITS) ;
+ 总_1_do_0 = MarketInfo(总_336_st_3130,MODE_ASK) - MarketInfo(总_336_st_3130,MODE_BID) ;
+ 总_221_do_1A80 = MarketInfo(总_336_st_3130,MODE_STOPLEVEL) * 总_337_do_3140 ;
+ 总_309_do_2898 = MarketInfo(总_336_st_3130,MODE_FREEZELEVEL) * 总_337_do_3140 ;
+ 总_234_in_1E20=总_89_in_1D8 * 60 * 60;
+ if ( 总_89_in_1D8 >  0 )
+ {
+   总_302_da_2870=TimeCurrent() + 总_234_in_1E20;
+ }
+ else
+ {
+   总_302_da_2870 = 0 ;
+ }
+ if ( Virtual_expiration )
+ {
+   总_302_da_2870 = 0 ;
+ }
+ 总_9_do_60 = 1.0 ;
+ if ( !(UseVariableValues) )   return;
+ 
+ if ( 总_7_do_50>0.0 )
+ {
+   总_8_do_58 = iOpen(总_336_st_3130,PERIOD_D1,1) / 总_7_do_50 ;
+ }
+ else
+ {
+   总_8_do_58 = 1.0 ;
+ }
+ if ( AdjustLotsizeToVariableValues )
+ {
+   总_9_do_60 = 1.0 / 总_8_do_58 ;
+ }
+ else
+ {
+   总_9_do_60 = 1.0 ;
+ }
+ 总_80_do_198 = 总_80_do_198 * 总_8_do_58 ;
+ 总_83_do_1B0 = NormalizeDouble(总_83_do_1B0 * 总_8_do_58,0) ;
+ 总_84_do_1B8 = NormalizeDouble(总_84_do_1B8 * 总_8_do_58,0) ;
+ 总_100_do_230 = 总_100_do_230 * 总_8_do_58 ;
+ 总_101_do_238 = 总_101_do_238 * 总_8_do_58 ;
+ 总_103_do_250 = 总_103_do_250 * 总_8_do_58 ;
+ 总_104_do_258 = 总_104_do_258 * 总_8_do_58 ;
+ 总_105_do_260 = 总_105_do_260 * 总_8_do_58 ;
+ 总_108_do_278 = 总_108_do_278 * 总_8_do_58 ;
+ 总_109_do_280 = 总_109_do_280 * 总_8_do_58 ;
+ 总_113_do_2A8 = 总_113_do_2A8 * 总_8_do_58 ;
+ 总_114_do_2B0 = 总_114_do_2B0 * 总_8_do_58 ;
+ }
+//lizong_6 <<==--------   --------
+ int lizong_7( int 木_0_in)
+ {
+  bool      子_2_bo;
+  datetime  子_3_lo;
+  int       子_4_in;
+  int       子_5_in;
+  string    子_6_st;
+  datetime  子_7_da;
+  int       子_8_in;
+  int       子_9_in;
+//----- -----
+ int        临_in_1;
+ int        临_in_2;
+ int        临_in_3;
+ int        临_in_4;
+ int        临_in_5;
+ int        临_in_6;
+ int        临_in_7;
+ int        临_in_8;
+ int        临_in_9;
+ int        临_in_10;
+ int        临_in_11;
+ int        临_in_12;
+ int        临_in_13;
+ int        临_in_14;
+ int        临_in_15;
+ int        临_in_16;
+ int        临_in_17;
+ int        临_in_18;
+ int        临_in_19;
+ int        临_in_20;
+ int        临_in_21;
+ int        临_in_22;
+ int        临_in_23;
+ int        临_in_24;
+ int        临_in_25;
+ int        临_in_26;
+ int        临_in_27;
+ int        临_in_28;
+ int        临_in_29;
+ int        临_in_30;
+ int        临_in_31;
+ int        临_in_32;
+ int        临_in_33;
+ int        临_in_34;
+ int        临_in_35;
+ int        临_in_36;
+ int        临_in_37;
+ int        临_in_38;
+ int        临_in_39;
+ int        临_in_40;
+ int        临_in_41;
+ int        临_in_42;
+ int        临_in_43;
+ int        临_in_44;
+ int        临_in_45;
+ int        临_in_46;
+ int        临_in_47;
+ int        临_in_48;
+ int        临_in_49;
+ int        临_in_50;
+ int        临_in_51;
+ int        临_in_52;
+ int        临_in_53;
+ int        临_in_54;
+ int        临_in_55;
+ int        临_in_56;
+ int        临_in_57;
+ int        临_in_58;
+ int        临_in_59;
+ int        临_in_60;
+ int        临_in_61;
+ int        临_in_62;
+ int        临_in_63;
+ int        临_in_64;
+ int        临_in_65;
+ int        临_in_66;
+ int        临_in_67;
+ int        临_in_68;
+ int        临_in_69;
+ int        临_in_70;
+ int        临_in_71;
+ int        临_in_72;
+ int        临_in_73;
+ int        临_in_74;
+ int        临_in_75;
+ int        临_in_76;
+ int        临_in_77;
+ int        临_in_78;
+ int        临_in_79;
+ int        临_in_80;
+ int        临_in_81;
+ int        临_in_82;
+ int        临_in_83;
+ int        临_in_84;
+ int        临_in_85;
+ int        临_in_86;
+ int        临_in_87;
+ int        临_in_88;
+ int        临_in_89;
+ double     临_do_90;
+ long       临_lo_91;
+ int        临_in_92;
+ long       临_lo_93;
+ int        临_in_94;
+ int        临_in_95;
+ int        临_in_96;
+ double     临_do_97;
+ long       临_lo_98;
+ int        临_in_99;
+ long       临_lo_100;
+ int        临_in_101;
+ int        临_in_102;
+ int        临_in_103;
+ int        临_in_104;
+ int        临_in_105;
+ bool       临_bo_106;
+ int        临_in_107;
+ int        临_in_108;
+ bool       临_bo_109;
+ int        临_in_110;
+ long       临_lo_111;
+ int        临_in_112;
+ long       临_lo_113;
+ string     临_st_114;
+ int        临_in_115;
+ int        临_in_116;
+ int        临_in_117;
+ int        临_in_118;
+
+ 总_328_in_3100 = 木_0_in ;
+ 子_2_bo = false ;
+ 
+ if ( 总_81_do_1A0>0.0 )
+ {
+   总_80_do_198 = 总_81_do_1A0 / 100.0 * MarketInfo(总_336_st_3130,MODE_ASK) * 10.0 ;
+ }
+ if ( 总_99_in_22C == 0 )
+ {
+   if ( lizong_18() )
+   {
+     子_2_bo = true ;
+   }
+   if ( lizong_19() )
+   {
+     子_2_bo = true ;
+   }
+   if ( 子_2_bo )
+   {
+     return(0); 
+   }
+ }
+ else
+ {
+   if ( 总_321_in_2920_si99[总_328_in_3100] != iBars(总_336_st_3130,总_99_in_22C) )
+   {
+     总_321_in_2920_si99[总_328_in_3100] = iBars(总_336_st_3130,总_99_in_22C);
+     if ( lizong_18() )
+     {
+       子_2_bo = true ;
+     }
+     if ( lizong_19() )
+     {
+       子_2_bo = true ;
+     }
+     if ( 子_2_bo )
+     {
+       return(0); 
+     }
+   }
+ }
+ lizong_22(false); 
+ if ( !(IsTesting()) && MarketInfo(总_336_st_3130,MODE_TRADEALLOWED)==0.0 )
+ {
+   if ( !(总_256_bo_2564) )
+   {
+     Print("Market closed... waiting to continue"); 
+   }
+   总_256_bo_2564 = true ;
+   return(0); 
+ }
+ if ( 总_68_in_15C >  0 && ( ( Hour() == 0 && Minute() < 总_68_in_15C ) || (Hour() == 23 && 总_68_in_15C >  60 - 总_68_in_15C) ) )
+ {
+   if ( !(总_256_bo_2564) )
+   {
+     Print("DAYSWITCH -> Market might be closed... waiting " + string(总_68_in_15C) + " minutes before setting order.."); 
+   }
+   总_256_bo_2564 = true ;
+   return(0); 
+ }
+ 总_256_bo_2564 = false ;
+ if ( 总_171_bo_4BC )
+ {
+   if ( lizong_20() && 总_303_bo_2878 )
+   {
+     if ( 总_173_bo_4C4 )
+     {
+       lizong_8(); 
+     }
+     总_303_bo_2878 = false ;
+   }
+   if ( !(lizong_20()) && !(总_303_bo_2878) )
+   {
+     Print("ENTERING NON-TRADING HOURS! Closing orders..."); 
+     if ( 总_173_bo_4C4 )
+     {
+       for (临_in_1 = 0 ; 临_in_1 < 总_200_in_16B4 ; 临_in_1=临_in_1 + 1)
+       {
+         for (临_in_2 = 0 ; 临_in_2 < 2 ; 临_in_2=临_in_2 + 1)
+         {
+           总_197_do_6DC_si100si3[临_in_1][临_in_2] = 0.0;
+         }
+       }
+       临_in_3 = 0;
+       for (临_in_4 = OrdersTotal() ; 临_in_4 >= 0 ; 临_in_4=临_in_4 - 1)
+       {
+         if ( OrderSelect(临_in_4,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 )   continue;
+         
+         if ( ( OrderType() != 4 && OrderType() != 5 ) )   continue;
+         Print("Storing pending order nr " + string(OrderTicket())); 
+         总_197_do_6DC_si100si3[临_in_3][1] = OrderType();
+         总_197_do_6DC_si100si3[临_in_3][0] = OrderOpenPrice();
+         总_197_do_6DC_si100si3[临_in_3][2] = OrderLots();
+         临_in_3=临_in_3 + 1;
+         
+       }
+     }
+     临_in_5 = 1;
+     for (临_in_6 = OrdersTotal() ; 临_in_6 >= 0 ; 临_in_6=临_in_6 - 1)
+     {
+       if ( OrderSelect(临_in_6,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
+       OrderDelete(OrderTicket(),0xFFFFFFFF); 
+       
+     }
+     if ( 临_in_5 == 2 )
+     {
+       for (临_in_7 = OrdersTotal() ; 临_in_7 >= 0 ; 临_in_7=临_in_7 - 1)
+       {
+         if ( OrderSelect(临_in_7,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
+         OrderDelete(OrderTicket(),0xFFFFFFFF); 
+         
+       }
+     }
+     临_in_8 = 1;
+     for (临_in_9 = OrdersTotal() ; 临_in_9 >= 0 ; 临_in_9=临_in_9 - 1)
+     {
+       if ( OrderSelect(临_in_9,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
+       OrderDelete(OrderTicket(),0xFFFFFFFF); 
+       
+     }
+     if ( 临_in_8 == 2 )
+     {
+       for (临_in_10 = OrdersTotal() ; 临_in_10 >= 0 ; 临_in_10=临_in_10 - 1)
+       {
+         if ( OrderSelect(临_in_10,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
+         OrderDelete(OrderTicket(),0xFFFFFFFF); 
+         
+       }
+     }
+     临_in_11 = 2;
+     if(1==0) //条件不成立
+     {
+       do
+       {
+         if ( OrderSelect(1,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
+         OrderDelete(OrderTicket(),0xFFFFFFFF); 
+         
+       }
+       while( - 1 >= 0);
+       
+     }
+     if ( 临_in_11 == 2 )
+     {
+       for (临_in_12 = OrdersTotal() ; 临_in_12 >= 0 ; 临_in_12=临_in_12 - 1)
+       {
+         if ( OrderSelect(临_in_12,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
+         OrderDelete(OrderTicket(),0xFFFFFFFF); 
+         
+       }
+     }
+     临_in_13 = 2;
+     if(1==0) //条件不成立
+     {
+       do
+       {
+         if ( OrderSelect(1,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
+         OrderDelete(OrderTicket(),0xFFFFFFFF); 
+         
+       }
+       while( - 1 >= 0);
+       
+     }
+     if ( 临_in_13 == 2 )
+     {
+       for (临_in_14 = OrdersTotal() ; 临_in_14 >= 0 ; 临_in_14=临_in_14 - 1)
+       {
+         if ( OrderSelect(临_in_14,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
+         OrderDelete(OrderTicket(),0xFFFFFFFF); 
+         
+       }
+     }
+     总_303_bo_2878 = true ;
+     return(0); 
+   }
+ }
+ if ( EnableNFP_Filter )
+ {
+   if ( Year() <= 2026 )
+   {
+     子_3_lo = 0 ;
+     for (子_4_in = 0 ; 子_4_in < 300 ; 子_4_in ++)
+     {
+       临_in_15 = TimeYear(总_391_da_5DFC_si300[子_4_in]);
+       if ( 临_in_15 != Year() )   continue;
+       临_in_16 = TimeMonth(总_391_da_5DFC_si300[子_4_in]);
+       if ( 临_in_16 != Month() )   continue;
+       子_3_lo = 总_391_da_5DFC_si300[子_4_in] ;
+       break;
+       
+     }
+     子_5_in = 60 ;
+     if ( lizong_48() )
+     {
+       子_5_in = 0 ;
+     }
+     if ( 总_390_da_5DC0 >= 子_3_lo - NFP_MinutesBefore * 60 + 子_5_in * 60 && 总_390_da_5DC0 <= 子_3_lo + NFP_MinutesAfter * 60 + 子_5_in * 60 )
+     {
+       if ( NFP_ClosePendingOrders )
+       {
+         临_in_17 = 1;
+         for (临_in_18 = OrdersTotal() ; 临_in_18 >= 0 ; 临_in_18=临_in_18 - 1)
+         {
+           if ( OrderSelect(临_in_18,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
+           OrderDelete(OrderTicket(),0xFFFFFFFF); 
+           
+         }
+         if ( 临_in_17 == 2 )
+         {
+           for (临_in_19 = OrdersTotal() ; 临_in_19 >= 0 ; 临_in_19=临_in_19 - 1)
+           {
+             if ( OrderSelect(临_in_19,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
+             OrderDelete(OrderTicket(),0xFFFFFFFF); 
+             
+           }
+         }
+         临_in_20 = 1;
+         for (临_in_21 = OrdersTotal() ; 临_in_21 >= 0 ; 临_in_21=临_in_21 - 1)
+         {
+           if ( OrderSelect(临_in_21,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
+           OrderDelete(OrderTicket(),0xFFFFFFFF); 
+           
+         }
+         if ( 临_in_20 == 2 )
+         {
+           for (临_in_22 = OrdersTotal() ; 临_in_22 >= 0 ; 临_in_22=临_in_22 - 1)
+           {
+             if ( OrderSelect(临_in_22,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
+             OrderDelete(OrderTicket(),0xFFFFFFFF); 
+             
+           }
+         }
+         临_in_23 = 2;
+         if(1==0) //条件不成立
+         {
+           do
+           {
+             if ( OrderSelect(1,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
+             OrderDelete(OrderTicket(),0xFFFFFFFF); 
+             
+           }
+           while( - 1 >= 0);
+           
+         }
+         if ( 临_in_23 == 2 )
+         {
+           for (临_in_24 = OrdersTotal() ; 临_in_24 >= 0 ; 临_in_24=临_in_24 - 1)
+           {
+             if ( OrderSelect(临_in_24,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
+             OrderDelete(OrderTicket(),0xFFFFFFFF); 
+             
+           }
+         }
+         临_in_25 = 2;
+         if(1==0) //条件不成立
+         {
+           do
+           {
+             if ( OrderSelect(1,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
+             OrderDelete(OrderTicket(),0xFFFFFFFF); 
+             
+           }
+           while( - 1 >= 0);
+           
+         }
+         if ( 临_in_25 == 2 )
+         {
+           for (临_in_26 = OrdersTotal() ; 临_in_26 >= 0 ; 临_in_26=临_in_26 - 1)
+           {
+             if ( OrderSelect(临_in_26,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
+             OrderDelete(OrderTicket(),0xFFFFFFFF); 
+             
+           }
+         }
+       }
+       if ( NFP_CloseOpenTrades )
+       {
+         for (临_in_27 = OrdersTotal() ; 临_in_27 >= 0 ; 临_in_27=临_in_27 - 1)
+         {
+           if ( OrderSelect(临_in_27,0,0) != true || OrderSymbol() != 总_336_st_3130 )   continue;
+           临_in_28 = OrderMagicNumber();
+           临_in_29=ST1_MagicNumber + 1;
+           if ( 临_in_28 != 临_in_29 )
+           {
+             临_in_29 = OrderMagicNumber();
+             临_in_30=ST1_MagicNumber + 2;
+             if ( 临_in_29 != 临_in_30 )
+             {
+               临_in_30 = OrderMagicNumber();
+               临_in_31=ST1_MagicNumber + 3;
+               if ( 临_in_30 != 临_in_31 )
+               {
+                 临_in_31 = OrderMagicNumber();
+                 临_in_32=ST1_MagicNumber + 4;
+                 if ( 临_in_31 != 临_in_32 )
+                 {
+                   临_in_32 = OrderMagicNumber();
+                   临_in_33=ST1_MagicNumber + 5;
+                   if ( 临_in_32 != 临_in_33 )
+                   {
+                     临_in_33 = OrderMagicNumber();
+                     临_in_34=ST1_MagicNumber + 6;
+                     if ( 临_in_33 != 临_in_34 )
+                     {
+                       临_in_34 = OrderMagicNumber();
+                       临_in_35=ST1_MagicNumber + 7;
+                       if ( 临_in_34 != 临_in_35 )
+                       {
+                         临_in_35 = OrderMagicNumber();
+                         临_in_36=ST1_MagicNumber + 8;
+                         if ( 临_in_35 != 临_in_36 )
+                         {
+                           临_in_36 = OrderMagicNumber();
+                           临_in_37=ST1_MagicNumber + 9;
+                           if ( 临_in_36 != 临_in_37 )
+                           {
+                             临_in_37 = OrderMagicNumber();
+                             临_in_38=ST1_MagicNumber + 10;
+                             if ( 临_in_37 != 临_in_38 )
+                             {
+                               临_in_38 = OrderMagicNumber();
+                               临_in_39=ST1_MagicNumber + 11;
+                               if ( 临_in_38 != 临_in_39 )
+                               {
+                                 临_in_39 = OrderMagicNumber();
+                                 临_in_40=ST1_MagicNumber + 12;
+                                 if ( 临_in_39 != 临_in_40 )
+                                 {
+                                   临_in_40 = OrderMagicNumber();
+                                   临_in_41=ST1_MagicNumber + 13;
+                                   if ( 临_in_40 != 临_in_41 )
+                                   {
+                                     临_in_41 = OrderMagicNumber();
+                                     临_in_42=ST1_MagicNumber + 14;
+                                     if ( 临_in_41 != 临_in_42 )
+                                     {
+                                       临_in_42 = OrderMagicNumber();
+                                       临_in_43=ST1_MagicNumber + 15;
+                                     if ( 临_in_42 != 临_in_43 )   continue;
+                                     }
+                                   }
+                                 }
+                               }
+                             }
+                           }
+                         }
+                       }
+                     }
+                   }
+                 }
+               }
+             }
+           }
+           if ( OrderType() == 0 )
+           {
+             OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),99999,Red); 
+           }
+           if ( OrderType() != 1 )   continue;
+           OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),99999,Red); 
+           
+         }
+       }
+       if ( !(总_320_bo_28E8) )
+       {
+         Print("NFP!! deleting trades!!"); 
+       }
+       总_320_bo_28E8 = true ;
+     }
+     else
+     {
+       总_320_bo_28E8 = false ;
+     }
+   }
+   else
+   {
+     if ( Day() <= 7 && DayOfWeek() == 5 )
+     {
+       子_6_st = IntegerToString(Year(),0,32) + IntegerToString(Month(),0,32) + IntegerToString(Day(),0,32) + " " + IntegerToString(0x4CE,0,32) ;
+       子_7_da = StringToTime(子_6_st) ;
+       if ( 总_390_da_5DC0 >= 子_7_da - NFP_MinutesBefore * 60 && 总_390_da_5DC0 <= 子_7_da + NFP_MinutesAfter * 60 )
+       {
+         if ( NFP_ClosePendingOrders )
+         {
+           临_in_44 = 1;
+           for (临_in_45 = OrdersTotal() ; 临_in_45 >= 0 ; 临_in_45=临_in_45 - 1)
+           {
+             if ( OrderSelect(临_in_45,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
+             OrderDelete(OrderTicket(),0xFFFFFFFF); 
+             
+           }
+           if ( 临_in_44 == 2 )
+           {
+             for (临_in_46 = OrdersTotal() ; 临_in_46 >= 0 ; 临_in_46=临_in_46 - 1)
+             {
+               if ( OrderSelect(临_in_46,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
+               OrderDelete(OrderTicket(),0xFFFFFFFF); 
+               
+             }
+           }
+           临_in_47 = 1;
+           for (临_in_48 = OrdersTotal() ; 临_in_48 >= 0 ; 临_in_48=临_in_48 - 1)
+           {
+             if ( OrderSelect(临_in_48,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
+             OrderDelete(OrderTicket(),0xFFFFFFFF); 
+             
+           }
+           if ( 临_in_47 == 2 )
+           {
+             for (临_in_49 = OrdersTotal() ; 临_in_49 >= 0 ; 临_in_49=临_in_49 - 1)
+             {
+               if ( OrderSelect(临_in_49,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
+               OrderDelete(OrderTicket(),0xFFFFFFFF); 
+               
+             }
+           }
+           临_in_50 = 2;
+           if(1==0) //条件不成立
+           {
+             do
+             {
+               if ( OrderSelect(1,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
+               OrderDelete(OrderTicket(),0xFFFFFFFF); 
+               
+             }
+             while( - 1 >= 0);
+             
+           }
+           if ( 临_in_50 == 2 )
+           {
+             for (临_in_51 = OrdersTotal() ; 临_in_51 >= 0 ; 临_in_51=临_in_51 - 1)
+             {
+               if ( OrderSelect(临_in_51,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
+               OrderDelete(OrderTicket(),0xFFFFFFFF); 
+               
+             }
+           }
+           临_in_52 = 2;
+           if(1==0) //条件不成立
+           {
+             do
+             {
+               if ( OrderSelect(1,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
+               OrderDelete(OrderTicket(),0xFFFFFFFF); 
+               
+             }
+             while( - 1 >= 0);
+             
+           }
+           if ( 临_in_52 == 2 )
+           {
+             for (临_in_53 = OrdersTotal() ; 临_in_53 >= 0 ; 临_in_53=临_in_53 - 1)
+             {
+               if ( OrderSelect(临_in_53,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
+               OrderDelete(OrderTicket(),0xFFFFFFFF); 
+               
+             }
+           }
+         }
+         if ( NFP_CloseOpenTrades )
+         {
+           for (临_in_54 = OrdersTotal() ; 临_in_54 >= 0 ; 临_in_54=临_in_54 - 1)
+           {
+             if ( OrderSelect(临_in_54,0,0) != true || OrderSymbol() != 总_336_st_3130 )   continue;
+             临_in_55 = OrderMagicNumber();
+             临_in_56=ST1_MagicNumber + 1;
+             if ( 临_in_55 != 临_in_56 )
+             {
+               临_in_56 = OrderMagicNumber();
+               临_in_57=ST1_MagicNumber + 2;
+               if ( 临_in_56 != 临_in_57 )
+               {
+                 临_in_57 = OrderMagicNumber();
+                 临_in_58=ST1_MagicNumber + 3;
+                 if ( 临_in_57 != 临_in_58 )
+                 {
+                   临_in_58 = OrderMagicNumber();
+                   临_in_59=ST1_MagicNumber + 4;
+                   if ( 临_in_58 != 临_in_59 )
+                   {
+                     临_in_59 = OrderMagicNumber();
+                     临_in_60=ST1_MagicNumber + 5;
+                     if ( 临_in_59 != 临_in_60 )
+                     {
+                       临_in_60 = OrderMagicNumber();
+                       临_in_61=ST1_MagicNumber + 6;
+                       if ( 临_in_60 != 临_in_61 )
+                       {
+                         临_in_61 = OrderMagicNumber();
+                         临_in_62=ST1_MagicNumber + 7;
+                         if ( 临_in_61 != 临_in_62 )
+                         {
+                           临_in_62 = OrderMagicNumber();
+                           临_in_63=ST1_MagicNumber + 8;
+                           if ( 临_in_62 != 临_in_63 )
+                           {
+                             临_in_63 = OrderMagicNumber();
+                             临_in_64=ST1_MagicNumber + 9;
+                             if ( 临_in_63 != 临_in_64 )
+                             {
+                               临_in_64 = OrderMagicNumber();
+                               临_in_65=ST1_MagicNumber + 10;
+                               if ( 临_in_64 != 临_in_65 )
+                               {
+                                 临_in_65 = OrderMagicNumber();
+                                 临_in_66=ST1_MagicNumber + 11;
+                                 if ( 临_in_65 != 临_in_66 )
+                                 {
+                                   临_in_66 = OrderMagicNumber();
+                                   临_in_67=ST1_MagicNumber + 12;
+                                   if ( 临_in_66 != 临_in_67 )
+                                   {
+                                     临_in_67 = OrderMagicNumber();
+                                     临_in_68=ST1_MagicNumber + 13;
+                                     if ( 临_in_67 != 临_in_68 )
+                                     {
+                                       临_in_68 = OrderMagicNumber();
+                                       临_in_69=ST1_MagicNumber + 14;
+                                       if ( 临_in_68 != 临_in_69 )
+                                       {
+                                         临_in_69 = OrderMagicNumber();
+                                         临_in_70=ST1_MagicNumber + 15;
+                                       if ( 临_in_69 != 临_in_70 )   continue;
+                                       }
+                                     }
+                                   }
+                                 }
+                               }
+                             }
+                           }
+                         }
+                       }
+                     }
+                   }
+                 }
+               }
+             }
+             if ( OrderType() == 0 )
+             {
+               OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),99999,Red); 
+             }
+             if ( OrderType() != 1 )   continue;
+             OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),99999,Red); 
+             
+           }
+         }
+         if ( !(总_320_bo_28E8) )
+         {
+           Print("NFP!! deleting trades!!"); 
+         }
+         总_320_bo_28E8 = true ;
+       }
+       else
+       {
+         总_320_bo_28E8 = false ;
+       }
+     }
+   }
+ }
+ if ( 总_320_bo_28E8 )
+ {
+   return(0); 
+ }
+ if ( 总_45_bo_FC )
+ {
+   if ( DayOfWeek() == 5 && Hour() >= FridayStopHour && !(总_305_bo_2880) )
+   {
+     for (临_in_71 = OrdersTotal() ; 临_in_71 >= 0 ; 临_in_71=临_in_71 - 1)
+     {
+       if ( OrderSelect(临_in_71,0,0) != true || OrderSymbol() != 总_336_st_3130 )   continue;
+       临_in_72 = OrderMagicNumber();
+       临_in_73=ST1_MagicNumber + 1;
+       if ( 临_in_72 != 临_in_73 )
+       {
+         临_in_73 = OrderMagicNumber();
+         临_in_74=ST1_MagicNumber + 2;
+         if ( 临_in_73 != 临_in_74 )
+         {
+           临_in_74 = OrderMagicNumber();
+           临_in_75=ST1_MagicNumber + 3;
+           if ( 临_in_74 != 临_in_75 )
+           {
+             临_in_75 = OrderMagicNumber();
+             临_in_76=ST1_MagicNumber + 4;
+             if ( 临_in_75 != 临_in_76 )
+             {
+               临_in_76 = OrderMagicNumber();
+               临_in_77=ST1_MagicNumber + 5;
+               if ( 临_in_76 != 临_in_77 )
+               {
+                 临_in_77 = OrderMagicNumber();
+                 临_in_78=ST1_MagicNumber + 6;
+                 if ( 临_in_77 != 临_in_78 )
+                 {
+                   临_in_78 = OrderMagicNumber();
+                   临_in_79=ST1_MagicNumber + 7;
+                   if ( 临_in_78 != 临_in_79 )
+                   {
+                     临_in_79 = OrderMagicNumber();
+                     临_in_80=ST1_MagicNumber + 8;
+                     if ( 临_in_79 != 临_in_80 )
+                     {
+                       临_in_80 = OrderMagicNumber();
+                       临_in_81=ST1_MagicNumber + 9;
+                       if ( 临_in_80 != 临_in_81 )
+                       {
+                         临_in_81 = OrderMagicNumber();
+                         临_in_82=ST1_MagicNumber + 10;
+                         if ( 临_in_81 != 临_in_82 )
+                         {
+                           临_in_82 = OrderMagicNumber();
+                           临_in_83=ST1_MagicNumber + 11;
+                           if ( 临_in_82 != 临_in_83 )
+                           {
+                             临_in_83 = OrderMagicNumber();
+                             临_in_84=ST1_MagicNumber + 12;
+                             if ( 临_in_83 != 临_in_84 )
+                             {
+                               临_in_84 = OrderMagicNumber();
+                               临_in_85=ST1_MagicNumber + 13;
+                               if ( 临_in_84 != 临_in_85 )
+                               {
+                                 临_in_85 = OrderMagicNumber();
+                                 临_in_86=ST1_MagicNumber + 14;
+                                 if ( 临_in_85 != 临_in_86 )
+                                 {
+                                   临_in_86 = OrderMagicNumber();
+                                   临_in_87=ST1_MagicNumber + 15;
+                                 if ( 临_in_86 != 临_in_87 )   continue;
+                                 }
+                               }
+                             }
+                           }
+                         }
+                       }
+                     }
+                   }
+                 }
+               }
+             }
+           }
+         }
+       }
+       if ( OrderType() == 0 )
+       {
+         OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,Red); 
+       }
+       if ( OrderType() == 1 )
+       {
+         OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),总_38_do_C0,Red); 
+       }
+       if ( ( OrderType() != 4 && OrderType() != 5 ) )   continue;
+       OrderDelete(OrderTicket(),Red); 
+       
+     }
+     Print("Weekend starting! closing trades.."); 
+     总_305_bo_2880 = true ;
+     return(0); 
+   }
+   if ( DayOfWeek() != 5 && 总_305_bo_2880 == true )
+   {
+     总_305_bo_2880 = false ;
+     if ( 总_46_bo_FD )
+     {
+       lizong_8(); 
+       return(0); 
+     }
+   }
+ }
+ 总_1_do_0 = MarketInfo(总_336_st_3130,MODE_ASK) - MarketInfo(总_336_st_3130,MODE_BID) ;
+ if ( 总_35_bo_AF )
+ {
+   if ( 总_1_do_0>MaxSpread * 总_229_do_1E00 )
+   {
+     lizong_9(); 
+     return(0); 
+   }
+   if ( 总_1_do_0<=总_37_do_B8 * 总_229_do_1E00 && ( !(总_45_bo_FC) || DayOfWeek() != 5 || Hour() <  FridayStopHour ) && ( !(总_171_bo_4BC) || lizong_20() ) )
+   {
+     lizong_8(); 
+   }
+ }
+ if ( 总_69_in_160 == 1 )
+ {
+   临_in_88 = 0;
+   for (临_in_89 = OrdersTotal() ; 临_in_89 >= 0 ; 临_in_89=临_in_89 - 1)
+   {
+     if ( OrderSelect(临_in_89,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
+     临_in_88=临_in_88 + 1;
+     
+   }
+   if ( 临_in_88 >  总_86_in_1C8 )
+   {
+     临_do_90 = 0.0;
+     临_lo_91 = 0;
+     for (临_in_92 = OrdersTotal() ; 临_in_92 >= 0 ; 临_in_92=临_in_92 - 1)
+     {
+       if ( OrderSelect(临_in_92,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 || !(OrderOpenPrice()>临_do_90) )   continue;
+       临_lo_91 = OrderTicket();
+       临_do_90 = OrderOpenPrice();
+       
+     }
+     if ( 临_lo_91 != 0 )
+     {
+       OrderDelete(临_lo_91,Green); 
+       临_lo_93 = 临_lo_91;
+       for (临_in_94 = 0 ; 临_in_94 < 100 ; 临_in_94=临_in_94 + 1)
+       {
+         if ( !(总_198_do_1070_si100si2[临_in_94][0]==临_lo_93) )   continue;
+         总_198_do_1070_si100si2[临_in_94][0] = 0.0;
+         总_198_do_1070_si100si2[临_in_94][1] = 0.0;
+         break;
+         
+       }
+       Print("Max number of pending buy orders reached... deleting highest buystop order!"); 
+     }
+   }
+   临_in_95 = 0;
+   for (临_in_96 = OrdersTotal() ; 临_in_96 >= 0 ; 临_in_96=临_in_96 - 1)
+   {
+     if ( OrderSelect(临_in_96,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
+     临_in_95=临_in_95 + 1;
+     
+   }
+   if ( 临_in_95 >  总_86_in_1C8 )
+   {
+     临_do_97 = 9999.0;
+     临_lo_98 = 0;
+     for (临_in_99 = OrdersTotal() ; 临_in_99 >= 0 ; 临_in_99=临_in_99 - 1)
+     {
+       if ( OrderSelect(临_in_99,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 || !(OrderOpenPrice()<临_do_97) )   continue;
+       临_lo_98 = OrderTicket();
+       临_do_97 = OrderOpenPrice();
+       
+     }
+     if ( 临_lo_98 != 0 )
+     {
+       OrderDelete(临_lo_98,Green); 
+       临_lo_100 = 临_lo_98;
+       for (临_in_101 = 0 ; 临_in_101 < 100 ; 临_in_101=临_in_101 + 1)
+       {
+         if ( !(总_198_do_1070_si100si2[临_in_101][0]==临_lo_100) )   continue;
+         总_198_do_1070_si100si2[临_in_101][0] = 0.0;
+         总_198_do_1070_si100si2[临_in_101][1] = 0.0;
+         break;
+         
+       }
+       Print("Max number of pending sell orders reached... deleting lowest sellstop order!"); 
+     }
+   }
+ }
+ if ( !(总_305_bo_2880) && 总_69_in_160 == 1 && !(总_303_bo_2878) )
+ {
+   if ( ( 总_322_in_2AE0_si99[总_328_in_3100] != iBars(总_336_st_3130,总_72_in_178) || 总_72_in_178 == 0 ) )
+   {
+     总_322_in_2AE0_si99[总_328_in_3100] = iBars(总_336_st_3130,总_72_in_178);
+     if ( 总_119_in_2D0 >  0 && 总_120_in_2D4 >= 0 )
+     {
+       总_241_do_1E78_si99[总_328_in_3100] = 总_123_do_2E0 * 总_229_do_1E00 + (lizong_13(总_117_in_2C8,总_119_in_2D0,总_120_in_2D4) + 总_1_do_0);
+       总_242_do_21C4_si99[总_328_in_3100] = lizong_14(总_117_in_2C8,总_119_in_2D0,总_120_in_2D4) - 总_123_do_2E0 * 总_229_do_1E00;
+     }
+     if ( 总_187_in_504 >  0 )
+     {
+       子_8_in=MathRand() * 总_187_in_504 / 32768 + 1;
+       总_15_in_78 = 子_8_in ;
+       Print("Slippage: " + (string(子_8_in))); 
+     }
+     if ( 总_63_in_140 != 1 )
+     {
+       临_in_102 = 0;
+       for (临_in_103 = OrdersTotal() ; 临_in_103 >= 0 ; 临_in_103=临_in_103 - 1)
+       {
+         if ( OrderSelect(临_in_103,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 0 )   continue;
+         临_in_102=临_in_102 + 1;
+         
+       }
+       if ( 临_in_102 == 0 )
+       {
+         临_in_104 = 0;
+         for (临_in_105 = OrdersTotal() ; 临_in_105 >= 0 ; 临_in_105=临_in_105 - 1)
+         {
+           if ( OrderSelect(临_in_105,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 1 )   continue;
+           临_in_104=临_in_104 + 1;
+           
+         }
+         if ( 临_in_104 == 0 )
+         {
+           临_bo_106 = false;
+           for (临_in_107 = 0 ; 临_in_107 < 总_199_in_16B0 ; 临_in_107=临_in_107 + 1)
+           {
+             if ( !(总_196_do_568_si20si2[临_in_107][0]>0.0) )   continue;
+             临_bo_106 = false;
+             for (临_in_108 = OrdersTotal() ; 临_in_108 >= 0 ; 临_in_108=临_in_108 - 1)
+             {
+               if ( OrderSelect(临_in_108,0,0) != true )   continue;
+               
+               if ( ( OrderType() != 0 && OrderType() != 1 ) || !(OrderTicket()==总_196_do_568_si20si2[临_in_107][0]) )   continue;
+               临_bo_106 = true;
+               
+             }
+             if ( 临_bo_106 )   continue;
+             总_196_do_568_si20si2[临_in_107][0] = 0.0;
+             总_196_do_568_si20si2[临_in_107][1] = 0.0;
+             
+           }
+         }
+       }
+     }
+     for (子_9_in = 0 ; 子_9_in < 总_86_in_1C8 ; 子_9_in ++)
+     {
+       lizong_15(); 
+     }
+   }
+   lizong_29(); 
+   if ( 总_267_in_25A0 != Hour() )
+   {
+     总_267_in_25A0 = Hour() ;
+     临_bo_109 = false;
+     for (临_in_110 = 0 ; 临_in_110 < 100 ; 临_in_110=临_in_110 + 1)
+     {
+       临_lo_111 = 总_198_do_1070_si100si2[临_in_110][0];
+       临_bo_109 = false;
+       for (临_in_112 = OrdersTotal() ; 临_in_112 >= 0 ; 临_in_112=临_in_112 - 1)
+       {
+         if ( !(OrderSelect(临_in_112,0,0)) )   continue;
+         临_lo_113 = OrderTicket();
+         if ( 临_lo_111 != 临_lo_113 )   continue;
+         临_bo_109 = true;
+         
+       }
+       if ( 临_bo_109 )   continue;
+       总_198_do_1070_si100si2[临_in_110][0] = 0.0;
+       总_198_do_1070_si100si2[临_in_110][1] = 0.0;
+       
+     }
+   }
+ }
+ if ( 总_62_bo_13D )
+ {
+   临_st_114="Current spread: " + string(NormalizeDouble(总_1_do_0 / 总_229_do_1E00,1)) + "\nPending Buy Order: ";
+   临_in_115 = 0;
+   for (临_in_116 = OrdersTotal() ; 临_in_116 >= 0 ; 临_in_116=临_in_116 - 1)
+   {
+     if ( OrderSelect(临_in_116,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
+     临_in_115=临_in_115 + 1;
+     
+   }
+   临_st_114=临_st_114 + string(临_in_115);
+   临_st_114=临_st_114 + "\nPending Sell Orders: ";
+   临_in_117 = 0;
+   for (临_in_118 = OrdersTotal() ; 临_in_118 >= 0 ; 临_in_118=临_in_118 - 1)
+   {
+     if ( OrderSelect(临_in_118,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
+     临_in_117=临_in_117 + 1;
+     
+   }
+   临_st_114=临_st_114 + string(临_in_117);
+   Comment(临_st_114); 
+ }
+ return(0); 
+ }
+//lizong_7 <<==--------   --------
+ void lizong_8()
+ {
+  int       子_1_in;
+//----- -----
+ double     临_do_1;
+ long       临_lo_2;
+ int        临_in_3;
+ double     临_do_4;
+ long       临_lo_5;
+ int        临_in_6;
+ double     临_do_7;
+ long       临_lo_8;
+ int        临_in_9;
+ double     临_do_10;
+ long       临_lo_11;
+ int        临_in_12;
+ int        临_in_13;
+
+ for (子_1_in = 0 ; 子_1_in < 总_200_in_16B4 ; 子_1_in ++)
+ {
+   if ( !(总_197_do_6DC_si100si3[子_1_in][0]>0.0) )   continue;
+   
+   if ( 总_197_do_6DC_si100si3[子_1_in][1]==4.0 && MarketInfo(总_336_st_3130,MODE_ASK)<总_197_do_6DC_si100si3[子_1_in][0] - 总_221_do_1A80 )
+   {
+     Print("Restoring pending buy-order"); 
+     总_230_in_1E08 = OrderSend(总_336_st_3130,4,总_197_do_6DC_si100si3[子_1_in][2],总_197_do_6DC_si100si3[子_1_in][0],int(总_38_do_C0 * 总_229_do_1E00),总_197_do_6DC_si100si3[子_1_in][0] - (总_100_do_230 + 总_64_do_148) * 总_229_do_1E00,总_101_do_238 * 总_229_do_1E00 + 总_197_do_6DC_si100si3[子_1_in][0],总_334_st_3120,总_93_in_1F0,总_302_da_2870 + 0x2A300,Green) ;
+     总_280_bo_25FA = false ;
+     临_do_1 = 总_197_do_6DC_si100si3[子_1_in][0];
+     临_lo_2 = 总_230_in_1E08;
+     for (临_in_3 = 0 ; 临_in_3 < 100 ; 临_in_3=临_in_3 + 1)
+     {
+       if ( !(总_198_do_1070_si100si2[临_in_3][0]==0.0) )   continue;
+       总_198_do_1070_si100si2[临_in_3][0] = 临_lo_2;
+       总_198_do_1070_si100si2[临_in_3][1] = 临_do_1;
+       break;
+       
+     }
+     if ( 总_230_in_1E08 <= 0 )
+     {
+       if ( GetLastError() == 132 )
+       {
+         ResetLastError();
+         if(1==0) //条件不成立
+         {
+           do
+           {
+             Sleep(2500); 
+             总_230_in_1E08 = OrderSend(总_336_st_3130,4,总_197_do_6DC_si100si3[子_1_in][2],总_197_do_6DC_si100si3[子_1_in][0],int(总_38_do_C0 * 总_229_do_1E00),总_197_do_6DC_si100si3[子_1_in][0] - (总_100_do_230 + 总_64_do_148) * 总_229_do_1E00,总_101_do_238 * 总_229_do_1E00 + 总_197_do_6DC_si100si3[子_1_in][0],总_334_st_3120,总_93_in_1F0,总_302_da_2870 + 0x2A300,Green) ;
+             总_280_bo_25FA = false ;
+             临_do_4 = 总_197_do_6DC_si100si3[子_1_in][0];
+             临_lo_5 = 总_230_in_1E08;
+             for (临_in_6 = 0 ; 临_in_6 < 100 ; 临_in_6=临_in_6 + 1)
+             {
+               if ( !(总_198_do_1070_si100si2[临_in_6][0]==0.0) )   continue;
+               总_198_do_1070_si100si2[临_in_6][0] = 临_lo_5;
+               总_198_do_1070_si100si2[临_in_6][1] = 临_do_4;
+               break;
+               
+             }
+           }
+           while(GetLastError() == 132);
+           
+         }
+       }
+       Print("error: \'" + lizong_21(GetLastError()) + "\' when setting entry order"); 
+     }
+   }
+   if ( !(总_197_do_6DC_si100si3[子_1_in][1]==5.0) || !(MarketInfo(总_336_st_3130,MODE_BID)>总_197_do_6DC_si100si3[子_1_in][0] + 总_221_do_1A80) )   continue;
+   Print("Restoring pending sell-order"); 
+   总_230_in_1E08 = OrderSend(总_336_st_3130,5,总_197_do_6DC_si100si3[子_1_in][2],总_197_do_6DC_si100si3[子_1_in][0],int(总_38_do_C0 * 总_229_do_1E00),(总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 + 总_197_do_6DC_si100si3[子_1_in][0],总_197_do_6DC_si100si3[子_1_in][0] - 总_101_do_238 * 总_229_do_1E00,总_334_st_3120,总_93_in_1F0,总_302_da_2870 + 0x2A300,Green) ;
+   总_281_bo_25FB = false ;
+   临_do_7 = 总_197_do_6DC_si100si3[子_1_in][0];
+   临_lo_8 = 总_230_in_1E08;
+   for (临_in_9 = 0 ; 临_in_9 < 100 ; 临_in_9=临_in_9 + 1)
+   {
+     if ( !(总_198_do_1070_si100si2[临_in_9][0]==0.0) )   continue;
+     总_198_do_1070_si100si2[临_in_9][0] = 临_lo_8;
+     总_198_do_1070_si100si2[临_in_9][1] = 临_do_7;
+     break;
+     
+   }
+   if ( 总_230_in_1E08 > 0 )   continue;
+   
+   if ( GetLastError() == 132 )
+   {
+     ResetLastError();
+     if(1==0) //条件不成立
+     {
+       do
+       {
+         Sleep(2500); 
+         总_230_in_1E08 = OrderSend(总_336_st_3130,5,总_197_do_6DC_si100si3[子_1_in][2],总_197_do_6DC_si100si3[子_1_in][0],int(总_38_do_C0 * 总_229_do_1E00),(总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 + 总_197_do_6DC_si100si3[子_1_in][0],总_197_do_6DC_si100si3[子_1_in][0] - 总_101_do_238 * 总_229_do_1E00,总_334_st_3120,总_93_in_1F0,总_302_da_2870 + 0x2A300,Green) ;
+         总_281_bo_25FB = false ;
+         临_do_10 = 总_197_do_6DC_si100si3[子_1_in][0];
+         临_lo_11 = 总_230_in_1E08;
+         for (临_in_12 = 0 ; 临_in_12 < 100 ; 临_in_12=临_in_12 + 1)
+         {
+           if ( !(总_198_do_1070_si100si2[临_in_12][0]==0.0) )   continue;
+           总_198_do_1070_si100si2[临_in_12][0] = 临_lo_11;
+           总_198_do_1070_si100si2[临_in_12][1] = 临_do_10;
+           break;
+           
+         }
+       }
+       while(GetLastError() == 132);
+       
+     }
+   }
+   Print("error: \'" + lizong_21(GetLastError()) + "\' when setting entry order"); 
+   
+ }
+ for (临_in_13 = 0 ; 临_in_13 < 总_200_in_16B4 ; 临_in_13=临_in_13 + 1)
+ {
+   总_197_do_6DC_si100si3[临_in_13][0] = 0.0;
+   总_197_do_6DC_si100si3[临_in_13][1] = 0.0;
+   总_197_do_6DC_si100si3[临_in_13][2] = 0.0;
+ }
+ }
+//lizong_8 <<==--------   --------
+ bool lizong_9()
+ {
+  int       子_2_in;
+  int       子_3_in;
+  int       子_4_in;
+//----- -----
+ long       临_lo_1;
+ int        临_in_2;
+ long       临_lo_3;
+ int        临_in_4;
+ double     临_do_5;
+ double     临_do_6;
+ long       临_lo_7;
+ int        临_in_8;
+ long       临_lo_9;
+ int        临_in_10;
+
+ for (子_2_in = OrdersTotal() ; 子_2_in >= 0 ; 子_2_in --)
+ {
+   if ( OrderSelect(子_2_in,0,0) != true )   continue;
+   
+   if ( ( OrderMagicNumber() != 总_93_in_1F0 && OrderMagicNumber() != 总_96_in_208 ) || OrderSymbol() != 总_336_st_3130 )   continue;
+   
+   if ( OrderType() == 4 && OrderOpenPrice()<总_36_in_B0 * 总_229_do_1E00 + MarketInfo(总_336_st_3130,MODE_ASK) && MarketInfo(总_336_st_3130,MODE_ASK)<OrderOpenPrice() - 总_309_do_2898 )
+   {
+     if ( 总_37_do_B8>0.0 )
+     {
+       Print("Spread too high..(" + string(总_1_do_0) + ") storing and deleting order " + string(OrderTicket())); 
+       for (子_3_in = 0 ; 子_3_in < 总_200_in_16B4 ; 子_3_in ++)
+       {
+         if ( 总_197_do_6DC_si100si3[子_3_in][0]==0.0 )
+         {
+           Print("Storing pending order nr " + string(OrderTicket())); 
+           总_197_do_6DC_si100si3[子_3_in][1] = OrderType();
+           总_197_do_6DC_si100si3[子_3_in][0] = OrderOpenPrice();
+           总_197_do_6DC_si100si3[子_3_in][2] = OrderLots();
+           break;
+         }
+       }
+       临_lo_1 = OrderTicket();
+       for (临_in_2 = 0 ; 临_in_2 < 100 ; 临_in_2=临_in_2 + 1)
+       {
+         if ( !(总_198_do_1070_si100si2[临_in_2][0]==临_lo_1) )   continue;
+         总_198_do_1070_si100si2[临_in_2][0] = 0.0;
+         总_198_do_1070_si100si2[临_in_2][1] = 0.0;
+         break;
+         
+       }
+       OrderDelete(OrderTicket(),Green); 
+     }
+     else
+     {
+       Print("Spread too high..(" + string(总_1_do_0) + ") deleting order " + string(OrderTicket())); 
+       临_lo_3 = OrderTicket();
+       for (临_in_4 = 0 ; 临_in_4 < 100 ; 临_in_4=临_in_4 + 1)
+       {
+         if ( !(总_198_do_1070_si100si2[临_in_4][0]==临_lo_3) )   continue;
+         总_198_do_1070_si100si2[临_in_4][0] = 0.0;
+         总_198_do_1070_si100si2[临_in_4][1] = 0.0;
+         break;
+         
+       }
+       OrderDelete(OrderTicket(),Green); 
+     }
+   }
+   if ( OrderType() != 5 )   continue;
+   临_do_5 = OrderOpenPrice();
+   if ( !(临_do_5>MarketInfo(总_336_st_3130,MODE_BID) - 总_36_in_B0 * 总_229_do_1E00) )   continue;
+   临_do_6 = MarketInfo(总_336_st_3130,MODE_BID);
+   if ( !(临_do_6>OrderOpenPrice() + 总_309_do_2898) )   continue;
+   
+   if ( 总_37_do_B8>0.0 )
+   {
+     Print("Spread too high..(" + string(总_1_do_0) + ") storing and deleting order " + string(OrderTicket())); 
+     for (子_4_in = 0 ; 子_4_in < 总_200_in_16B4 ; 子_4_in ++)
+     {
+       if ( 总_197_do_6DC_si100si3[子_4_in][0]==0.0 )
+       {
+         Print("Storing pending order nr " + string(OrderTicket())); 
+         总_197_do_6DC_si100si3[子_4_in][1] = OrderType();
+         总_197_do_6DC_si100si3[子_4_in][0] = OrderOpenPrice();
+         总_197_do_6DC_si100si3[子_4_in][2] = OrderLots();
+         break;
+       }
+     }
+     临_lo_7 = OrderTicket();
+     for (临_in_8 = 0 ; 临_in_8 < 100 ; 临_in_8=临_in_8 + 1)
+     {
+       if ( !(总_198_do_1070_si100si2[临_in_8][0]==临_lo_7) )   continue;
+       总_198_do_1070_si100si2[临_in_8][0] = 0.0;
+       总_198_do_1070_si100si2[临_in_8][1] = 0.0;
+       break;
+       
+     }
+     OrderDelete(OrderTicket(),Green); 
+      continue;
+   }
+   Print("Spread too high..(" + string(总_1_do_0) + ") deleting order " + string(OrderTicket())); 
+   临_lo_9 = OrderTicket();
+   for (临_in_10 = 0 ; 临_in_10 < 100 ; 临_in_10=临_in_10 + 1)
+   {
+     if ( !(总_198_do_1070_si100si2[临_in_10][0]==临_lo_9) )   continue;
+     总_198_do_1070_si100si2[临_in_10][0] = 0.0;
+     总_198_do_1070_si100si2[临_in_10][1] = 0.0;
+     break;
+     
+   }
+   OrderDelete(OrderTicket(),Green); 
+   
+ }
+ return(false); 
+ }
+//lizong_9 <<==--------   --------
+ void lizong_10( double 木_0_do,int 木_1_in)
+ {
+  double    子_1_do;
+  double    子_2_do;
+  double    子_3_do;
+  double    子_4_do;
+  double    子_5_do;
+  double    子_6_do;
+  double    子_7_do;
+//----- -----
+
+ 子_1_do = 总_223_do_1AC4_si99[总_328_in_3100] ;
+ 子_2_do = 总_223_do_1AC4_si99[总_328_in_3100] ;
+ 总_401_do_6AD0 = AccountInfoDouble(ACCOUNT_BALANCE) ;
+ if ( UseEquity )
+ {
+   总_401_do_6AD0 = AccountInfoDouble(ACCOUNT_EQUITY) ;
+ }
+ if ( ForceBalanceToUse>0.0 )
+ {
+   总_401_do_6AD0 = ForceBalanceToUse ;
+ }
+ if ( OnlyUp && 总_402_do_6AD8>总_401_do_6AD0 )
+ {
+   总_401_do_6AD0 = 总_402_do_6AD8 ;
+ }
+ if ( 总_401_do_6AD0>总_402_do_6AD8 )
+ {
+   总_402_do_6AD8 = 总_401_do_6AD0 ;
+ }
+ 子_3_do = 木_0_do ;
+ if ( ( 总_190_in_518 == 2 || 总_190_in_518 == 4 ) )
+ {
+   子_3_do = 木_0_do / 10.0 ;
+ }
+ if ( Risk <  999 && Risk >  0 )
+ {
+   子_4_do = Risk ;
+   子_5_do = 子_4_do / 1000.0 * 总_401_do_6AD0 ;
+   if ( MarketInfo(总_336_st_3130,MODE_LOTSTEP)==0.1 )
+   {
+     子_2_do = NormalizeDouble(木_1_in * 0.01 * (子_5_do / (MarketInfo(总_336_st_3130,MODE_TICKVALUE) * 子_3_do) * 0.1),1) ;
+   }
+   if ( MarketInfo(总_336_st_3130,MODE_LOTSTEP)==0.01 )
+   {
+     子_2_do = NormalizeDouble(木_1_in * 0.01 * (子_5_do / (MarketInfo(总_336_st_3130,MODE_TICKVALUE) * 子_3_do) * 0.1),2) ;
+   }
+ }
+ if ( Risk == 999 )
+ {
+   子_6_do = 总_148_do_420 / 100.0 * 总_401_do_6AD0 ;
+   if ( MarketInfo(总_336_st_3130,MODE_LOTSTEP)==0.1 )
+   {
+     子_2_do = NormalizeDouble(木_1_in * 0.01 * (子_6_do / (MarketInfo(总_336_st_3130,MODE_TICKVALUE) * 子_3_do) * 0.1),1) ;
+   }
+   if ( MarketInfo(总_336_st_3130,MODE_LOTSTEP)==0.01 )
+   {
+     子_2_do = NormalizeDouble(木_1_in * 0.01 * (子_6_do / (MarketInfo(总_336_st_3130,MODE_TICKVALUE) * 子_3_do) * 0.1),2) ;
+   }
+ }
+ if ( Risk == 0 )
+ {
+   if ( MarketInfo(总_336_st_3130,MODE_LOTSTEP)==0.1 )
+   {
+     子_2_do = NormalizeDouble(木_1_in * 0.01 * StartLots,1) ;
+   }
+   if ( MarketInfo(总_336_st_3130,MODE_LOTSTEP)==0.01 )
+   {
+     子_2_do = NormalizeDouble(木_1_in * 0.01 * StartLots,2) ;
+   }
+ }
+ if ( Risk == 9999 )
+ {
+   if ( MarketInfo(总_336_st_3130,MODE_LOTSTEP)==0.1 )
+   {
+     子_2_do = NormalizeDouble(木_1_in * 0.01 * (总_401_do_6AD0 / 总_145_in_40C * 0.01),1) ;
+   }
+   if ( MarketInfo(总_336_st_3130,MODE_LOTSTEP)==0.01 )
+   {
+     子_2_do = NormalizeDouble(木_1_in * 0.01 * (总_401_do_6AD0 / 总_145_in_40C * 0.01),2) ;
+   }
+ }
+ if ( Risk == 1234 )
+ {
+   if ( UseWeightedLots )
+   {
+     if ( 总_397_do_6768==0.0 )
+     {
+       总_397_do_6768 = 100000.0 ;
+     }
+     总_146_do_410 = MaxAllowedDD / 总_398_do_6770 ;
+     if ( SymbolInfoDouble(总_336_st_3130,36)==0.1 )
+     {
+       子_2_do = NormalizeDouble(总_146_do_410 / 总_397_do_6768 * 总_401_do_6AD0 / 100.0 * 0.01,1) ;
+     }
+     if ( SymbolInfoDouble(总_336_st_3130,36)==0.01 )
+     {
+       子_2_do = NormalizeDouble(总_146_do_410 / 总_397_do_6768 * 总_401_do_6AD0 / 100.0 * 0.01,2) ;
+     }
+   }
+   else
+   {
+     if ( 总_397_do_6768==0.0 )
+     {
+       总_397_do_6768 = 100000.0 ;
+     }
+     子_7_do = lizong_36(总_401_do_6AD0) ;
+     if ( 总_19_in_9C == 0 )
+     {
+       总_145_in_40C = 总_385_in_5DA8 / (MaxAllowedDD / 100.0) ;
+     }
+     if ( 总_19_in_9C == 1 )
+     {
+       总_145_in_40C = 总_386_in_5DAC / (MaxAllowedDD / 100.0) ;
+     }
+     if ( 总_19_in_9C == 2 )
+     {
+       总_145_in_40C = 总_387_in_5DB0 / (MaxAllowedDD / 100.0) ;
+     }
+     if ( 总_19_in_9C == 3 )
+     {
+       总_145_in_40C = 总_388_in_5DB4 / (MaxAllowedDD / 100.0) ;
+     }
+     if ( 总_19_in_9C == 4 )
+     {
+       总_145_in_40C = 总_389_in_5DB8 / (MaxAllowedDD / 100.0) ;
+     }
+     if ( SymbolInfoDouble(总_336_st_3130,36)==0.1 )
+     {
+       子_2_do = NormalizeDouble(木_1_in * 0.01 * (子_7_do / 总_145_in_40C * 0.01),1) ;
+     }
+     if ( SymbolInfoDouble(总_336_st_3130,36)==0.01 )
+     {
+       子_2_do = NormalizeDouble(木_1_in * 0.01 * (子_7_do / 总_145_in_40C * 0.01),2) ;
+     }
+   }
+ }
+ if ( Risk == 3 )
+ {
+   if ( SymbolInfoDouble(总_336_st_3130,36)==0.1 )
+   {
+     子_2_do = NormalizeDouble(MaxRiskPerStrategy_ / 总_397_do_6768 * 总_401_do_6AD0 / 100.0 * 0.01,1) ;
+   }
+   if ( SymbolInfoDouble(总_336_st_3130,36)==0.01 )
+   {
+     子_2_do = NormalizeDouble(MaxRiskPerStrategy_ / 总_397_do_6768 * 总_401_do_6AD0 / 100.0 * 0.01,2) ;
+   }
+ }
+ 子_2_do = 子_2_do * 总_9_do_60 ;
+ if ( 子_2_do<MarketInfo(总_336_st_3130,MODE_LOTSTEP) )
+ {
+   子_2_do = MarketInfo(总_336_st_3130,MODE_LOTSTEP) ;
+ }
+ if ( 子_2_do>总_141_do_3F8 )
+ {
+   子_2_do = 总_141_do_3F8 ;
+ }
+ if ( 子_2_do<MarketInfo(总_336_st_3130,MODE_MINLOT) )
+ {
+   子_2_do = MarketInfo(总_336_st_3130,MODE_MINLOT) ;
+ }
+ if ( 子_2_do>MarketInfo(总_336_st_3130,MODE_MAXLOT) && MarketInfo(总_336_st_3130,MODE_MAXLOT)!=0.0 )
+ {
+   子_2_do = MarketInfo(总_336_st_3130,MODE_MAXLOT) ;
+ }
+ if ( MarketInfo(总_336_st_3130,MODE_LOTSTEP)==0.1 )
+ {
+   总_223_do_1AC4_si99[总_328_in_3100] = NormalizeDouble((MathFloor(子_2_do * 10.0)) / 10.0,1);
+   return;
+ }
+ 总_223_do_1AC4_si99[总_328_in_3100] = NormalizeDouble(MathFloor(子_2_do * 100.0) / 100.0,2);
+ }
+//lizong_10 <<==--------   --------
+ double lizong_11( int 木_0_in)
+ {
+  bool      子_2_bo = false;
+  bool      子_3_bo = false;
+  bool      子_4_bo;
+  int       子_5_in;
+  int       子_6_in;
+  int       子_7_in;
+//----- -----
+ double     临_do_1;
+ int        临_in_2;
+ double     临_do_3;
+ int        临_in_4;
+ double     临_do_5;
+ int        临_in_6;
+ bool       临_bo_7;
+
+ 子_4_bo = false ;
+ 子_5_in=总_74_in_180 + 1;
+ do
+ {
+   子_3_bo = true ;
+   子_4_bo = true ;
+   for (子_6_in = 子_5_in ; 子_6_in >= 子_5_in - 总_74_in_180 ; 子_6_in --)
+   {
+     if ( iHigh(总_336_st_3130,木_0_in,子_6_in)>iHigh(总_336_st_3130,木_0_in,子_5_in) )
+     {
+       子_4_bo = false ;
+     }
+   }
+   for (子_7_in = 子_5_in ; 子_7_in <= 子_5_in + 总_73_in_17C ; 子_7_in ++)
+   {
+     if ( iHigh(总_336_st_3130,木_0_in,子_7_in)>iHigh(总_336_st_3130,木_0_in,子_5_in) )
+     {
+       子_3_bo = false ;
+     }
+   }
+   if ( 子_4_bo && 子_3_bo && iHigh(总_336_st_3130,木_0_in,子_5_in)>总_80_do_198 * 总_229_do_1E00 + MarketInfo(总_336_st_3130,MODE_ASK) )
+   {
+     临_do_1 = iHigh(总_336_st_3130,木_0_in,子_5_in);
+     临_in_2 = 子_5_in;
+     临_do_3 = iHigh(总_336_st_3130,总_71_in_174,0);
+     for (临_in_4 = 1 ; 临_in_4 <= 临_in_2 ; 临_in_4=临_in_4 + 1)
+     {
+       if ( iHigh(总_336_st_3130,总_71_in_174,临_in_4)>临_do_3 )
+       {
+         临_do_3 = iHigh(总_336_st_3130,总_71_in_174,临_in_4);
+       }
+     }
+     if ( 临_do_1>=临_do_3 )
+     {
+       临_do_5 = NormalizeDouble(iHigh(总_336_st_3130,木_0_in,子_5_in),总_190_in_518);
+       临_bo_7=false; 
+       for (临_in_6 = OrdersTotal() ; 临_in_6 >= 0 ; 临_in_6=临_in_6 - 1)
+       {
+         if ( OrderSelect(临_in_6,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 || !(MathAbs(OrderOpenPrice() - (总_83_do_1B0 * 总_229_do_1E00 + 临_do_5))<总_88_do_1D0 * 总_229_do_1E00) )   continue;
+         临_bo_7 = true;
+          break;
+         
+       }
+       if ( !(临_bo_7) && ( !(总_75_bo_184) || !(iClose(总_336_st_3130,木_0_in,子_5_in - 1)>iHigh(总_336_st_3130,木_0_in,子_5_in) - 总_80_do_198 * 总_229_do_1E00) ) )
+       {
+         子_2_bo = true ;
+         总_262_do_2580 = NormalizeDouble(iHigh(总_336_st_3130,木_0_in,子_5_in),总_190_in_518) ;
+         总_265_in_2598 = 子_5_in ;
+         break;
+       }
+     }
+   }
+   子_5_in ++;
+   if ( 子_5_in <= 总_77_in_188 )   continue;
+   总_262_do_2580 = 0.0 ;
+   break;
+   
+ }
+ while(!(子_2_bo));
+ 
+ return(总_262_do_2580); 
+ }
+//lizong_11 <<==--------   --------
+ double lizong_12( int 木_0_in)
+ {
+  bool      子_2_bo = false;
+  bool      子_3_bo = false;
+  bool      子_4_bo;
+  int       子_5_in;
+  int       子_6_in;
+  int       子_7_in;
+//----- -----
+ double     临_do_1;
+ int        临_in_2;
+ double     临_do_3;
+ int        临_in_4;
+ double     临_do_5;
+ int        临_in_6;
+ bool       临_bo_7;
+
+ 子_4_bo = false ;
+ 子_5_in=总_74_in_180 + 1;
+ do
+ {
+   子_3_bo = true ;
+   子_4_bo = true ;
+   for (子_6_in = 子_5_in ; 子_6_in >= 子_5_in - 总_74_in_180 ; 子_6_in --)
+   {
+     if ( iLow(总_336_st_3130,木_0_in,子_6_in)<iLow(总_336_st_3130,木_0_in,子_5_in) )
+     {
+       子_4_bo = false ;
+     }
+   }
+   for (子_7_in = 子_5_in ; 子_7_in <= 子_5_in + 总_73_in_17C ; 子_7_in ++)
+   {
+     if ( iLow(总_336_st_3130,木_0_in,子_7_in)<iLow(总_336_st_3130,木_0_in,子_5_in) )
+     {
+       子_3_bo = false ;
+     }
+   }
+   if ( 子_4_bo && 子_3_bo && iLow(总_336_st_3130,木_0_in,子_5_in)<MarketInfo(总_336_st_3130,MODE_BID) - 总_80_do_198 * 总_229_do_1E00 )
+   {
+     临_do_1 = iLow(总_336_st_3130,木_0_in,子_5_in);
+     临_in_2 = 子_5_in;
+     临_do_3 = iLow(总_336_st_3130,总_71_in_174,0);
+     for (临_in_4 = 1 ; 临_in_4 <= 临_in_2 ; 临_in_4=临_in_4 + 1)
+     {
+       if ( iLow(总_336_st_3130,总_71_in_174,临_in_4)<临_do_3 )
+       {
+         临_do_3 = iLow(总_336_st_3130,总_71_in_174,临_in_4);
+       }
+     }
+     if ( 临_do_1<=临_do_3 )
+     {
+       临_do_5 = NormalizeDouble(iLow(总_336_st_3130,木_0_in,子_5_in),总_190_in_518);
+       临_bo_7=false; 
+       for (临_in_6 = OrdersTotal() ; 临_in_6 >= 0 ; 临_in_6=临_in_6 - 1)
+       {
+         if ( OrderSelect(临_in_6,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 || !(MathAbs(OrderOpenPrice() - (临_do_5 - 总_84_do_1B8 * 总_229_do_1E00))<总_88_do_1D0 * 总_229_do_1E00) )   continue;
+         临_bo_7 = true;
+          break;
+         
+       }
+       if ( !(临_bo_7) && ( !(总_75_bo_184) || !(iClose(总_336_st_3130,木_0_in,子_5_in - 1)<总_80_do_198 * 总_229_do_1E00 + iLow(总_336_st_3130,木_0_in,子_5_in)) ) )
+       {
+         子_2_bo = true ;
+         总_261_do_2578 = NormalizeDouble(iLow(总_336_st_3130,木_0_in,子_5_in),总_190_in_518) ;
+         总_266_in_259C = 子_5_in ;
+         break;
+       }
+     }
+   }
+   子_5_in ++;
+   if ( 子_5_in <= 总_77_in_188 )   continue;
+   总_261_do_2578 = 0.0 ;
+   break;
+   
+ }
+ while(!(子_2_bo));
+ 
+ return(总_261_do_2578); 
+ }
+//lizong_12 <<==--------   --------
+ double lizong_13( int 木_0_in,int 木_1_in,int 木_2_in)
+ {
+  bool      子_2_bo = false;
+  double    子_3_do = 0.0;
+  bool      子_4_bo = false;
+  bool      子_5_bo;
+  int       子_6_in;
+  int       子_7_in;
+  int       子_8_in;
+//----- -----
+
+ 子_5_bo = false ;
+ 子_6_in=木_2_in + 1;
+ do
+ {
+   子_4_bo = true ;
+   子_5_bo = true ;
+   for (子_7_in = 子_6_in ; 子_7_in >= 子_6_in - 木_2_in ; 子_7_in --)
+   {
+     if ( iHigh(总_336_st_3130,木_0_in,子_7_in)>iHigh(总_336_st_3130,木_0_in,子_6_in) )
+     {
+       子_5_bo = false ;
+     }
+   }
+   for (子_8_in = 子_6_in ; 子_8_in <= 子_6_in + 木_1_in ; 子_8_in ++)
+   {
+     if ( iHigh(总_336_st_3130,木_0_in,子_8_in)>iHigh(总_336_st_3130,木_0_in,子_6_in) )
+     {
+       子_4_bo = false ;
+     }
+   }
+   if ( 子_5_bo && 子_4_bo && iHigh(总_336_st_3130,木_0_in,子_6_in)>总_221_do_1A80 * 总_229_do_1E00 + MarketInfo(总_336_st_3130,MODE_ASK) )
+   {
+     子_2_bo = true ;
+     子_3_do = NormalizeDouble(iHigh(总_336_st_3130,木_0_in,子_6_in),总_190_in_518) ;
+     break;
+   }
+   子_6_in ++;
+   if ( 子_6_in <= 总_118_in_2CC )   continue;
+   子_3_do = 9999.0 ;
+   break;
+   
+ }
+ while(!(子_2_bo));
+ 
+ return(子_3_do); 
+ }
+//lizong_13 <<==--------   --------
+ double lizong_14( int 木_0_in,int 木_1_in,int 木_2_in)
+ {
+  bool      子_2_bo = false;
+  double    子_3_do = 0.0;
+  bool      子_4_bo = false;
+  bool      子_5_bo;
+  int       子_6_in;
+  int       子_7_in;
+  int       子_8_in;
+//----- -----
+
+ 子_5_bo = false ;
+ 子_6_in=木_2_in + 1;
+ do
+ {
+   子_4_bo = true ;
+   子_5_bo = true ;
+   for (子_7_in = 子_6_in ; 子_7_in >= 子_6_in - 木_2_in ; 子_7_in --)
+   {
+     if ( iLow(总_336_st_3130,木_0_in,子_7_in)<iLow(总_336_st_3130,木_0_in,子_6_in) )
+     {
+       子_5_bo = false ;
+     }
+   }
+   for (子_8_in = 子_6_in ; 子_8_in <= 子_6_in + 木_1_in ; 子_8_in ++)
+   {
+     if ( iLow(总_336_st_3130,木_0_in,子_8_in)<iLow(总_336_st_3130,木_0_in,子_6_in) )
+     {
+       子_4_bo = false ;
+     }
+   }
+   if ( 子_5_bo && 子_4_bo && iLow(总_336_st_3130,木_0_in,子_6_in)<MarketInfo(总_336_st_3130,MODE_BID) - 总_221_do_1A80 * 总_229_do_1E00 )
+   {
+     子_2_bo = true ;
+     子_3_do = NormalizeDouble(iLow(总_336_st_3130,木_0_in,子_6_in),总_190_in_518) ;
+     break;
+   }
+   子_6_in ++;
+   if ( 子_6_in <= 总_118_in_2CC )   continue;
+   子_3_do = 0.0 ;
+   break;
+   
+ }
+ while(!(子_2_bo));
+ 
+ return(子_3_do); 
+ }
+//lizong_14 <<==--------   --------
+ void lizong_15()
+ {
+  int       子_1_in;
+//----- -----
+ long       临_lo_1;
+ long       临_lo_2;
+ int        临_in_3;
+ int        临_in_4;
+ int        临_in_5;
+ int        临_in_6;
+ int        临_in_7;
+ int        临_in_8;
+ int        临_in_9;
+ int        临_in_10;
+ int        临_in_11;
+ int        临_in_12;
+
+ if ( 总_213_bo_1710 )
+ {
+   总_268_do_25A8 = iMA(总_336_st_3130,0,总_214_in_1714,0,1,0,1) ;
+   总_269_do_25B0 = iMA(总_336_st_3130,0,总_217_in_1A70,0,1,0,1) ;
+ }
+ lizong_10(总_100_do_230,总_92_in_1EC); 
+ if ( 总_223_do_1AC4_si99[总_328_in_3100]>总_141_do_3F8 )
+ {
+   总_223_do_1AC4_si99[总_328_in_3100] = 总_141_do_3F8;
+ }
+ if ( 总_89_in_1D8 >  0 )
+ {
+   总_302_da_2870=TimeCurrent() + 总_234_in_1E20;
+ }
+ if ( Virtual_expiration )
+ {
+   总_302_da_2870 = 0 ;
+   for (子_1_in = OrdersTotal() ; 子_1_in >= 0 ; 子_1_in --)
+   {
+     if ( OrderSelect(子_1_in,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 )   continue;
+     
+     if ( ( OrderType() != 4 && OrderType() != 5 ) )   continue;
+     临_lo_1 = TimeCurrent();
+     临_lo_2=OrderOpenTime() + 总_234_in_1E20;
+     if ( 临_lo_1 < 临_lo_2 )   continue;
+     OrderDelete(OrderTicket(),Red); 
+     
+   }
+ }
+ 临_in_3 = 0;
+ for (临_in_4 = OrdersTotal() ; 临_in_4 >= 0 ; 临_in_4=临_in_4 - 1)
+ {
+   if ( OrderSelect(临_in_4,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 0 )   continue;
+   临_in_3=临_in_3 + 1;
+   
+ }
+ if ( 临_in_3 <  总_87_in_1CC )
+ {
+   lizong_16(1); 
+ }
+ else
+ {
+   临_in_5 = 1;
+   for (临_in_6 = OrdersTotal() ; 临_in_6 >= 0 ; 临_in_6=临_in_6 - 1)
+   {
+     if ( OrderSelect(临_in_6,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
+     OrderDelete(OrderTicket(),0xFFFFFFFF); 
+     
+   }
+   if ( 临_in_5 == 2 )
+   {
+     for (临_in_7 = OrdersTotal() ; 临_in_7 >= 0 ; 临_in_7=临_in_7 - 1)
+     {
+       if ( OrderSelect(临_in_7,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
+       OrderDelete(OrderTicket(),0xFFFFFFFF); 
+       
+     }
+   }
+ }
+ 临_in_8 = 0;
+ for (临_in_9 = OrdersTotal() ; 临_in_9 >= 0 ; 临_in_9=临_in_9 - 1)
+ {
+   if ( OrderSelect(临_in_9,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 1 )   continue;
+   临_in_8=临_in_8 + 1;
+   
+ }
+ if ( 临_in_8 <  总_87_in_1CC )
+ {
+   lizong_17(1); 
+   return;
+ }
+ 临_in_10 = 1;
+ for (临_in_11 = OrdersTotal() ; 临_in_11 >= 0 ; 临_in_11=临_in_11 - 1)
+ {
+   if ( OrderSelect(临_in_11,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
+   OrderDelete(OrderTicket(),0xFFFFFFFF); 
+   
+ }
+ if ( 临_in_10 != 2 )   return;
+ for (临_in_12 = OrdersTotal() ; 临_in_12 >= 0 ; 临_in_12=临_in_12 - 1)
+ {
+   if ( OrderSelect(临_in_12,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
+   OrderDelete(OrderTicket(),0xFFFFFFFF); 
+   
+ }
+ }
+//lizong_15 <<==--------   --------
+ bool lizong_16( int 木_0_in)
+ {
+  bool      子_2_bo;
+  double    子_3_do;
+  double    子_4_do;
+  double    子_5_do;
+  double    子_6_do;
+//----- -----
+ bool       临_bo_1;
+ int        临_in_2;
+ double     临_do_3;
+ int        临_in_4;
+ bool       临_bo_5;
+ int        临_in_6;
+ int        临_in_7;
+ double     临_do_8;
+ int        临_in_9;
+ double     临_do_10;
+ int        临_in_11;
+ bool       临_bo_12;
+ bool       临_bo_13;
+ int        临_in_14;
+ bool       临_bo_15;
+ int        临_in_16;
+ double     临_do_17;
+ long       临_lo_18;
+ int        临_in_19;
+
+ if ( !(AllowBuyTrades) )
+ {
+   return(false); 
+ }
+ if ( 总_218_bo_1A74 )
+ {
+   临_bo_1 = false;
+ }
+ else
+ {
+   临_bo_1=false; 
+   for (临_in_2 = 0 ; 临_in_2 < OrdersTotal() ; 临_in_2=临_in_2 + 1)
+   {
+     if ( OrderSelect(临_in_2,0,0) != true || OrderType() != 0 || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 )   continue;
+     临_bo_1 = true;
+      break;
+     
+   }
+ }
+ if ( 临_bo_1 == true )
+ {
+   return(false); 
+ }
+ if ( 总_213_bo_1710 && 总_268_do_25A8<总_269_do_25B0 )
+ {
+   return(false); 
+ }
+ if ( 木_0_in == 1 )
+ {
+   lizong_11(总_71_in_174); 
+   子_2_bo = false ;
+   临_do_3 = 总_262_do_2580;
+   临_bo_5=false; 
+   for (临_in_4 = OrdersTotal() ; 临_in_4 >= 0 ; 临_in_4=临_in_4 - 1)
+   {
+     if ( OrderSelect(临_in_4,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 || !(MathAbs(OrderOpenPrice() - (总_83_do_1B0 * 总_229_do_1E00 + 临_do_3))<总_88_do_1D0 * 总_229_do_1E00) )   continue;
+     临_bo_5 = true;
+      break;
+     
+   }
+   if ( !(临_bo_5) )
+   {
+     临_in_6 = 0;
+     for (临_in_7 = OrdersTotal() ; 临_in_7 >= 0 ; 临_in_7=临_in_7 - 1)
+     {
+       if ( OrderSelect(临_in_7,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
+       临_in_6=临_in_6 + 1;
+       
+     }
+     if ( 临_in_6 == 总_86_in_1C8 )
+     {
+       临_do_8 = 9999.0;
+       for (临_in_9 = OrdersTotal() ; 临_in_9 >= 0 ; 临_in_9=临_in_9 - 1)
+       {
+         if ( OrderSelect(临_in_9,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 || !(OrderOpenPrice()<临_do_8) )   continue;
+         临_do_8 = OrderOpenPrice();
+         
+       }
+       if ( 总_262_do_2580>临_do_8 )
+       {
+         return(false); 
+       }
+     }
+     总_264_do_2590 = 总_262_do_2580 ;
+     子_2_bo = true ;
+     总_188_do_508 = NormalizeDouble(总_262_do_2580,总_190_in_518) ;
+   }
+   if ( 总_188_do_508==0.0 )
+   {
+     return(false); 
+   }
+   if ( 子_2_bo )
+   {
+     总_247_do_2500 = 总_129_do_318 ;
+     子_3_do = NormalizeDouble(总_83_do_1B0 * 总_229_do_1E00 + 总_188_do_508,总_190_in_518) ;
+     临_do_10 = 子_3_do;
+     临_bo_12=false; 
+     for (临_in_11 = OrdersTotal() ; 临_in_11 >= 0 ; 临_in_11=临_in_11 - 1)
+     {
+       if ( OrderSelect(临_in_11,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 || !(OrderOpenPrice()<=临_do_10) )   continue;
+       临_bo_12 = true;
+        break;
+       
+     }
+     if ( 临_bo_12 )
+     {
+       return(false); 
+     }
+     总_310_do_28A0 = 子_3_do ;
+     if ( !(总_67_bo_158) )
+     {
+       if ( CheckMargin && AccountFreeMarginCheck(总_336_st_3130,0,总_223_do_1AC4_si99[总_328_in_3100])<=0.0 )
+       {
+         Print("Free margin not sufficient for setting order with lotsize " + string(总_223_do_1AC4_si99[总_328_in_3100]) + "..."); 
+         return(false); 
+       }
+       子_4_do = NormalizeDouble(总_15_in_78 * 总_229_do_1E00 + 子_3_do,总_190_in_518) ;
+       子_5_do = NormalizeDouble(子_3_do - (总_100_do_230 + 总_64_do_148) * 总_229_do_1E00,总_190_in_518) ;
+       子_6_do = NormalizeDouble(总_101_do_238 * 总_229_do_1E00 + 子_3_do,总_190_in_518) ;
+       if ( 总_223_do_1AC4_si99[总_328_in_3100]<SymbolInfoDouble(总_336_st_3130,34) )
+       {
+         Print("Volume is less than the minimal allowed SYMBOL_VOLUME_MIN=" + string(SymbolInfoDouble(总_336_st_3130,34))); 
+         临_bo_13 = false;
+       }
+       else
+       {
+         if ( 总_223_do_1AC4_si99[总_328_in_3100]>SymbolInfoDouble(总_336_st_3130,35) )
+         {
+           Print("Volume is greater than the maximal allowed SYMBOL_VOLUME_MAX=" + string(SymbolInfoDouble(总_336_st_3130,35))); 
+           临_bo_13 = false;
+         }
+         else
+         {
+           if ( MathAbs(NormalizeDouble(总_223_do_1AC4_si99[总_328_in_3100] / SymbolInfoDouble(总_336_st_3130,36),0) * SymbolInfoDouble(总_336_st_3130,36) - 总_223_do_1AC4_si99[总_328_in_3100])>0.0000001 )
+           {
+             Print("Volume " + string(总_223_do_1AC4_si99[总_328_in_3100]) + " is not a multiple of the minimal step SYMBOL_VOLUME_STEP=" + string(SymbolInfoDouble(总_336_st_3130,36))); 
+             临_bo_13 = false;
+           }
+           else
+           {
+             临_bo_13 = true;
+           }
+         }
+       }
+
+       临_in_14 = AccountInfoInteger(ACCOUNT_LIMIT_ORDERS);
+       if ( 临_in_14 == 0 )
+       {
+         临_bo_15 = true;
+       }
+       else
+       {
+         临_bo_15 = OrdersTotal()<临_in_14;
+       }
+       if ( ( !(临_bo_13) || !(临_bo_15) ) )
+       {
+         return(false); 
+       }
+       if ( MarketInfo(总_336_st_3130,MODE_ASK)<子_4_do - 总_309_do_2898 * 总_229_do_1E00 && MarketInfo(总_336_st_3130,MODE_ASK)<子_4_do - 总_221_do_1A80 * 总_229_do_1E00 )
+       {
+         if ( !(setSL_TP_After_Entry) )
+         {
+           总_230_in_1E08 = OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),子_5_do,子_6_do,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Green) ;
+         }
+         else
+         {
+           总_230_in_1E08 = OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),0.0,0.0,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Green) ;
+         }
+         总_280_bo_25FA = false ;
+         if ( 总_230_in_1E08 <= 0 )
+         {
+           临_in_16 = GetLastError();
+           if ( 临_in_16 == 132 )
+           {
+             ResetLastError();
+             if(1==0) //条件不成立
+             {
+               do
+               {
+                 Sleep(2500); 
+                 if ( !(setSL_TP_After_Entry) )
+                 {
+                   临_in_16 = 总_38_do_C0 * 总_229_do_1E00;
+                   总_230_in_1E08 = OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,临_in_16,子_5_do,子_6_do,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Green) ;
+                 }
+                 else
+                 {
+                   总_230_in_1E08 = OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),0.0,0.0,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Green) ;
+                 }
+                 总_280_bo_25FA = false ;
+               }
+               while(GetLastError() == 132);
+               
+             }
+           }
+           Print("error: \'" + lizong_21(GetLastError()) + "\' when setting entry order"); 
+         }
+         else
+         {
+           临_do_17 = 子_3_do;
+           临_lo_18 = 总_230_in_1E08;
+           for (临_in_19 = 0 ; 临_in_19 < 100 ; 临_in_19=临_in_19 + 1)
+           {
+             if ( !(总_198_do_1070_si100si2[临_in_19][0]==0.0) )   continue;
+             总_198_do_1070_si100si2[临_in_19][0] = 临_lo_18;
+             总_198_do_1070_si100si2[临_in_19][1] = 临_do_17;
+             break;
+             
+           }
+         }
+       }
+     }
+     return(true); 
+   }
+ }
+ return(false); 
+ }
+//lizong_16 <<==--------   --------
+ bool lizong_17( int 木_0_in)
+ {
+  bool      子_2_bo;
+  double    子_3_do;
+  double    子_4_do;
+  double    子_5_do;
+  double    子_6_do;
+//----- -----
+ bool       临_bo_1;
+ int        临_in_2;
+ double     临_do_3;
+ int        临_in_4;
+ bool       临_bo_5;
+ int        临_in_6;
+ int        临_in_7;
+ double     临_do_8;
+ int        临_in_9;
+ double     临_do_10;
+ int        临_in_11;
+ bool       临_bo_12;
+ bool       临_bo_13;
+ int        临_in_14;
+ bool       临_bo_15;
+ int        临_in_16;
+ double     临_do_17;
+ long       临_lo_18;
+ int        临_in_19;
+
+ if ( !(AllowSellTrades) )
+ {
+   return(false); 
+ }
+ if ( 总_218_bo_1A74 )
+ {
+   临_bo_1 = false;
+ }
+ else
+ {
+   临_bo_1=false; 
+   for (临_in_2 = 0 ; 临_in_2 < OrdersTotal() ; 临_in_2=临_in_2 + 1)
+   {
+     if ( OrderSelect(临_in_2,0,0) != true || OrderType() != 1 || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 )   continue;
+     临_bo_1 = true;
+      break;
+     
+   }
+ }
+ if ( 临_bo_1 == true )
+ {
+   return(false); 
+ }
+ if ( 总_213_bo_1710 && 总_268_do_25A8>总_269_do_25B0 )
+ {
+   return(false); 
+ }
+ if ( 木_0_in == 1 )
+ {
+   lizong_12(总_71_in_174); 
+   子_2_bo = false ;
+   临_do_3 = 总_261_do_2578;
+   临_bo_5=false; 
+   for (临_in_4 = OrdersTotal() ; 临_in_4 >= 0 ; 临_in_4=临_in_4 - 1)
+   {
+     if ( OrderSelect(临_in_4,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 || !(MathAbs(OrderOpenPrice() - (临_do_3 - 总_84_do_1B8 * 总_229_do_1E00))<总_88_do_1D0 * 总_229_do_1E00) )   continue;
+     临_bo_5 = true;
+      break;
+     
+   }
+   if ( !(临_bo_5) )
+   {
+     临_in_6 = 0;
+     for (临_in_7 = OrdersTotal() ; 临_in_7 >= 0 ; 临_in_7=临_in_7 - 1)
+     {
+       if ( OrderSelect(临_in_7,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
+       临_in_6=临_in_6 + 1;
+       
+     }
+     if ( 临_in_6 == 总_86_in_1C8 )
+     {
+       临_do_8 = 0.0;
+       for (临_in_9 = OrdersTotal() ; 临_in_9 >= 0 ; 临_in_9=临_in_9 - 1)
+       {
+         if ( OrderSelect(临_in_9,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 || !(OrderOpenPrice()>临_do_8) )   continue;
+         临_do_8 = OrderOpenPrice();
+         
+       }
+       if ( 总_261_do_2578<临_do_8 )
+       {
+         return(false); 
+       }
+     }
+     总_263_do_2588 = 总_261_do_2578 ;
+     子_2_bo = true ;
+     总_189_do_510 = NormalizeDouble(总_261_do_2578,总_190_in_518) ;
+   }
+   if ( 总_189_do_510==0.0 )
+   {
+     return(false); 
+   }
+   if ( 子_2_bo )
+   {
+     总_247_do_2500 = 总_129_do_318 ;
+     子_3_do = NormalizeDouble(总_189_do_510 - 总_84_do_1B8 * 总_229_do_1E00,总_190_in_518) ;
+     临_do_10 = 子_3_do;
+     临_bo_12=false; 
+     for (临_in_11 = OrdersTotal() ; 临_in_11 >= 0 ; 临_in_11=临_in_11 - 1)
+     {
+       if ( OrderSelect(临_in_11,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 || !(OrderOpenPrice()>=临_do_10) )   continue;
+       临_bo_12 = true;
+        break;
+       
+     }
+     if ( 临_bo_12 )
+     {
+       return(false); 
+     }
+     总_311_do_28A8 = 子_3_do ;
+     if ( !(总_67_bo_158) )
+     {
+       if ( CheckMargin && AccountFreeMarginCheck(总_336_st_3130,1,总_223_do_1AC4_si99[总_328_in_3100])<=0.0 )
+       {
+         Print("Free margin not sufficient for setting order with lotsize " + string(总_223_do_1AC4_si99[总_328_in_3100]) + "..."); 
+         return(false); 
+       }
+       子_4_do = NormalizeDouble(子_3_do - 总_15_in_78 * 总_229_do_1E00,总_190_in_518) ;
+       子_5_do = NormalizeDouble((总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 + 子_3_do,总_190_in_518) ;
+       子_6_do = NormalizeDouble(子_3_do - 总_101_do_238 * 总_229_do_1E00,总_190_in_518) ;
+       if ( 总_223_do_1AC4_si99[总_328_in_3100]<SymbolInfoDouble(总_336_st_3130,34) )
+       {
+         Print("Volume is less than the minimal allowed SYMBOL_VOLUME_MIN=" + string(SymbolInfoDouble(总_336_st_3130,34))); 
+         临_bo_13 = false;
+       }
+       else
+       {
+         if ( 总_223_do_1AC4_si99[总_328_in_3100]>SymbolInfoDouble(总_336_st_3130,35) )
+         {
+           Print("Volume is greater than the maximal allowed SYMBOL_VOLUME_MAX=" + string(SymbolInfoDouble(总_336_st_3130,35))); 
+           临_bo_13 = false;
+         }
+         else
+         {
+           if ( MathAbs(NormalizeDouble(总_223_do_1AC4_si99[总_328_in_3100] / SymbolInfoDouble(总_336_st_3130,36),0) * SymbolInfoDouble(总_336_st_3130,36) - 总_223_do_1AC4_si99[总_328_in_3100])>0.0000001 )
+           {
+             Print("Volume " + string(总_223_do_1AC4_si99[总_328_in_3100]) + " is not a multiple of the minimal step SYMBOL_VOLUME_STEP=" + string(SymbolInfoDouble(总_336_st_3130,36))); 
+             临_bo_13 = false;
+           }
+           else
+           {
+             临_bo_13 = true;
+           }
+         }
+       }
+
+       临_in_14 = AccountInfoInteger(ACCOUNT_LIMIT_ORDERS);
+       if ( 临_in_14 == 0 )
+       {
+         临_bo_15 = true;
+       }
+       else
+       {
+         临_bo_15 = OrdersTotal()<临_in_14;
+       }
+       if ( ( !(临_bo_13) || !(临_bo_15) ) )
+       {
+         return(false); 
+       }
+       if ( MarketInfo(总_336_st_3130,MODE_BID)>总_309_do_2898 * 总_229_do_1E00 + 子_4_do && MarketInfo(总_336_st_3130,MODE_BID)>总_221_do_1A80 * 总_229_do_1E00 + 子_4_do )
+       {
+         if ( !(setSL_TP_After_Entry) )
+         {
+           总_230_in_1E08 = OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),子_5_do,子_6_do,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Red) ;
+         }
+         else
+         {
+           总_230_in_1E08 = OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),0.0,0.0,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Red) ;
+         }
+         总_281_bo_25FB = false ;
+         if ( 总_230_in_1E08 <= 0 )
+         {
+           临_in_16 = GetLastError();
+           if ( 临_in_16 == 132 )
+           {
+             ResetLastError();
+             if(1==0) //条件不成立
+             {
+               do
+               {
+                 Sleep(2500); 
+                 if ( !(setSL_TP_After_Entry) )
+                 {
+                   临_in_16 = 总_38_do_C0 * 总_229_do_1E00;
+                   总_230_in_1E08 = OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,临_in_16,子_5_do,子_6_do,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Red) ;
+                 }
+                 else
+                 {
+                   总_230_in_1E08 = OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),0.0,0.0,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Red) ;
+                 }
+                 总_281_bo_25FB = false ;
+               }
+               while(GetLastError() == 132);
+               
+             }
+           }
+           Print("error: \'" + lizong_21(GetLastError()) + "\' when setting entry order"); 
+         }
+         else
+         {
+           临_do_17 = 子_3_do;
+           临_lo_18 = 总_230_in_1E08;
+           for (临_in_19 = 0 ; 临_in_19 < 100 ; 临_in_19=临_in_19 + 1)
+           {
+             if ( !(总_198_do_1070_si100si2[临_in_19][0]==0.0) )   continue;
+             总_198_do_1070_si100si2[临_in_19][0] = 临_lo_18;
+             总_198_do_1070_si100si2[临_in_19][1] = 临_do_17;
+             break;
+             
+           }
+         }
+       }
+     }
+   }
+ }
+ return(false); 
+ }
+//lizong_17 <<==--------   --------
+ bool lizong_18()
+ {
+  bool      子_2_bo = false;
+  bool      子_3_bo = false;
+  double    子_4_do;
+  double    子_5_do;
+  int       子_6_in;
+  double    子_7_do;
+  double    子_8_do;
+  long      子_9_lo;
+  double    子_10_do;
+  string    子_11_st;
+  double    子_12_do;
+  datetime  子_13_da;
+  int       子_14_in;
+  int       子_15_in;
+  string    子_16_st;
+  double    子_17_do;
+  double    子_18_do;
+  bool      子_19_bo;
+  bool      子_20_bo;
+  double    子_21_do;
+  bool      子_22_bo;
+  double    子_23_do;
+  double    子_24_do;
+  double    子_25_do;
+  double    子_26_do;
+  double    子_27_do;
+  int       子_28_in;
+  double    子_29_do;
+//----- -----
+ int        临_in_1;
+ long       临_lo_2;
+ int        临_in_3;
+ double     临_do_4;
+ double     临_do_5;
+ long       临_lo_6;
+ int        临_in_7;
+ long       临_lo_8;
+ int        临_in_9;
+ int        临_in_10;
+ string     临_st_11;
+ double     临_do_12;
+ int        临_in_13;
+ long       临_lo_14;
+ double     临_do_15;
+ int        临_in_16;
+ long       临_lo_17;
+ long       临_lo_18;
+ int        临_in_19;
+ int        临_in_20;
+ int        临_in_21;
+ string     临_st_22;
+ long       临_lo_23;
+ double     临_do_24;
+ double     临_do_25;
+ int        临_in_26;
+ double     临_do_27;
+ bool       临_bo_28;
+ int        临_in_29;
+ int        临_in_30;
+ double     临_do_31;
+ long       临_lo_32;
+ int        临_in_33;
+ long       临_lo_34;
+ double     临_do_35;
+ double     临_do_36;
+ int        临_in_37;
+ double     临_do_38;
+ bool       临_bo_39;
+ int        临_in_40;
+ int        临_in_41;
+ double     临_do_42;
+ long       临_lo_43;
+ int        临_in_44;
+
+ 子_4_do = 0.0 ;
+ 子_5_do = 0.0 ;
+ for (子_6_in = 0 ; 子_6_in < OrdersTotal() ; 子_6_in ++)
+ {
+   if ( OrderSelect(子_6_in,0,0) == true )
+   {
+     子_2_bo = false ;
+     子_7_do = NormalizeDouble(OrderStopLoss(),总_190_in_518) ;
+     子_8_do = NormalizeDouble(OrderTakeProfit(),总_190_in_518) ;
+     子_9_lo = OrderTicket() ;
+     子_10_do = NormalizeDouble(OrderOpenPrice(),总_190_in_518) ;
+     子_11_st = OrderComment() ;
+     子_12_do = OrderLots() ;
+     子_13_da = OrderOpenTime() ;
+     子_14_in = OrderType() ;
+     子_15_in = OrderMagicNumber() ;
+     子_16_st = OrderSymbol() ;
+     if ( ( 子_14_in == 4 || 子_14_in == 2 ) && 总_69_in_160 == 2 && ( 总_95_in_204 == 0 || (总_95_in_204 == 1 && 子_16_st == 总_336_st_3130) ) && ( 子_15_in == 总_96_in_208 || 总_96_in_208 == 0 ) && ( 子_11_st == 总_97_st_210 || 总_97_st_210 == "" ) )
+     {
+       if ( ( 子_7_do==0.0 || 子_7_do==0.0 ) )
+       {
+         子_7_do = NormalizeDouble(子_10_do - 总_100_do_230 * 总_229_do_1E00,总_190_in_518) ;
+         OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
+       }
+       if ( ( 子_8_do==0.0 || 子_8_do==0.0 ) )
+       {
+         子_8_do = NormalizeDouble(总_101_do_238 * 总_229_do_1E00 + 子_10_do,总_190_in_518) ;
+         OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
+       }
+     }
+     if ( 子_14_in == 0 && ( ( 子_15_in == 总_93_in_1F0 && 总_69_in_160 == 1 && 子_16_st == 总_336_st_3130 ) || (总_69_in_160 == 2 && ( 总_95_in_204 == 0 || (总_95_in_204 == 1 && 子_16_st == 总_336_st_3130) ) && ( 子_15_in == 总_96_in_208 || 总_96_in_208 == 0 ) && (子_11_st == 总_97_st_210 || 总_97_st_210 == "")) ) )
+     {
+       if ( ( 子_7_do==0.0 || 子_7_do==0.0 ) )
+       {
+         子_7_do = NormalizeDouble(子_10_do - 总_100_do_230 * 总_229_do_1E00,总_190_in_518) ;
+         OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
+       }
+       if ( ( 子_8_do==0.0 || 子_8_do==0.0 ) )
+       {
+         子_8_do = NormalizeDouble(总_101_do_238 * 总_229_do_1E00 + 子_10_do,总_190_in_518) ;
+         OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
+       }
+       if ( 总_53_bo_11C && iTime(总_336_st_3130,总_52_in_118,总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,总_52_in_118,0) >  子_13_da && iClose(总_336_st_3130,总_52_in_118,1)<iOpen(总_336_st_3130,总_52_in_118,1) && iClose(总_336_st_3130,总_52_in_118,1)<子_10_do )
+       {
+         OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),0,Red); 
+         Print("closing candle confirmation"); 
+       }
+       if ( 总_55_bo_124 && iTime(总_336_st_3130,总_54_in_120,总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,总_54_in_120,0) >  子_13_da && iClose(总_336_st_3130,总_54_in_120,1)<iOpen(总_336_st_3130,总_54_in_120,1) && iClose(总_336_st_3130,总_54_in_120,1)<子_10_do )
+       {
+         OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),0,Red); 
+         Print("closing candle confirmation"); 
+       }
+       if ( 总_57_bo_12C && iTime(总_336_st_3130,总_56_in_128,总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,总_56_in_128,0) >  子_13_da && iClose(总_336_st_3130,总_56_in_128,1)<iOpen(总_336_st_3130,总_56_in_128,1) && iClose(总_336_st_3130,总_56_in_128,1)<子_10_do )
+       {
+         OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),0,Red); 
+         Print("closing candle confirmation"); 
+       }
+       if ( 总_59_bo_134 && iTime(总_336_st_3130,总_58_in_130,总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,总_58_in_130,0) >  子_13_da && iClose(总_336_st_3130,总_58_in_130,1)<iOpen(总_336_st_3130,总_58_in_130,1) && iClose(总_336_st_3130,总_58_in_130,1)<子_10_do )
+       {
+         OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),0,Red); 
+         Print("closing candle confirmation"); 
+       }
+       if ( 总_61_bo_13C && iTime(总_336_st_3130,总_60_in_138,总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,总_60_in_138,0) >  子_13_da && iClose(总_336_st_3130,总_60_in_138,1)<iOpen(总_336_st_3130,总_60_in_138,1) && iClose(总_336_st_3130,总_60_in_138,1)<子_10_do )
+       {
+         OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),0,Red); 
+         Print("closing candle confirmation"); 
+       }
+       总_247_do_2500 = 总_129_do_318 ;
+       if ( 总_133_in_338 >  0 && TimeCurrent() >  子_13_da + 总_133_in_338 * 60 )
+       {
+         总_247_do_2500 = 总_134_do_340 ;
+       }
+       临_in_1 = 总_190_in_518;
+       临_lo_2 = 子_9_lo;
+       for (临_in_3 = 0 ; 临_in_3 < 100 ; 临_in_3=临_in_3 + 1)
+       {
+         if ( !(总_198_do_1070_si100si2[临_in_3][0]==临_lo_2) )   continue;
+         临_do_4 = 总_198_do_1070_si100si2[临_in_3][1];
+         break;
+         
+       }
+       临_do_4 = 0.0;
+       子_17_do = NormalizeDouble(临_do_4,临_in_1) ;
+       if ( 子_17_do==0.0 )
+       {
+         临_do_5 = 子_10_do;
+         临_lo_6 = 子_9_lo;
+         for (临_in_7 = 0 ; 临_in_7 < 100 ; 临_in_7=临_in_7 + 1)
+         {
+           if ( !(总_198_do_1070_si100si2[临_in_7][0]==0.0) )   continue;
+           总_198_do_1070_si100si2[临_in_7][0] = 临_lo_6;
+           总_198_do_1070_si100si2[临_in_7][1] = 临_do_5;
+           break;
+           
+         }
+         子_17_do = 子_10_do ;
+       }
+       else
+       {
+         子_17_do = 子_17_do - 总_85_do_1C0 * 总_229_do_1E00 ;
+       }
+       子_18_do = 子_10_do - 子_17_do ;
+       子_19_bo = false ;
+       if ( 子_17_do>0.0 - 总_85_do_1C0 * 总_229_do_1E00 && 子_18_do>总_38_do_C0 * 总_229_do_1E00 )
+       {
+         子_19_bo = true ;
+         if ( 总_39_in_C8 == 2 )
+         {
+           总_247_do_2500 = -1000.0 ;
+           Print("SlippageMode 2 active"); 
+         }
+       }
+       if ( 总_43_bo_E8 )
+       {
+         子_5_do = 子_17_do ;
+       }
+       else
+       {
+         子_5_do = 子_10_do ;
+       }
+       if ( 子_7_do<NormalizeDouble(子_10_do - (总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 - 总_1_do_0,总_190_in_518) )
+       {
+         子_7_do = NormalizeDouble(子_10_do - (总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 - 总_1_do_0,总_190_in_518) ;
+         OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF); 
+       }
+       if ( MarketInfo(总_336_st_3130,MODE_BID)<子_10_do - (总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 - 总_1_do_0 )
+       {
+         RefreshRates(); 
+         OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),总_1_do_0,Red); 
+         return(true); 
+       }
+       子_20_bo = false ;
+       if ( 总_159_bo_464 )
+       {
+         临_lo_8 = 子_9_lo;
+         临_in_9 = 0;
+         for (临_in_10 = OrdersTotal() ; 临_in_10 >= 0 ; 临_in_10=临_in_10 - 1)
+         {
+           if ( OrderSelect(临_in_10,0,0) != true || OrderMagicNumber() != 总_168_in_4A8 || OrderSymbol() != 总_336_st_3130 )   continue;
+           临_st_11 = OrderComment();
+           if ( 临_st_11 != IntegerToString(临_lo_8,0,32) )   continue;
+           临_in_9=临_in_9 + 1;
+           
+         }
+         子_21_do = 临_in_9 ;
+         子_22_bo = false ;
+         if ( !(总_194_bo_530) )
+         {
+           总_194_bo_530 = true ;
+           总_192_in_528 = 0 ;
+         }
+         if ( 子_21_do==0.0 )
+         {
+           总_192_in_528 = 0 ;
+         }
+         if ( MathFloor(子_21_do / 2.0)==子_21_do / 2.0 )
+         {
+           总_192_in_528 = 0 ;
+         }
+         else
+         {
+           总_192_in_528 = 1 ;
+         }
+         if ( 总_194_bo_530 )
+         {
+           if ( 子_21_do>0.0 )
+           {
+             临_do_12 = AccountEquity();
+             if ( 临_do_12>AccountBalance() + 总_163_do_480 )
+             {
+               for (临_in_13 = OrdersTotal() ; 临_in_13 >= 0 ; 临_in_13=临_in_13 - 1)
+               {
+                 if ( OrderSelect(临_in_13,0,0) != true )   continue;
+                 
+                 if ( ( OrderMagicNumber() != 总_93_in_1F0 && OrderMagicNumber() != 总_169_in_4AC && OrderMagicNumber() != 总_168_in_4A8 ) )   continue;
+                 
+                 if ( OrderType() == 0 )
+                 {
+                   OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,Red); 
+                 }
+                 if ( OrderType() != 1 )   continue;
+                 OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),总_38_do_C0,Red); 
+                 
+               }
+             }
+           }
+           if ( 子_21_do>0.0 )
+           {
+             临_lo_14 = 子_9_lo;
+             临_do_15 = 0.0;
+             for (临_in_16 = OrdersTotal() ; 临_in_16 >= 0 ; 临_in_16=临_in_16 - 1)
+             {
+               if ( OrderSelect(临_in_16,0,0) != true )   continue;
+               临_lo_17 = OrderTicket();
+               if ( 临_lo_17 != 临_lo_14 )
+               {
+                 临_st_11 = OrderComment();
+               if ( 临_st_11 != IntegerToString(临_lo_14,0,32) )   continue;
+               }
+               临_do_15 = 临_do_15 + OrderProfit();
+               
+             }
+             if ( 临_do_15>总_163_do_480 )
+             {
+               Print("Closing zone"); 
+               临_lo_18 = 子_9_lo;
+               for (临_in_19 = OrdersTotal() ; 临_in_19 >= 0 ; 临_in_19=临_in_19 - 1)
+               {
+                 if ( OrderSelect(临_in_19,0,0) != true )   continue;
+                 
+                 if ( OrderMagicNumber() == 总_93_in_1F0 && OrderTicket() == 临_lo_18 )
+                 {
+                   OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),3,Red); 
+                 }
+                 if ( OrderMagicNumber() != 总_168_in_4A8 )   continue;
+                 临_st_11 = OrderComment();
+                 if ( 临_st_11 != IntegerToString(临_lo_18,0,32) )   continue;
+                 
+                 if ( OrderType() == 0 )
+                 {
+                   OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,Red); 
+                 }
+                 if ( OrderType() != 1 )   continue;
+                 OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),总_38_do_C0,Red); 
+                 
+               }
+               总_194_bo_530 = false ;
+               子_20_bo = true ;
+             }
+           }
+           else
+           {
+             子_23_do = 子_12_do * 总_165_do_490 ;
+             if ( 总_164_in_488 == 2 )
+             {
+               子_23_do = (子_21_do + 1.0) * 子_12_do + 子_12_do ;
+             }
+             if ( 总_164_in_488 == 3 )
+             {
+               子_23_do = 子_12_do * (MathPow(总_165_do_490,子_21_do + 1.0)) ;
+             }
+             if ( 总_192_in_528 == 0 )
+             {
+               子_24_do = 子_21_do * 总_161_do_470 * 总_229_do_1E00 + (子_17_do - 总_160_do_468 * 总_229_do_1E00) ;
+               if ( 子_24_do>子_17_do - 总_162_do_478 * 总_229_do_1E00 )
+               {
+                 子_24_do = 子_17_do - 总_162_do_478 * 总_229_do_1E00 ;
+               }
+               if ( MarketInfo(总_336_st_3130,MODE_BID)<子_24_do )
+               {
+                 if ( 子_21_do>=总_166_in_498 )
+                 {
+                   for (临_in_20 = OrdersTotal() ; 临_in_20 >= 0 ; 临_in_20=临_in_20 - 1)
+                   {
+                     if ( OrderSelect(临_in_20,0,0) != true )   continue;
+                     
+                     if ( OrderMagicNumber() == 总_93_in_1F0 && OrderTicket() == 子_9_lo )
+                     {
+                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),3,Red); 
+                     }
+                     if ( OrderMagicNumber() != 总_168_in_4A8 )   continue;
+                     临_st_11 = OrderComment();
+                     if ( 临_st_11 != IntegerToString(子_9_lo,0,32) )   continue;
+                     
+                     if ( OrderType() == 0 )
+                     {
+                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,Red); 
+                     }
+                     if ( OrderType() != 1 )   continue;
+                     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),总_38_do_C0,Red); 
+                     
+                   }
+                 }
+                 else
+                 {
+                   OrderSend(总_336_st_3130,1,子_23_do,MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,0.0,0.0,IntegerToString(子_9_lo,0,32),总_168_in_4A8,0,Green); 
+                   总_192_in_528 = 1 ;
+                   子_22_bo = true ;
+                 }
+               }
+             }
+             else
+             {
+               子_25_do = 子_17_do ;
+               if ( MarketInfo(总_336_st_3130,MODE_ASK)>子_17_do )
+               {
+                 if ( 子_21_do>=总_166_in_498 )
+                 {
+                   for (临_in_21 = OrdersTotal() ; 临_in_21 >= 0 ; 临_in_21=临_in_21 - 1)
+                   {
+                     if ( OrderSelect(临_in_21,0,0) != true )   continue;
+                     
+                     if ( OrderMagicNumber() == 总_93_in_1F0 && OrderTicket() == 子_9_lo )
+                     {
+                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),3,Red); 
+                     }
+                     if ( OrderMagicNumber() != 总_168_in_4A8 )   continue;
+                     临_st_22 = OrderComment();
+                     if ( 临_st_22 != IntegerToString(子_9_lo,0,32) )   continue;
+                     
+                     if ( OrderType() == 0 )
+                     {
+                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,Red); 
+                     }
+                     if ( OrderType() != 1 )   continue;
+                     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),总_38_do_C0,Red); 
+                     
+                   }
+                 }
+                 else
+                 {
+                   OrderSend(总_336_st_3130,0,子_23_do,MarketInfo(总_336_st_3130,MODE_ASK),总_38_do_C0,0.0,0.0,IntegerToString(子_9_lo,0,32),总_168_in_4A8,0,Green); 
+                   总_192_in_528 = 0 ;
+                   子_22_bo = true ;
+                 }
+               }
+             }
+           }
+         }
+         if ( ( 子_21_do>0.0 || 子_22_bo ) )
+         {
+           子_20_bo = true ;
+         }
+       }
+       if ( !(子_20_bo) )
+       {
+         if ( ( 总_63_in_140 == 1 || (总_63_in_140 != 3 && 总_63_in_140 != 2) ) )
+         {
+           临_lo_23 = 子_9_lo;
+           临_do_24 = 总_100_do_230;
+           临_do_25 = 子_10_do;
+           临_in_26 = 1;
+           临_do_27 = 0.0;
+           临_bo_28 = false;
+           for (临_in_29 = 0 ; 临_in_29 < 总_199_in_16B0 ; 临_in_29=临_in_29 + 1)
+           {
+             if ( 总_196_do_568_si20si2[临_in_29][0]==临_lo_23 )
+             {
+               临_do_27 = 总_196_do_568_si20si2[临_in_29][1];
+               临_bo_28 = true;
+               break;
+             }
+           }
+           if ( !(临_bo_28) )
+           {
+             if ( 临_in_26 == 1 )
+             {
+               临_do_27 = NormalizeDouble(临_do_25 - 临_do_24 * 总_229_do_1E00,总_190_in_518);
+             }
+             if ( 临_in_26 == 2 )
+             {
+               临_do_27 = NormalizeDouble(临_do_24 * 总_229_do_1E00 + 临_do_25,总_190_in_518);
+             }
+             for (临_in_30 = 0 ; 临_in_30 < 总_199_in_16B0 ; 临_in_30=临_in_30 + 1)
+             {
+               if ( 总_196_do_568_si20si2[临_in_30][0]==0.0 )
+               {
+                 总_196_do_568_si20si2[临_in_30][0] = 临_lo_23;
+                 总_196_do_568_si20si2[临_in_30][1] = 临_do_27;
+                 break;
+               }
+             }
+           }
+           总_191_do_520 = 临_do_27 ;
+           子_4_do = 总_191_do_520 ;
+           if ( MarketInfo(总_336_st_3130,MODE_BID)<子_4_do )
+           {
+             Print("Closing with virtual SL"); 
+             RefreshRates(); 
+             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),总_1_do_0,0xFFFFFFFF); 
+             return(true); 
+           }
+           if ( 总_125_do_2F8>0.0 && TimeCurrent() >= 子_13_da + 总_304_in_287C && MarketInfo(总_336_st_3130,MODE_BID)>NormalizeDouble(总_126_do_300 * 总_229_do_1E00 + (子_7_do + 总_337_do_3140),总_190_in_518) && MarketInfo(总_336_st_3130,MODE_BID)<子_8_do - 总_309_do_2898 )
+           {
+             子_7_do = NormalizeDouble(MarketInfo(总_336_st_3130,MODE_BID) - 总_126_do_300 * 总_229_do_1E00,总_190_in_518) ;
+             if ( 子_7_do<MarketInfo(总_336_st_3130,MODE_BID) - 总_221_do_1A80 )
+             {
+               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               if ( 总_230_in_1E08 <= 0 )
+               {
+                 Print("TrailStop error: \'" + lizong_21(GetLastError()) + "\' when setting trailing Exit_TrailSL_after_X_Minutes_size loss.  Trying again!"); 
+               }
+               子_2_bo = true ;
+             }
+           }
+           if ( 总_103_do_250>0.0 && MarketInfo(总_336_st_3130,MODE_BID)>NormalizeDouble((总_103_do_250 + 总_106_do_268) * 总_229_do_1E00 + (子_7_do + 总_337_do_3140),总_190_in_518) && MarketInfo(总_336_st_3130,MODE_BID)>NormalizeDouble(总_104_do_258 * 总_229_do_1E00 + 子_5_do,总_190_in_518) && MarketInfo(总_336_st_3130,MODE_BID)<子_8_do - 总_309_do_2898 && 子_7_do<NormalizeDouble(总_105_do_260 * 总_229_do_1E00 + 子_10_do,总_190_in_518) )
+           {
+             子_7_do = NormalizeDouble(MarketInfo(总_336_st_3130,MODE_BID) - 总_103_do_250 * 总_229_do_1E00,总_190_in_518) ;
+             if ( 子_7_do<MarketInfo(总_336_st_3130,MODE_BID) - 总_221_do_1A80 )
+             {
+               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               if ( 总_230_in_1E08 <= 0 )
+               {
+                 Print("TrailStop error: \'" + lizong_21(GetLastError()) + "\' when setting trailing Exit_stop loss.  Trying again!"); 
+               }
+               else
+               {
+                 子_26_do = NormalizeDouble(总_107_do_270 / 100.0 * 总_223_do_1AC4_si99[总_328_in_3100],2) ;
+                 if ( 子_26_do<子_12_do && 子_26_do>=MarketInfo(总_336_st_3130,MODE_LOTSTEP) )
+                 {
+                   OrderClose(子_9_lo,子_26_do,MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,Red); 
+                   return(true); 
+                 }
+               }
+               子_2_bo = true ;
+             }
+           }
+           if ( 总_108_do_278>0.0 && MarketInfo(总_336_st_3130,MODE_ASK)<NormalizeDouble(子_8_do - 总_337_do_3140 - 总_108_do_278 * 总_229_do_1E00,总_190_in_518) && MarketInfo(总_336_st_3130,MODE_ASK)<NormalizeDouble(子_5_do - 总_109_do_280 * 总_229_do_1E00,总_190_in_518) && MarketInfo(总_336_st_3130,MODE_BID)<子_8_do - 总_309_do_2898 )
+           {
+             子_8_do = NormalizeDouble(MarketInfo(总_336_st_3130,MODE_BID) + 总_108_do_278 * 总_229_do_1E00,总_190_in_518) ;
+             if ( 子_8_do>MarketInfo(总_336_st_3130,MODE_ASK) + 总_221_do_1A80 )
+             {
+               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               if ( 总_230_in_1E08 <= 0 )
+               {
+                 Print("TrailStop error: \'" + lizong_21(GetLastError()) + "\' when setting trailing Exit_TP.  Trying again!"); 
+               }
+               else
+               {
+                 子_27_do = NormalizeDouble(总_107_do_270 / 100.0 * 总_223_do_1AC4_si99[总_328_in_3100],2) ;
+                 if ( 子_27_do<子_12_do && 子_27_do>=SymbolInfoDouble(总_336_st_3130,34) )
+                 {
+                   OrderClose(子_9_lo,子_27_do,MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,Red); 
+                   return(true); 
+                 }
+               }
+               子_2_bo = true ;
+             }
+           }
+           if ( 子_19_bo && 总_39_in_C8 == 1 && 总_41_do_D8>0.0 && MarketInfo(总_336_st_3130,MODE_BID)>NormalizeDouble(总_41_do_D8 * 总_229_do_1E00 + (子_7_do + 总_337_do_3140),总_190_in_518) && MarketInfo(总_336_st_3130,MODE_BID)>NormalizeDouble(总_40_do_D0 * 总_229_do_1E00 + 子_17_do,总_190_in_518) && MarketInfo(总_336_st_3130,MODE_BID)<子_8_do - 总_309_do_2898 && 子_7_do<NormalizeDouble(总_42_do_E0 * 总_229_do_1E00 + 子_10_do,总_190_in_518) )
+           {
+             子_7_do = NormalizeDouble(MarketInfo(总_336_st_3130,MODE_BID) - 总_41_do_D8 * 总_229_do_1E00,总_190_in_518) ;
+             if ( 子_7_do<MarketInfo(总_336_st_3130,MODE_BID) - 总_221_do_1A80 )
+             {
+               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               if ( 总_230_in_1E08 <= 0 )
+               {
+                 Print("TrailStop error: \'" + lizong_21(GetLastError()) + "\' when setting Slip TL.  Trying again!"); 
+               }
+               else
+               {
+                 Print("Slippage control active"); 
+               }
+               子_2_bo = true ;
+             }
+           }
+           if ( 总_119_in_2D0 >  0 && 总_120_in_2D4 >= 0 && UseHL_TrailingSL && 总_242_do_21C4_si99[总_328_in_3100]>NormalizeDouble(子_7_do + 总_221_do_1A80 + 总_337_do_3140,总_190_in_518) && 总_242_do_21C4_si99[总_328_in_3100]<MarketInfo(总_336_st_3130,MODE_BID) - 总_121_in_2D8 * 总_229_do_1E00 && ( 总_242_do_21C4_si99[总_328_in_3100]<子_10_do || !(总_116_bo_2C4) ) && 总_242_do_21C4_si99[总_328_in_3100]<NormalizeDouble(MarketInfo(总_336_st_3130,MODE_BID) - 总_122_in_2DC * 总_229_do_1E00 - 总_221_do_1A80 - 总_337_do_3140,总_190_in_518) && MarketInfo(总_336_st_3130,MODE_BID)<子_8_do - 总_309_do_2898 )
+           {
+             子_7_do = NormalizeDouble(总_242_do_21C4_si99[总_328_in_3100],总_190_in_518) ;
+             if ( 子_7_do<MarketInfo(总_336_st_3130,MODE_BID) - 总_221_do_1A80 )
+             {
+               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               if ( 总_230_in_1E08 <= 0 )
+               {
+                 Print("error: \'" + lizong_21(GetLastError()) + "\' when modifying stoploss"); 
+               }
+               子_2_bo = true ;
+             }
+           }
+           if ( 总_113_do_2A8>0.0 && MarketInfo(总_336_st_3130,MODE_BID)>NormalizeDouble(总_113_do_2A8 * 总_229_do_1E00 + 子_10_do,总_190_in_518) && NormalizeDouble(总_114_do_2B0 * 总_229_do_1E00 + 子_10_do,总_190_in_518)>子_7_do + 总_337_do_3140 && MarketInfo(总_336_st_3130,MODE_BID)>NormalizeDouble(总_114_do_2B0 * 总_229_do_1E00 + 子_10_do + 总_221_do_1A80,总_190_in_518) && MarketInfo(总_336_st_3130,MODE_BID)<子_8_do - 总_309_do_2898 )
+           {
+             子_7_do = NormalizeDouble(总_114_do_2B0 * 总_229_do_1E00 + 子_10_do,总_190_in_518) ;
+             if ( 子_7_do<MarketInfo(总_336_st_3130,MODE_BID) - 总_221_do_1A80 )
+             {
+               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               if ( 总_230_in_1E08 <= 0 )
+               {
+                 Print("error when setting breakeven: \'" + lizong_21(GetLastError()) + "\' ..\'Exit_BE_start\' to close to \'Exit_BE_extra_pips\' ..trying again!"); 
+               }
+               子_2_bo = true ;
+             }
+           }
+           if ( !(子_2_bo) && ( 总_128_in_314 == 1 || (总_128_in_314 == 2 && 总_131_do_328 * 总_229_do_1E00 + 子_7_do<=总_132_do_330 * 总_229_do_1E00 + (子_5_do + 总_1_do_0)) ) )
+           {
+             总_250_in_2518 ++;
+             if ( MarketInfo(总_336_st_3130,MODE_BID)>总_131_do_328 * 总_229_do_1E00 + 子_7_do + 总_221_do_1A80 && MarketInfo(总_336_st_3130,MODE_BID)<子_8_do - 总_309_do_2898 && ( 总_129_do_318==0.0 || MarketInfo(总_336_st_3130,MODE_BID)>总_247_do_2500 * 总_229_do_1E00 + 子_5_do ) && 总_250_in_2518 >= 总_130_in_320 && NormalizeDouble(总_131_do_328 * 总_229_do_1E00 + 子_7_do,总_190_in_518)>子_7_do )
+             {
+               总_250_in_2518 = 0 ;
+               子_7_do = NormalizeDouble(总_131_do_328 * 总_229_do_1E00 + 子_7_do,总_190_in_518) ;
+               OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF); 
+               子_2_bo = true ;
+             }
+           }
+           总_191_do_520 = 子_7_do ;
+           if ( MarketInfo(总_336_st_3130,MODE_BID)<子_7_do )
+           {
+             Print("Closing with virtual SL"); 
+             RefreshRates(); 
+             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),总_1_do_0,0xFFFFFFFF); 
+             return(true); 
+           }
+           if ( NormalizeDouble(子_4_do,总_190_in_518)!=NormalizeDouble(总_191_do_520,总_190_in_518) )
+           {
+             临_do_31 = NormalizeDouble(总_191_do_520,总_190_in_518);
+             临_lo_32 = 子_9_lo;
+             for (临_in_33 = 0 ; 临_in_33 < 总_199_in_16B0 ; 临_in_33=临_in_33 + 1)
+             {
+               if ( 总_196_do_568_si20si2[临_in_33][0]==临_lo_32 )
+               {
+                 总_196_do_568_si20si2[临_in_33][1] = 临_do_31;
+                 break;
+               }
+             }
+           }
+           if ( 子_2_bo && 总_135_bo_348 )
+           {
+             return(true); 
+           }
+         }
+         if ( ( 总_63_in_140 == 2 || 总_63_in_140 == 3 ) )
+         {
+           临_lo_34 = 子_9_lo;
+           临_do_35 = 总_100_do_230;
+           临_do_36 = 子_10_do;
+           临_in_37 = 1;
+           临_do_38 = 0.0;
+           临_bo_39 = false;
+           for (临_in_40 = 0 ; 临_in_40 < 总_199_in_16B0 ; 临_in_40=临_in_40 + 1)
+           {
+             if ( 总_196_do_568_si20si2[临_in_40][0]==临_lo_34 )
+             {
+               临_do_38 = 总_196_do_568_si20si2[临_in_40][1];
+               临_bo_39 = true;
+               break;
+             }
+           }
+           if ( !(临_bo_39) )
+           {
+             if ( 临_in_37 == 1 )
+             {
+               临_do_38 = NormalizeDouble(临_do_36 - 临_do_35 * 总_229_do_1E00,总_190_in_518);
+             }
+             if ( 临_in_37 == 2 )
+             {
+               临_do_38 = NormalizeDouble(临_do_35 * 总_229_do_1E00 + 临_do_36,总_190_in_518);
+             }
+             for (临_in_41 = 0 ; 临_in_41 < 总_199_in_16B0 ; 临_in_41=临_in_41 + 1)
+             {
+               if ( 总_196_do_568_si20si2[临_in_41][0]==0.0 )
+               {
+                 总_196_do_568_si20si2[临_in_41][0] = 临_lo_34;
+                 总_196_do_568_si20si2[临_in_41][1] = 临_do_38;
+                 break;
+               }
+             }
+           }
+           总_191_do_520 = 临_do_38 ;
+           子_4_do = 总_191_do_520 ;
+           if ( MarketInfo(总_336_st_3130,MODE_BID)<=子_4_do )
+           {
+             RefreshRates(); 
+             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),总_1_do_0,0xFFFFFFFF); 
+             return(true); 
+           }
+           子_28_in = TimeCurrent() - 总_319_da_28E0 ;
+           if ( 子_28_in >= 总_65_in_150 )
+           {
+             if ( NormalizeDouble(总_191_do_520,总_190_in_518)>子_7_do + 总_337_do_3140 )
+             {
+               OrderModify(子_9_lo,子_10_do,NormalizeDouble(总_191_do_520,总_190_in_518),子_8_do,0,0xFFFFFFFF); 
+             }
+             总_319_da_28E0 = TimeCurrent() ;
+           }
+           if ( 总_125_do_2F8>0.0 && TimeCurrent() >= 子_13_da + 总_304_in_287C && MarketInfo(总_336_st_3130,MODE_BID)>总_126_do_300 * 总_229_do_1E00 + (总_191_do_520 + 总_337_do_3140) && MarketInfo(总_336_st_3130,MODE_BID)<子_8_do - 总_309_do_2898 )
+           {
+             子_2_bo = true ;
+             总_191_do_520 = MarketInfo(总_336_st_3130,MODE_BID) - 总_126_do_300 * 总_229_do_1E00 ;
+           }
+           if ( 总_103_do_250>0.0 && MarketInfo(总_336_st_3130,MODE_BID)>(总_103_do_250 + 总_106_do_268) * 总_229_do_1E00 + (总_191_do_520 + 总_337_do_3140) && MarketInfo(总_336_st_3130,MODE_BID)>总_104_do_258 * 总_229_do_1E00 + 子_5_do && 总_191_do_520<总_105_do_260 * 总_229_do_1E00 + 子_10_do )
+           {
+             子_2_bo = true ;
+             总_191_do_520 = MarketInfo(总_336_st_3130,MODE_BID) - 总_103_do_250 * 总_229_do_1E00 ;
+             子_29_do = NormalizeDouble(总_107_do_270 / 100.0 * 总_223_do_1AC4_si99[总_328_in_3100],2) ;
+             if ( 子_29_do<子_12_do && 子_29_do>=MarketInfo(总_336_st_3130,MODE_LOTSTEP) )
+             {
+               OrderClose(子_9_lo,子_29_do,MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,Red); 
+               return(true); 
+             }
+           }
+           if ( 子_19_bo && 总_39_in_C8 == 1 && 总_41_do_D8>0.0 && MarketInfo(总_336_st_3130,MODE_BID)>总_41_do_D8 * 总_229_do_1E00 + (总_191_do_520 + 总_337_do_3140) && MarketInfo(总_336_st_3130,MODE_BID)>总_40_do_D0 * 总_229_do_1E00 + 子_17_do && MarketInfo(总_336_st_3130,MODE_BID)<子_8_do - 总_309_do_2898 && 总_191_do_520<总_42_do_E0 * 总_229_do_1E00 + 子_10_do )
+           {
+             Print("Slippage control active"); 
+             子_2_bo = true ;
+             总_191_do_520 = MarketInfo(总_336_st_3130,MODE_BID) - 总_41_do_D8 * 总_229_do_1E00 ;
+           }
+           if ( 总_119_in_2D0 >  0 && 总_120_in_2D4 >= 0 && 总_242_do_21C4_si99[总_328_in_3100]>总_191_do_520 + 总_221_do_1A80 + 总_337_do_3140 && ( 总_242_do_21C4_si99[总_328_in_3100]<子_10_do || !(总_116_bo_2C4) ) && 总_242_do_21C4_si99[总_328_in_3100]<MarketInfo(总_336_st_3130,MODE_BID) - 总_122_in_2DC * 总_229_do_1E00 - 总_221_do_1A80 - 总_337_do_3140 && MarketInfo(总_336_st_3130,MODE_BID)<子_8_do - 总_309_do_2898 )
+           {
+             总_191_do_520 = 总_242_do_21C4_si99[总_328_in_3100] ;
+             子_2_bo = true ;
+           }
+           if ( 总_113_do_2A8>0.0 && 总_63_in_140 == 3 && MarketInfo(总_336_st_3130,MODE_BID)>总_113_do_2A8 * 总_229_do_1E00 + 子_10_do && 总_114_do_2B0 * 总_229_do_1E00 + 子_10_do>子_7_do + 总_337_do_3140 && MarketInfo(总_336_st_3130,MODE_BID)>总_114_do_2B0 * 总_229_do_1E00 + 子_10_do + 总_221_do_1A80 && MarketInfo(总_336_st_3130,MODE_BID)<子_8_do - 总_309_do_2898 && NormalizeDouble(总_114_do_2B0 * 总_229_do_1E00 + 子_10_do,总_190_in_518)>OrderStopLoss() )
+           {
+             总_191_do_520 = NormalizeDouble(总_114_do_2B0 * 总_229_do_1E00 + 子_10_do,总_190_in_518) ;
+             总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,总_191_do_520,子_8_do,0,0xFFFFFFFF) ;
+             if ( 总_230_in_1E08 <= 0 )
+             {
+               Print("error when setting breakeven: \'" + lizong_21(GetLastError()) + "\' ..\'Exit_BE_start\' to close to \'Exit_BE_extra_pips\' ..trying again!"); 
+             }
+             子_2_bo = true ;
+           }
+           if ( 总_113_do_2A8>0.0 && 总_63_in_140 == 2 && MarketInfo(总_336_st_3130,MODE_BID)>总_113_do_2A8 * 总_229_do_1E00 + 子_10_do && 总_114_do_2B0 * 总_229_do_1E00 + 子_10_do>总_191_do_520 + 总_337_do_3140 && MarketInfo(总_336_st_3130,MODE_BID)>总_114_do_2B0 * 总_229_do_1E00 + 子_10_do + 总_221_do_1A80 && MarketInfo(总_336_st_3130,MODE_BID)<子_8_do - 总_309_do_2898 )
+           {
+             总_191_do_520 = 总_114_do_2B0 * 总_229_do_1E00 + 子_10_do ;
+             子_2_bo = true ;
+           }
+           if ( !(子_2_bo) && ( 总_128_in_314 == 1 || (总_128_in_314 == 2 && 总_131_do_328 * 总_229_do_1E00 + 总_191_do_520<=总_132_do_330 * 总_229_do_1E00 + (子_5_do + 总_1_do_0)) ) )
+           {
+             总_250_in_2518 ++;
+             if ( MarketInfo(总_336_st_3130,MODE_BID)>总_131_do_328 * 总_229_do_1E00 + 总_191_do_520 + 总_221_do_1A80 && MarketInfo(总_336_st_3130,MODE_BID)<子_8_do - 总_309_do_2898 && ( 总_129_do_318==0.0 || MarketInfo(总_336_st_3130,MODE_BID)>总_247_do_2500 * 总_229_do_1E00 + 子_5_do ) && 总_250_in_2518 >= 总_130_in_320 )
+             {
+               总_250_in_2518 = 0 ;
+               总_191_do_520 = 总_131_do_328 * 总_229_do_1E00 + 总_191_do_520 ;
+               子_2_bo = true ;
+             }
+           }
+           if ( MarketInfo(总_336_st_3130,MODE_BID)<=总_191_do_520 )
+           {
+             RefreshRates(); 
+             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),总_1_do_0,0xFFFFFFFF); 
+             return(true); 
+           }
+           if ( NormalizeDouble(子_4_do,总_190_in_518)!=NormalizeDouble(总_191_do_520,总_190_in_518) )
+           {
+             临_do_42 = NormalizeDouble(总_191_do_520,总_190_in_518);
+             临_lo_43 = 子_9_lo;
+             for (临_in_44 = 0 ; 临_in_44 < 总_199_in_16B0 ; 临_in_44=临_in_44 + 1)
+             {
+               if ( 总_196_do_568_si20si2[临_in_44][0]==临_lo_43 )
+               {
+                 总_196_do_568_si20si2[临_in_44][1] = 临_do_42;
+                 break;
+               }
+             }
+           }
+         }
+       }
+     }
+     if ( 子_2_bo )
+     {
+       子_3_bo = true ;
+     }
+   }
+   if ( 子_2_bo )
+   {
+     子_3_bo = true ;
+   }
+ }
+ return(子_3_bo); 
+ }
+//lizong_18 <<==--------   --------
+ bool lizong_19()
+ {
+  bool      子_2_bo = false;
+  bool      子_3_bo = false;
+  double    子_4_do;
+  double    子_5_do;
+  int       子_6_in;
+  double    子_7_do;
+  double    子_8_do;
+  long      子_9_lo;
+  double    子_10_do;
+  string    子_11_st;
+  double    子_12_do;
+  datetime  子_13_da;
+  int       子_14_in;
+  int       子_15_in;
+  string    子_16_st;
+  double    子_17_do;
+  double    子_18_do;
+  bool      子_19_bo;
+  bool      子_20_bo;
+  double    子_21_do;
+  bool      子_22_bo;
+  double    子_23_do;
+  double    子_24_do;
+  double    子_25_do;
+  double    子_26_do;
+  double    子_27_do;
+  int       子_28_in;
+  double    子_29_do;
+//----- -----
+ int        临_in_1;
+ long       临_lo_2;
+ int        临_in_3;
+ double     临_do_4;
+ double     临_do_5;
+ long       临_lo_6;
+ int        临_in_7;
+ long       临_lo_8;
+ int        临_in_9;
+ int        临_in_10;
+ string     临_st_11;
+ double     临_do_12;
+ int        临_in_13;
+ long       临_lo_14;
+ double     临_do_15;
+ int        临_in_16;
+ long       临_lo_17;
+ long       临_lo_18;
+ int        临_in_19;
+ int        临_in_20;
+ int        临_in_21;
+ string     临_st_22;
+ long       临_lo_23;
+ double     临_do_24;
+ double     临_do_25;
+ int        临_in_26;
+ double     临_do_27;
+ bool       临_bo_28;
+ int        临_in_29;
+ int        临_in_30;
+ double     临_do_31;
+ long       临_lo_32;
+ int        临_in_33;
+ long       临_lo_34;
+ double     临_do_35;
+ double     临_do_36;
+ int        临_in_37;
+ double     临_do_38;
+ bool       临_bo_39;
+ int        临_in_40;
+ int        临_in_41;
+ double     临_do_42;
+ long       临_lo_43;
+ int        临_in_44;
+
+ 子_4_do = 0.0 ;
+ 子_5_do = 0.0 ;
+ for (子_6_in = 0 ; 子_6_in < OrdersTotal() ; 子_6_in ++)
+ {
+   if ( OrderSelect(子_6_in,0,0) == true )
+   {
+     子_2_bo = false ;
+     子_7_do = NormalizeDouble(OrderStopLoss(),总_190_in_518) ;
+     子_8_do = NormalizeDouble(OrderTakeProfit(),总_190_in_518) ;
+     子_9_lo = OrderTicket() ;
+     子_10_do = NormalizeDouble(OrderOpenPrice(),总_190_in_518) ;
+     子_11_st = OrderComment() ;
+     子_12_do = OrderLots() ;
+     子_13_da = OrderOpenTime() ;
+     子_14_in = OrderType() ;
+     子_15_in = OrderMagicNumber() ;
+     子_16_st = OrderSymbol() ;
+     if ( ( 子_14_in == 5 || 子_14_in == 3 ) && 总_69_in_160 == 2 && ( 总_95_in_204 == 0 || (总_95_in_204 == 1 && 子_16_st == 总_336_st_3130) ) && ( 子_15_in == 总_96_in_208 || 总_96_in_208 == 0 ) && ( 子_11_st == 总_97_st_210 || 总_97_st_210 == "" ) )
+     {
+       if ( ( 子_7_do==0.0 || 子_7_do==0.0 ) )
+       {
+         子_7_do = NormalizeDouble(总_100_do_230 * 总_229_do_1E00 + 子_10_do,总_190_in_518) ;
+         OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
+       }
+       if ( ( 子_8_do==0.0 || 子_8_do==0.0 ) )
+       {
+         子_8_do = NormalizeDouble(子_10_do - 总_101_do_238 * 总_229_do_1E00,总_190_in_518) ;
+         OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
+       }
+     }
+     if ( 子_14_in == 1 && ( ( 子_15_in == 总_93_in_1F0 && 总_69_in_160 == 1 && 子_16_st == 总_336_st_3130 ) || (总_69_in_160 == 2 && ( 总_95_in_204 == 0 || (总_95_in_204 == 1 && 子_16_st == 总_336_st_3130) ) && ( 子_15_in == 总_96_in_208 || 总_96_in_208 == 0 ) && (子_11_st == 总_97_st_210 || 总_97_st_210 == "")) ) )
+     {
+       if ( ( 子_7_do==0.0 || 子_7_do==0.0 ) )
+       {
+         子_7_do = NormalizeDouble(总_100_do_230 * 总_229_do_1E00 + 子_10_do,总_190_in_518) ;
+         OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
+       }
+       if ( ( 子_8_do==0.0 || 子_8_do==0.0 ) )
+       {
+         子_8_do = NormalizeDouble(子_10_do - 总_101_do_238 * 总_229_do_1E00,总_190_in_518) ;
+         OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
+       }
+       if ( 总_53_bo_11C && iTime(总_336_st_3130,总_52_in_118,总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,总_52_in_118,0) >  子_13_da && iClose(总_336_st_3130,总_52_in_118,1)>iOpen(总_336_st_3130,总_52_in_118,1) && iClose(总_336_st_3130,总_52_in_118,1)>子_10_do )
+       {
+         OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),0,Red); 
+         Print("closing candle confirmation"); 
+       }
+       if ( 总_55_bo_124 && iTime(总_336_st_3130,总_54_in_120,总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,总_54_in_120,0) >  子_13_da && iClose(总_336_st_3130,总_54_in_120,1)>iOpen(总_336_st_3130,总_54_in_120,1) && iClose(总_336_st_3130,总_54_in_120,1)>子_10_do )
+       {
+         OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),0,Red); 
+         Print("closing candle confirmation"); 
+       }
+       if ( 总_57_bo_12C && iTime(总_336_st_3130,总_56_in_128,总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,总_56_in_128,0) >  子_13_da && iClose(总_336_st_3130,总_56_in_128,1)>iOpen(总_336_st_3130,总_56_in_128,1) && iClose(总_336_st_3130,总_56_in_128,1)>子_10_do )
+       {
+         OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),0,Red); 
+         Print("closing candle confirmation"); 
+       }
+       if ( 总_59_bo_134 && iTime(总_336_st_3130,总_58_in_130,总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,总_58_in_130,0) >  子_13_da && iClose(总_336_st_3130,总_58_in_130,1)>iOpen(总_336_st_3130,总_58_in_130,1) && iClose(总_336_st_3130,总_58_in_130,1)>子_10_do )
+       {
+         OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),0,Red); 
+         Print("closing candle confirmation"); 
+       }
+       if ( 总_61_bo_13C && iTime(总_336_st_3130,总_60_in_138,总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,总_60_in_138,0) >  子_13_da && iClose(总_336_st_3130,总_60_in_138,1)>iOpen(总_336_st_3130,总_60_in_138,1) && iClose(总_336_st_3130,总_60_in_138,1)>子_10_do )
+       {
+         OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),0,Red); 
+         Print("closing candle confirmation"); 
+       }
+       总_247_do_2500 = 总_129_do_318 ;
+       if ( 总_133_in_338 >  0 && TimeCurrent() >  子_13_da + 总_133_in_338 * 60 )
+       {
+         总_247_do_2500 = 总_134_do_340 ;
+       }
+       临_in_1 = 总_190_in_518;
+       临_lo_2 = 子_9_lo;
+       for (临_in_3 = 0 ; 临_in_3 < 100 ; 临_in_3=临_in_3 + 1)
+       {
+         if ( !(总_198_do_1070_si100si2[临_in_3][0]==临_lo_2) )   continue;
+         临_do_4 = 总_198_do_1070_si100si2[临_in_3][1];
+         break;
+         
+       }
+       临_do_4 = 0.0;
+       子_17_do = NormalizeDouble(临_do_4,临_in_1) ;
+       if ( 子_17_do==0.0 )
+       {
+         临_do_5 = 子_10_do;
+         临_lo_6 = 子_9_lo;
+         for (临_in_7 = 0 ; 临_in_7 < 100 ; 临_in_7=临_in_7 + 1)
+         {
+           if ( !(总_198_do_1070_si100si2[临_in_7][0]==0.0) )   continue;
+           总_198_do_1070_si100si2[临_in_7][0] = 临_lo_6;
+           总_198_do_1070_si100si2[临_in_7][1] = 临_do_5;
+           break;
+           
+         }
+         子_17_do = 子_10_do ;
+       }
+       else
+       {
+         子_17_do = 子_17_do - 总_85_do_1C0 * 总_229_do_1E00 ;
+       }
+       子_18_do = 子_17_do - 子_10_do ;
+       子_19_bo = false ;
+       if ( 子_17_do>总_85_do_1C0 * 总_229_do_1E00 && 子_18_do>总_38_do_C0 * 总_229_do_1E00 )
+       {
+         子_19_bo = true ;
+         if ( 总_39_in_C8 == 2 )
+         {
+           总_247_do_2500 = -1000.0 ;
+           Print("Slippage Mode 2 active"); 
+         }
+       }
+       if ( 总_43_bo_E8 )
+       {
+         子_5_do = 子_17_do ;
+       }
+       else
+       {
+         子_5_do = 子_10_do ;
+       }
+       if ( 子_7_do>NormalizeDouble((总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 + 子_10_do + 总_1_do_0,总_190_in_518) )
+       {
+         子_7_do = NormalizeDouble((总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 + 子_10_do + 总_1_do_0,总_190_in_518) ;
+         OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF); 
+       }
+       if ( MarketInfo(总_336_st_3130,MODE_ASK)>(总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 + 子_10_do + 总_1_do_0 )
+       {
+         RefreshRates(); 
+         OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),总_1_do_0,Red); 
+         return(true); 
+       }
+       子_20_bo = false ;
+       if ( 总_159_bo_464 )
+       {
+         临_lo_8 = 子_9_lo;
+         临_in_9 = 0;
+         for (临_in_10 = OrdersTotal() ; 临_in_10 >= 0 ; 临_in_10=临_in_10 - 1)
+         {
+           if ( OrderSelect(临_in_10,0,0) != true || OrderMagicNumber() != 总_169_in_4AC || OrderSymbol() != 总_336_st_3130 )   continue;
+           临_st_11 = OrderComment();
+           if ( 临_st_11 != IntegerToString(临_lo_8,0,32) )   continue;
+           临_in_9=临_in_9 + 1;
+           
+         }
+         子_21_do = 临_in_9 ;
+         子_22_bo = false ;
+         if ( !(总_195_bo_531) )
+         {
+           总_195_bo_531 = true ;
+           总_193_in_52C = 1 ;
+         }
+         if ( 子_21_do==0.0 )
+         {
+           总_193_in_52C = 1 ;
+         }
+         if ( MathFloor(子_21_do / 2.0)==子_21_do / 2.0 )
+         {
+           总_193_in_52C = 1 ;
+         }
+         else
+         {
+           总_193_in_52C = 0 ;
+         }
+         if ( 总_195_bo_531 )
+         {
+           if ( 子_21_do>0.0 )
+           {
+             临_do_12 = AccountEquity();
+             if ( 临_do_12>AccountBalance() + 总_163_do_480 )
+             {
+               for (临_in_13 = OrdersTotal() ; 临_in_13 >= 0 ; 临_in_13=临_in_13 - 1)
+               {
+                 if ( OrderSelect(临_in_13,0,0) != true )   continue;
+                 
+                 if ( ( OrderMagicNumber() != 总_93_in_1F0 && OrderMagicNumber() != 总_169_in_4AC && OrderMagicNumber() != 总_168_in_4A8 ) )   continue;
+                 
+                 if ( OrderType() == 0 )
+                 {
+                   OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,Red); 
+                 }
+                 if ( OrderType() != 1 )   continue;
+                 OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),总_38_do_C0,Red); 
+                 
+               }
+             }
+           }
+           if ( 子_21_do>0.0 )
+           {
+             临_lo_14 = 子_9_lo;
+             临_do_15 = 0.0;
+             for (临_in_16 = OrdersTotal() ; 临_in_16 >= 0 ; 临_in_16=临_in_16 - 1)
+             {
+               if ( OrderSelect(临_in_16,0,0) != true )   continue;
+               临_lo_17 = OrderTicket();
+               if ( 临_lo_17 != 临_lo_14 )
+               {
+                 临_st_11 = OrderComment();
+               if ( 临_st_11 != IntegerToString(临_lo_14,0,32) )   continue;
+               }
+               临_do_15 = 临_do_15 + OrderProfit();
+               
+             }
+             if ( 临_do_15>总_163_do_480 )
+             {
+               Print("Closing zone"); 
+               临_lo_18 = 子_9_lo;
+               for (临_in_19 = OrdersTotal() ; 临_in_19 >= 0 ; 临_in_19=临_in_19 - 1)
+               {
+                 if ( OrderSelect(临_in_19,0,0) != true )   continue;
+                 
+                 if ( OrderMagicNumber() == 总_93_in_1F0 && OrderTicket() == 临_lo_18 )
+                 {
+                   OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),3,Red); 
+                 }
+                 if ( OrderMagicNumber() != 总_169_in_4AC )   continue;
+                 临_st_11 = OrderComment();
+                 if ( 临_st_11 != IntegerToString(临_lo_18,0,32) )   continue;
+                 
+                 if ( OrderType() == 0 )
+                 {
+                   OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,Red); 
+                 }
+                 if ( OrderType() != 1 )   continue;
+                 OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),总_38_do_C0,Red); 
+                 
+               }
+               总_195_bo_531 = false ;
+               子_20_bo = true ;
+             }
+           }
+           else
+           {
+             子_23_do = 子_12_do * 总_165_do_490 ;
+             if ( 总_164_in_488 == 2 )
+             {
+               子_23_do = (子_21_do + 1.0) * 子_12_do + 子_12_do ;
+             }
+             if ( 总_164_in_488 == 3 )
+             {
+               子_23_do = 子_12_do * (MathPow(总_165_do_490,子_21_do + 1.0)) ;
+             }
+             if ( 总_193_in_52C == 0 )
+             {
+               子_24_do = 子_17_do ;
+               if ( MarketInfo(总_336_st_3130,MODE_BID)<子_17_do )
+               {
+                 if ( 子_21_do>=总_166_in_498 )
+                 {
+                   for (临_in_20 = OrdersTotal() ; 临_in_20 >= 0 ; 临_in_20=临_in_20 - 1)
+                   {
+                     if ( OrderSelect(临_in_20,0,0) != true )   continue;
+                     
+                     if ( OrderMagicNumber() == 总_93_in_1F0 && OrderTicket() == 子_9_lo )
+                     {
+                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),3,Red); 
+                     }
+                     if ( OrderMagicNumber() != 总_169_in_4AC )   continue;
+                     临_st_11 = OrderComment();
+                     if ( 临_st_11 != IntegerToString(子_9_lo,0,32) )   continue;
+                     
+                     if ( OrderType() == 0 )
+                     {
+                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,Red); 
+                     }
+                     if ( OrderType() != 1 )   continue;
+                     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),总_38_do_C0,Red); 
+                     
+                   }
+                 }
+                 else
+                 {
+                   OrderSend(总_336_st_3130,1,子_23_do,MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,0.0,0.0,IntegerToString(子_9_lo,0,32),总_169_in_4AC,0,Green); 
+                   总_193_in_52C = 1 ;
+                   子_22_bo = true ;
+                 }
+               }
+             }
+             else
+             {
+               子_25_do = 总_160_do_468 * 总_229_do_1E00 + 子_17_do - 子_21_do * 总_161_do_470 * 总_229_do_1E00 ;
+               if ( 子_25_do<总_162_do_478 * 总_229_do_1E00 + 子_17_do )
+               {
+                 子_25_do = 总_162_do_478 * 总_229_do_1E00 + 子_17_do ;
+               }
+               if ( MarketInfo(总_336_st_3130,MODE_ASK)>子_25_do )
+               {
+                 if ( 子_21_do>=总_166_in_498 )
+                 {
+                   for (临_in_21 = OrdersTotal() ; 临_in_21 >= 0 ; 临_in_21=临_in_21 - 1)
+                   {
+                     if ( OrderSelect(临_in_21,0,0) != true )   continue;
+                     
+                     if ( OrderMagicNumber() == 总_93_in_1F0 && OrderTicket() == 子_9_lo )
+                     {
+                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),3,Red); 
+                     }
+                     if ( OrderMagicNumber() != 总_169_in_4AC )   continue;
+                     临_st_22 = OrderComment();
+                     if ( 临_st_22 != IntegerToString(子_9_lo,0,32) )   continue;
+                     
+                     if ( OrderType() == 0 )
+                     {
+                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,Red); 
+                     }
+                     if ( OrderType() != 1 )   continue;
+                     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),总_38_do_C0,Red); 
+                     
+                   }
+                 }
+                 else
+                 {
+                   OrderSend(总_336_st_3130,0,子_23_do,MarketInfo(总_336_st_3130,MODE_ASK),总_38_do_C0,0.0,0.0,IntegerToString(子_9_lo,0,32),总_169_in_4AC,0,Green); 
+                   总_193_in_52C = 0 ;
+                   子_22_bo = true ;
+                 }
+               }
+             }
+           }
+         }
+         if ( ( 子_21_do>0.0 || 子_22_bo ) )
+         {
+           子_20_bo = true ;
+         }
+       }
+       if ( !(子_20_bo) )
+       {
+         if ( ( 总_63_in_140 == 1 || (总_63_in_140 != 2 && 总_63_in_140 != 3) ) )
+         {
+           临_lo_23 = 子_9_lo;
+           临_do_24 = 总_100_do_230;
+           临_do_25 = 子_10_do;
+           临_in_26 = 2;
+           临_do_27 = 0.0;
+           临_bo_28 = false;
+           for (临_in_29 = 0 ; 临_in_29 < 总_199_in_16B0 ; 临_in_29=临_in_29 + 1)
+           {
+             if ( 总_196_do_568_si20si2[临_in_29][0]==临_lo_23 )
+             {
+               临_do_27 = 总_196_do_568_si20si2[临_in_29][1];
+               临_bo_28 = true;
+               break;
+             }
+           }
+           if ( !(临_bo_28) )
+           {
+             if ( 临_in_26 == 1 )
+             {
+               临_do_27 = NormalizeDouble(临_do_25 - 临_do_24 * 总_229_do_1E00,总_190_in_518);
+             }
+             if ( 临_in_26 == 2 )
+             {
+               临_do_27 = NormalizeDouble(临_do_24 * 总_229_do_1E00 + 临_do_25,总_190_in_518);
+             }
+             for (临_in_30 = 0 ; 临_in_30 < 总_199_in_16B0 ; 临_in_30=临_in_30 + 1)
+             {
+               if ( 总_196_do_568_si20si2[临_in_30][0]==0.0 )
+               {
+                 总_196_do_568_si20si2[临_in_30][0] = 临_lo_23;
+                 总_196_do_568_si20si2[临_in_30][1] = 临_do_27;
+                 break;
+               }
+             }
+           }
+           总_191_do_520 = 临_do_27 ;
+           子_4_do = 总_191_do_520 ;
+           if ( MarketInfo(总_336_st_3130,MODE_ASK)>子_4_do )
+           {
+             Print("Closing with virtual SL"); 
+             RefreshRates(); 
+             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),总_1_do_0,0xFFFFFFFF); 
+             return(true); 
+           }
+           if ( 总_125_do_2F8>0.0 && TimeCurrent() >= 子_13_da + 总_304_in_287C && MarketInfo(总_336_st_3130,MODE_ASK)<子_7_do - 总_337_do_3140 - 总_126_do_300 * 总_229_do_1E00 && MarketInfo(总_336_st_3130,MODE_ASK)>子_8_do + 总_309_do_2898 && NormalizeDouble(MarketInfo(总_336_st_3130,MODE_ASK) + 总_126_do_300 * 总_229_do_1E00,总_190_in_518)<子_7_do )
+           {
+             子_7_do = NormalizeDouble(MarketInfo(总_336_st_3130,MODE_ASK) + 总_126_do_300 * 总_229_do_1E00,总_190_in_518) ;
+             if ( 子_7_do>MarketInfo(总_336_st_3130,MODE_ASK) + 总_221_do_1A80 )
+             {
+               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               if ( 总_230_in_1E08 <= 0 )
+               {
+                 Print("TrailStop error: \'" + lizong_21(GetLastError()) + "\' when setting trailing Exit_TrailSL_after_X_Minutes_size loss.  Trying again!"); 
+               }
+               子_2_bo = true ;
+             }
+           }
+           if ( 总_103_do_250>0.0 && MarketInfo(总_336_st_3130,MODE_ASK)<子_7_do - 总_337_do_3140 - (总_103_do_250 + 总_106_do_268) * 总_229_do_1E00 && MarketInfo(总_336_st_3130,MODE_ASK)<子_5_do - 总_104_do_258 * 总_229_do_1E00 && MarketInfo(总_336_st_3130,MODE_ASK)>子_8_do + 总_309_do_2898 && 子_7_do>子_10_do - 总_105_do_260 * 总_229_do_1E00 && NormalizeDouble(总_103_do_250 * 总_229_do_1E00 + MarketInfo(总_336_st_3130,MODE_ASK),总_190_in_518)<子_7_do )
+           {
+             子_7_do = NormalizeDouble(MarketInfo(总_336_st_3130,MODE_ASK) + 总_103_do_250 * 总_229_do_1E00,总_190_in_518) ;
+             if ( 子_7_do>MarketInfo(总_336_st_3130,MODE_ASK) + 总_221_do_1A80 )
+             {
+               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               if ( 总_230_in_1E08 <= 0 )
+               {
+                 Print("TrailStop error: \'" + lizong_21(GetLastError()) + "\' when setting trailing Exit_stop loss.  Trying again!"); 
+               }
+               else
+               {
+                 子_26_do = NormalizeDouble(总_107_do_270 / 100.0 * 总_223_do_1AC4_si99[总_328_in_3100],2) ;
+                 if ( 子_26_do<子_12_do && 子_26_do>=MarketInfo(总_336_st_3130,MODE_LOTSTEP) )
+                 {
+                   OrderClose(子_9_lo,子_26_do,MarketInfo(总_336_st_3130,MODE_ASK),总_38_do_C0,Red); 
+                   return(true); 
+                 }
+               }
+               子_2_bo = true ;
+             }
+           }
+           if ( 总_108_do_278>0.0 && MarketInfo(总_336_st_3130,MODE_BID)>NormalizeDouble(总_108_do_278 * 总_229_do_1E00 + (子_8_do + 总_337_do_3140),总_190_in_518) && Bid>NormalizeDouble(总_109_do_280 * 总_229_do_1E00 + 子_5_do,总_190_in_518) && MarketInfo(总_336_st_3130,MODE_BID)>子_8_do + 总_309_do_2898 )
+           {
+             子_8_do = NormalizeDouble(MarketInfo(总_336_st_3130,MODE_BID) - 总_108_do_278 * 总_229_do_1E00,总_190_in_518) ;
+             if ( 子_8_do<MarketInfo(总_336_st_3130,MODE_BID) - 总_221_do_1A80 )
+             {
+               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               if ( 总_230_in_1E08 <= 0 )
+               {
+                 Print("TrailStop error: \'" + lizong_21(GetLastError()) + "\' when setting trailing Exit_TP.  Trying again!"); 
+               }
+               else
+               {
+                 子_27_do = NormalizeDouble(总_107_do_270 / 100.0 * 总_223_do_1AC4_si99[总_328_in_3100],2) ;
+                 if ( 子_27_do<子_12_do && 子_27_do>=SymbolInfoDouble(总_336_st_3130,34) )
+                 {
+                   OrderClose(子_9_lo,子_27_do,MarketInfo(总_336_st_3130,MODE_ASK),总_38_do_C0,Red); 
+                   return(true); 
+                 }
+               }
+               子_2_bo = true ;
+             }
+           }
+           if ( 子_19_bo && 总_39_in_C8 == 1 && 总_41_do_D8>0.0 && MarketInfo(总_336_st_3130,MODE_ASK)<子_7_do - 总_337_do_3140 - 总_41_do_D8 * 总_229_do_1E00 && MarketInfo(总_336_st_3130,MODE_ASK)<子_17_do - 总_40_do_D0 * 总_229_do_1E00 && MarketInfo(总_336_st_3130,MODE_ASK)>子_8_do + 总_309_do_2898 && 子_7_do>子_10_do - 总_42_do_E0 * 总_229_do_1E00 && NormalizeDouble(MarketInfo(总_336_st_3130,MODE_ASK) + 总_41_do_D8 * 总_229_do_1E00,总_190_in_518)<子_7_do )
+           {
+             子_7_do = NormalizeDouble(MarketInfo(总_336_st_3130,MODE_ASK) + 总_41_do_D8 * 总_229_do_1E00,总_190_in_518) ;
+             if ( 子_7_do>MarketInfo(总_336_st_3130,MODE_ASK) + 总_221_do_1A80 )
+             {
+               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               if ( 总_230_in_1E08 <= 0 )
+               {
+                 Print("TrailStop error: \'" + lizong_21(GetLastError()) + "\' when setting Slip TL.  Trying again!"); 
+               }
+               else
+               {
+                 Print("Slippage controle active"); 
+               }
+               子_2_bo = true ;
+             }
+           }
+           if ( 总_119_in_2D0 >  0 && 总_120_in_2D4 >= 0 && UseHL_TrailingSL && 总_241_do_1E78_si99[总_328_in_3100]<子_7_do - 总_221_do_1A80 - 总_337_do_3140 && 总_241_do_1E78_si99[总_328_in_3100]>总_121_in_2D8 * 总_229_do_1E00 + MarketInfo(总_336_st_3130,MODE_ASK) && ( 总_241_do_1E78_si99[总_328_in_3100]>子_10_do || !(总_116_bo_2C4) ) && 总_241_do_1E78_si99[总_328_in_3100]>总_122_in_2DC * 总_229_do_1E00 + MarketInfo(总_336_st_3130,MODE_ASK) + 总_221_do_1A80 + 总_337_do_3140 && MarketInfo(总_336_st_3130,MODE_ASK)>子_8_do + 总_309_do_2898 && NormalizeDouble(总_241_do_1E78_si99[总_328_in_3100],总_190_in_518)<子_7_do )
+           {
+             子_7_do = NormalizeDouble(总_241_do_1E78_si99[总_328_in_3100],总_190_in_518) ;
+             if ( 子_7_do>MarketInfo(总_336_st_3130,MODE_ASK) + 总_221_do_1A80 )
+             {
+               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               if ( 总_230_in_1E08 <= 0 )
+               {
+                 Print("error: \'" + lizong_21(GetLastError()) + "\' when modifying stoploss"); 
+               }
+               子_2_bo = true ;
+             }
+           }
+           if ( 总_113_do_2A8>0.0 && MarketInfo(总_336_st_3130,MODE_ASK)<子_10_do - 总_113_do_2A8 * 总_229_do_1E00 && 子_10_do - 总_114_do_2B0 * 总_229_do_1E00<子_7_do - 总_337_do_3140 && MarketInfo(总_336_st_3130,MODE_ASK)<子_10_do - 总_114_do_2B0 * 总_229_do_1E00 - 总_221_do_1A80 && MarketInfo(总_336_st_3130,MODE_ASK)>子_8_do + 总_309_do_2898 && NormalizeDouble(子_10_do - 总_114_do_2B0 * 总_229_do_1E00,总_190_in_518)<子_7_do )
+           {
+             子_7_do = NormalizeDouble(子_10_do - 总_114_do_2B0 * 总_229_do_1E00,总_190_in_518) ;
+             if ( 子_7_do>MarketInfo(总_336_st_3130,MODE_ASK) + 总_221_do_1A80 )
+             {
+               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               if ( 总_230_in_1E08 <= 0 )
+               {
+                 Print("error when setting breakeven: \'" + lizong_21(GetLastError()) + "\' ..\'Exit_BE_start\' to close to \'Exit_BE_extra_pips\' ..trying again!"); 
+               }
+               子_2_bo = true ;
+             }
+           }
+           if ( !(子_2_bo) && ( 总_128_in_314 == 1 || (总_128_in_314 == 2 && 子_7_do - 总_131_do_328 * 总_229_do_1E00>=子_5_do - 总_1_do_0 - 总_132_do_330 * 总_229_do_1E00) ) )
+           {
+             总_250_in_2518 ++;
+             if ( MarketInfo(总_336_st_3130,MODE_ASK)<子_7_do - 总_131_do_328 * 总_229_do_1E00 - 总_221_do_1A80 && MarketInfo(总_336_st_3130,MODE_ASK)>子_8_do + 总_309_do_2898 && ( 总_129_do_318==0.0 || MarketInfo(总_336_st_3130,MODE_ASK)<子_5_do - 总_247_do_2500 * 总_229_do_1E00 ) && 总_250_in_2518 >= 总_130_in_320 && NormalizeDouble(子_7_do - 总_131_do_328 * 总_229_do_1E00,总_190_in_518)<子_7_do )
+             {
+               总_250_in_2518 = 0 ;
+               子_7_do = NormalizeDouble(子_7_do - 总_131_do_328 * 总_229_do_1E00,总_190_in_518) ;
+               OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF); 
+               子_2_bo = true ;
+             }
+           }
+           总_191_do_520 = 子_7_do ;
+           if ( MarketInfo(总_336_st_3130,MODE_ASK)>子_7_do )
+           {
+             Print("Closing with virtual SL"); 
+             RefreshRates(); 
+             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),总_1_do_0,0xFFFFFFFF); 
+             return(true); 
+           }
+           if ( NormalizeDouble(子_4_do,总_190_in_518)!=NormalizeDouble(总_191_do_520,总_190_in_518) )
+           {
+             临_do_31 = NormalizeDouble(总_191_do_520,总_190_in_518);
+             临_lo_32 = 子_9_lo;
+             for (临_in_33 = 0 ; 临_in_33 < 总_199_in_16B0 ; 临_in_33=临_in_33 + 1)
+             {
+               if ( 总_196_do_568_si20si2[临_in_33][0]==临_lo_32 )
+               {
+                 总_196_do_568_si20si2[临_in_33][1] = 临_do_31;
+                 break;
+               }
+             }
+           }
+           if ( 子_2_bo && 总_135_bo_348 )
+           {
+             return(true); 
+           }
+         }
+         if ( ( 总_63_in_140 == 2 || 总_63_in_140 == 3 ) )
+         {
+           临_lo_34 = 子_9_lo;
+           临_do_35 = 总_100_do_230;
+           临_do_36 = 子_10_do;
+           临_in_37 = 2;
+           临_do_38 = 0.0;
+           临_bo_39 = false;
+           for (临_in_40 = 0 ; 临_in_40 < 总_199_in_16B0 ; 临_in_40=临_in_40 + 1)
+           {
+             if ( 总_196_do_568_si20si2[临_in_40][0]==临_lo_34 )
+             {
+               临_do_38 = 总_196_do_568_si20si2[临_in_40][1];
+               临_bo_39 = true;
+               break;
+             }
+           }
+           if ( !(临_bo_39) )
+           {
+             if ( 临_in_37 == 1 )
+             {
+               临_do_38 = NormalizeDouble(临_do_36 - 临_do_35 * 总_229_do_1E00,总_190_in_518);
+             }
+             if ( 临_in_37 == 2 )
+             {
+               临_do_38 = NormalizeDouble(临_do_35 * 总_229_do_1E00 + 临_do_36,总_190_in_518);
+             }
+             for (临_in_41 = 0 ; 临_in_41 < 总_199_in_16B0 ; 临_in_41=临_in_41 + 1)
+             {
+               if ( 总_196_do_568_si20si2[临_in_41][0]==0.0 )
+               {
+                 总_196_do_568_si20si2[临_in_41][0] = 临_lo_34;
+                 总_196_do_568_si20si2[临_in_41][1] = 临_do_38;
+                 break;
+               }
+             }
+           }
+           总_191_do_520 = 临_do_38 ;
+           子_4_do = 总_191_do_520 ;
+           if ( MarketInfo(总_336_st_3130,MODE_ASK)>=子_4_do )
+           {
+             RefreshRates(); 
+             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),总_1_do_0,0xFFFFFFFF); 
+             return(true); 
+           }
+           子_28_in = TimeCurrent() - 总_319_da_28E0 ;
+           if ( 子_28_in >= 总_65_in_150 )
+           {
+             if ( NormalizeDouble(总_191_do_520,总_190_in_518)<子_7_do - 总_337_do_3140 )
+             {
+               OrderModify(子_9_lo,子_10_do,NormalizeDouble(总_191_do_520,总_190_in_518),子_8_do,0,0xFFFFFFFF); 
+             }
+             总_319_da_28E0 = TimeCurrent() ;
+           }
+           if ( 总_125_do_2F8>0.0 && TimeCurrent() >= 子_13_da + 总_304_in_287C && MarketInfo(总_336_st_3130,MODE_ASK)<总_191_do_520 - 总_337_do_3140 - 总_126_do_300 * 总_229_do_1E00 && MarketInfo(总_336_st_3130,MODE_ASK)>子_8_do + 总_309_do_2898 )
+           {
+             总_191_do_520 = MarketInfo(总_336_st_3130,MODE_ASK) + 总_126_do_300 * 总_229_do_1E00 ;
+             子_2_bo = true ;
+           }
+           if ( 总_103_do_250>0.0 && MarketInfo(总_336_st_3130,MODE_ASK)<总_191_do_520 - 总_337_do_3140 - (总_103_do_250 + 总_106_do_268) * 总_229_do_1E00 && MarketInfo(总_336_st_3130,MODE_ASK)<子_5_do - 总_104_do_258 * 总_229_do_1E00 && 总_191_do_520>子_10_do - 总_105_do_260 * 总_229_do_1E00 )
+           {
+             总_191_do_520 = 总_103_do_250 * 总_229_do_1E00 + MarketInfo(总_336_st_3130,MODE_ASK) ;
+             子_29_do = NormalizeDouble(总_107_do_270 / 100.0 * 总_223_do_1AC4_si99[总_328_in_3100],2) ;
+             if ( 子_29_do<子_12_do && 子_29_do>=MarketInfo(总_336_st_3130,MODE_LOTSTEP) )
+             {
+               OrderClose(子_9_lo,子_29_do,MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,Red); 
+               return(true); 
+             }
+             子_2_bo = true ;
+           }
+           if ( 子_19_bo && 总_39_in_C8 == 1 && 总_41_do_D8>0.0 && MarketInfo(总_336_st_3130,MODE_ASK)<总_191_do_520 - 总_337_do_3140 - 总_41_do_D8 * 总_229_do_1E00 && MarketInfo(总_336_st_3130,MODE_ASK)<子_17_do - 总_40_do_D0 * 总_229_do_1E00 && MarketInfo(总_336_st_3130,MODE_ASK)>子_8_do + 总_309_do_2898 && 总_191_do_520>子_10_do - 总_42_do_E0 * 总_229_do_1E00 )
+           {
+             Print("Slippage controle active"); 
+             子_2_bo = true ;
+             总_191_do_520 = MarketInfo(总_336_st_3130,MODE_ASK) + 总_41_do_D8 * 总_229_do_1E00 ;
+           }
+           if ( 总_119_in_2D0 >  0 && 总_120_in_2D4 >= 0 && 总_241_do_1E78_si99[总_328_in_3100]<总_191_do_520 - 总_221_do_1A80 - 总_337_do_3140 && ( 总_241_do_1E78_si99[总_328_in_3100]>子_10_do || !(总_116_bo_2C4) ) && 总_241_do_1E78_si99[总_328_in_3100]>总_122_in_2DC * 总_229_do_1E00 + MarketInfo(总_336_st_3130,MODE_ASK) + 总_221_do_1A80 + 总_337_do_3140 && MarketInfo(总_336_st_3130,MODE_ASK)>子_8_do + 总_309_do_2898 )
+           {
+             总_191_do_520 = 总_241_do_1E78_si99[总_328_in_3100] ;
+             子_2_bo = true ;
+           }
+           if ( 总_113_do_2A8>0.0 && 总_63_in_140 == 3 && MarketInfo(总_336_st_3130,MODE_ASK)<子_10_do - 总_113_do_2A8 * 总_229_do_1E00 && 子_10_do - 总_114_do_2B0 * 总_229_do_1E00<子_7_do - 总_337_do_3140 && MarketInfo(总_336_st_3130,MODE_ASK)<子_10_do - 总_114_do_2B0 * 总_229_do_1E00 - 总_221_do_1A80 && MarketInfo(总_336_st_3130,MODE_ASK)>子_8_do + 总_309_do_2898 && NormalizeDouble(子_10_do - 总_114_do_2B0 * 总_229_do_1E00,总_190_in_518)<总_191_do_520 )
+           {
+             总_191_do_520 = NormalizeDouble(子_10_do - 总_114_do_2B0 * 总_229_do_1E00,总_190_in_518) ;
+             总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,总_191_do_520,子_8_do,0,0xFFFFFFFF) ;
+             if ( 总_230_in_1E08 <= 0 )
+             {
+               Print("error when setting breakeven: \'" + lizong_21(GetLastError()) + "\' ..\'Exit_BE_start\' to close to \'Exit_BE_extra_pips\' ..trying again!"); 
+             }
+             子_2_bo = true ;
+           }
+           if ( 总_113_do_2A8>0.0 && 总_63_in_140 == 2 && MarketInfo(总_336_st_3130,MODE_ASK)<子_10_do - 总_113_do_2A8 * 总_229_do_1E00 && 子_10_do - 总_114_do_2B0 * 总_229_do_1E00<总_191_do_520 - 总_337_do_3140 && MarketInfo(总_336_st_3130,MODE_ASK)<子_10_do - 总_114_do_2B0 * 总_229_do_1E00 - 总_221_do_1A80 && MarketInfo(总_336_st_3130,MODE_ASK)>子_8_do + 总_309_do_2898 )
+           {
+             总_191_do_520 = 子_10_do - 总_114_do_2B0 * 总_229_do_1E00 ;
+             子_2_bo = true ;
+           }
+           if ( !(子_2_bo) && ( 总_128_in_314 == 1 || (总_128_in_314 == 2 && 总_191_do_520 - 总_131_do_328 * 总_229_do_1E00>=子_5_do - 总_1_do_0 - 总_132_do_330 * 总_229_do_1E00) ) )
+           {
+             总_250_in_2518 ++;
+             if ( MarketInfo(总_336_st_3130,MODE_ASK)<总_191_do_520 - 总_131_do_328 * 总_229_do_1E00 - 总_221_do_1A80 && MarketInfo(总_336_st_3130,MODE_ASK)>子_8_do + 总_309_do_2898 && ( 总_129_do_318==0.0 || MarketInfo(总_336_st_3130,MODE_ASK)<子_5_do - 总_247_do_2500 * 总_229_do_1E00 ) && 总_250_in_2518 >= 总_130_in_320 )
+             {
+               总_250_in_2518 = 0 ;
+               总_191_do_520 = 总_191_do_520 - 总_131_do_328 * 总_229_do_1E00 ;
+               子_2_bo = true ;
+             }
+           }
+           if ( MarketInfo(总_336_st_3130,MODE_ASK)>=总_191_do_520 )
+           {
+             RefreshRates(); 
+             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),总_1_do_0,0xFFFFFFFF); 
+             return(true); 
+           }
+           if ( NormalizeDouble(子_4_do,总_190_in_518)!=NormalizeDouble(总_191_do_520,总_190_in_518) )
+           {
+             临_do_42 = NormalizeDouble(总_191_do_520,总_190_in_518);
+             临_lo_43 = 子_9_lo;
+             for (临_in_44 = 0 ; 临_in_44 < 总_199_in_16B0 ; 临_in_44=临_in_44 + 1)
+             {
+               if ( 总_196_do_568_si20si2[临_in_44][0]==临_lo_43 )
+               {
+                 总_196_do_568_si20si2[临_in_44][1] = 临_do_42;
+                 break;
+               }
+             }
+           }
+         }
+       }
+     }
+     if ( 子_2_bo )
+     {
+       子_3_bo = true ;
+     }
+   }
+   if ( 子_2_bo )
+   {
+     子_3_bo = true ;
+   }
+ }
+ return(子_3_bo); 
+ }
+//lizong_19 <<==--------   --------
+ bool lizong_20()
+ {
+  bool      子_2_bo;
+  datetime  子_3_da;
+  int       子_4_in;
+//----- -----
+ bool       临_bo_1;
+ bool       临_bo_2;
+ bool       临_bo_3;
+ bool       临_bo_4;
+ bool       临_bo_5;
+ bool       临_bo_6;
+
+ if ( !(总_171_bo_4BC) )
+ {
+   return(true); 
+ }
+ 子_2_bo = false ;
+ 子_3_da = 0 ;
+ if ( 总_172_in_4C0 == 2 )
+ {
+   子_3_da = TimeCurrent() ;
+ }
+ if ( 总_172_in_4C0 == 0 )
+ {
+   TimeGMT(); 
+ }
+ if ( 总_172_in_4C0 == 1 )
+ {
+   TimeLocal(); 
+ }
+ 子_4_in = TimeHour(子_3_da) ;
+ if ( TimeDayOfWeek(子_3_da) == 0 )
+ {
+   if ( 总_174_in_4C8 <  总_175_in_4CC && ( 子_4_in < 总_174_in_4C8 || 子_4_in >= 总_175_in_4CC ) )
+   {
+     临_bo_1 = false;
+   }
+   else
+   {
+     if ( 总_174_in_4C8 >  总_175_in_4CC && 子_4_in <  总_174_in_4C8 && 子_4_in >= 总_175_in_4CC )
+     {
+       临_bo_1 = false;
+     }
+     else
+     {
+       if ( 总_174_in_4C8 == 总_175_in_4CC )
+       {
+         临_bo_1 = false;
+       }
+       else
+       {
+         临_bo_1 = true;
+       }
+     }
+   }
+   if ( 临_bo_1 )
+   {
+     子_2_bo = true ;
+   }
+ }
+ if ( TimeDayOfWeek(子_3_da) == 1 )
+ {
+   if ( 总_176_in_4D0 <  总_177_in_4D4 && ( 子_4_in < 总_176_in_4D0 || 子_4_in >= 总_177_in_4D4 ) )
+   {
+     临_bo_2 = false;
+   }
+   else
+   {
+     if ( 总_176_in_4D0 >  总_177_in_4D4 && 子_4_in <  总_176_in_4D0 && 子_4_in >= 总_177_in_4D4 )
+     {
+       临_bo_2 = false;
+     }
+     else
+     {
+       if ( 总_176_in_4D0 == 总_177_in_4D4 )
+       {
+         临_bo_2 = false;
+       }
+       else
+       {
+         临_bo_2 = true;
+       }
+     }
+   }
+   if ( 临_bo_2 )
+   {
+     子_2_bo = true ;
+   }
+ }
+ if ( TimeDayOfWeek(子_3_da) == 2 )
+ {
+   if ( 总_178_in_4D8 <  总_179_in_4DC && ( 子_4_in < 总_178_in_4D8 || 子_4_in >= 总_179_in_4DC ) )
+   {
+     临_bo_3 = false;
+   }
+   else
+   {
+     if ( 总_178_in_4D8 >  总_179_in_4DC && 子_4_in <  总_178_in_4D8 && 子_4_in >= 总_179_in_4DC )
+     {
+       临_bo_3 = false;
+     }
+     else
+     {
+       if ( 总_178_in_4D8 == 总_179_in_4DC )
+       {
+         临_bo_3 = false;
+       }
+       else
+       {
+         临_bo_3 = true;
+       }
+     }
+   }
+   if ( 临_bo_3 )
+   {
+     子_2_bo = true ;
+   }
+ }
+ if ( TimeDayOfWeek(子_3_da) == 3 )
+ {
+   if ( 总_180_in_4E0 <  总_181_in_4E4 && ( 子_4_in < 总_180_in_4E0 || 子_4_in >= 总_181_in_4E4 ) )
+   {
+     临_bo_4 = false;
+   }
+   else
+   {
+     if ( 总_180_in_4E0 >  总_181_in_4E4 && 子_4_in <  总_180_in_4E0 && 子_4_in >= 总_181_in_4E4 )
+     {
+       临_bo_4 = false;
+     }
+     else
+     {
+       if ( 总_180_in_4E0 == 总_181_in_4E4 )
+       {
+         临_bo_4 = false;
+       }
+       else
+       {
+         临_bo_4 = true;
+       }
+     }
+   }
+   if ( 临_bo_4 )
+   {
+     子_2_bo = true ;
+   }
+ }
+ if ( TimeDayOfWeek(子_3_da) == 4 )
+ {
+   if ( 总_182_in_4E8 <  总_183_in_4EC && ( 子_4_in < 总_182_in_4E8 || 子_4_in >= 总_183_in_4EC ) )
+   {
+     临_bo_5 = false;
+   }
+   else
+   {
+     if ( 总_182_in_4E8 >  总_183_in_4EC && 子_4_in <  总_182_in_4E8 && 子_4_in >= 总_183_in_4EC )
+     {
+       临_bo_5 = false;
+     }
+     else
+     {
+       if ( 总_182_in_4E8 == 总_183_in_4EC )
+       {
+         临_bo_5 = false;
+       }
+       else
+       {
+         临_bo_5 = true;
+       }
+     }
+   }
+   if ( 临_bo_5 )
+   {
+     子_2_bo = true ;
+   }
+ }
+ if ( TimeDayOfWeek(子_3_da) == 5 )
+ {
+   if ( 总_184_in_4F0 <  总_185_in_4F4 && ( 子_4_in < 总_184_in_4F0 || 子_4_in >= 总_185_in_4F4 ) )
+   {
+     临_bo_6 = false;
+   }
+   else
+   {
+     if ( 总_184_in_4F0 >  总_185_in_4F4 && 子_4_in <  总_184_in_4F0 && 子_4_in >= 总_185_in_4F4 )
+     {
+       临_bo_6 = false;
+     }
+     else
+     {
+       if ( 总_184_in_4F0 == 总_185_in_4F4 )
+       {
+         临_bo_6 = false;
+       }
+       else
+       {
+         临_bo_6 = true;
+       }
+     }
+   }
+   if ( 临_bo_6 )
+   {
+     子_2_bo = true ;
+   }
+ }
+ return(子_2_bo); 
+ }
+//lizong_20 <<==--------   --------
+ string lizong_21( int 木_0_in)
+ {
+  string    子_1_st;
+//----- -----
+
+ 总_274_in_25D8 ++;
+ switch(木_0_in)
+ {
+   case 0 : case 1 :
+   子_1_st = "no error" ;
+     break;
+   case 2 :
+   子_1_st = "common error" ;
+     break;
+   case 3 :
+   子_1_st = "invalid trade parameters" ;
+     break;
+   case 4 :
+   子_1_st = "trade server is busy" ;
+     break;
+   case 5 :
+   子_1_st = "old version of the client terminal" ;
+     break;
+   case 6 :
+   子_1_st = "no connection with trade server" ;
+     break;
+   case 7 :
+   子_1_st = "not enough rights" ;
+     break;
+   case 8 :
+   子_1_st = "too frequent requests" ;
+     break;
+   case 9 :
+   子_1_st = "malfunctional trade operation (never returned error)" ;
+     break;
+   case 64 :
+   子_1_st = "account disabled" ;
+     break;
+   case 65 :
+   子_1_st = "invalid account" ;
+     break;
+   case 128 :
+   子_1_st = "trade timeout" ;
+     break;
+   case 129 :
+   子_1_st = "invalid price" ;
+     break;
+   case 130 :
+   子_1_st = "invalid stops" ;
+     break;
+   case 131 :
+   子_1_st = "invalid trade volume" ;
+     break;
+   case 132 :
+   子_1_st = "market is closed" ;
+     break;
+   case 133 :
+   子_1_st = "trade is disabled" ;
+     break;
+   case 134 :
+   子_1_st = "not enough money" ;
+     break;
+   case 135 :
+   子_1_st = "price changed" ;
+     break;
+   case 136 :
+   子_1_st = "off quotes" ;
+     break;
+   case 137 :
+   子_1_st = "broker is busy (never returned error)" ;
+     break;
+   case 138 :
+   子_1_st = "requote" ;
+     break;
+   case 139 :
+   子_1_st = "order is locked" ;
+     break;
+   case 140 :
+   子_1_st = "long positions only allowed" ;
+     break;
+   case 141 :
+   子_1_st = "too many requests" ;
+     break;
+   case 145 :
+   子_1_st = "modification denied because order too close to market" ;
+     break;
+   case 146 :
+   子_1_st = "trade context is busy" ;
+     break;
+   case 147 :
+   子_1_st = "expirations are denied by broker" ;
+     break;
+   case 148 :
+   子_1_st = "amount of open and pending orders has reached the Exit_limit" ;
+     break;
+   case 149 :
+   子_1_st = "hedging is prohibited" ;
+     break;
+   case 150 :
+   子_1_st = "prohibited by FIFO rules" ;
+     break;
+   case 4000 :
+   子_1_st = "no error (never generated code)" ;
+     break;
+   case 4001 :
+   子_1_st = "wrong function pointer" ;
+     break;
+   case 4002 :
+   子_1_st = "array index is out of range" ;
+     break;
+   case 4003 :
+   子_1_st = "no memory for function call stack" ;
+     break;
+   case 4004 :
+   子_1_st = "recursive stack overflow" ;
+     break;
+   case 4005 :
+   子_1_st = "not enough stack for parameter" ;
+     break;
+   case 4006 :
+   子_1_st = "no memory for parameter string" ;
+     break;
+   case 4007 :
+   子_1_st = "no memory for temp string" ;
+     break;
+   case 4008 :
+   子_1_st = "not initialized string" ;
+     break;
+   case 4009 :
+   子_1_st = "not initialized string in array" ;
+     break;
+   case 4010 :
+   子_1_st = "no memory for array\' string" ;
+     break;
+   case 4011 :
+   子_1_st = "too long string" ;
+     break;
+   case 4012 :
+   子_1_st = "remainder from zero divide" ;
+     break;
+   case 4013 :
+   子_1_st = "zero divide" ;
+     break;
+   case 4014 :
+   子_1_st = "unknown command" ;
+     break;
+   case 4015 :
+   子_1_st = "wrong jump (never generated error)" ;
+     break;
+   case 4016 :
+   子_1_st = "not initialized array" ;
+     break;
+   case 4017 :
+   子_1_st = "dll calls are not allowed" ;
+     break;
+   case 4018 :
+   子_1_st = "cannot load library" ;
+     break;
+   case 4019 :
+   子_1_st = "cannot call function" ;
+     break;
+   case 4020 :
+   子_1_st = "expert function calls are not allowed" ;
+     break;
+   case 4021 :
+   子_1_st = "not enough memory for temp string returned from function" ;
+     break;
+   case 4022 :
+   子_1_st = "system is busy (never generated error)" ;
+     break;
+   case 4050 :
+   子_1_st = "invalid function parameters count" ;
+     break;
+   case 4051 :
+   子_1_st = "invalid function parameter value" ;
+     break;
+   case 4052 :
+   子_1_st = "string function internal error" ;
+     break;
+   case 4053 :
+   子_1_st = "some array error" ;
+     break;
+   case 4054 :
+   子_1_st = "incorrect series array using" ;
+     break;
+   case 4055 :
+   子_1_st = "custom indicator error" ;
+     break;
+   case 4056 :
+   子_1_st = "arrays are incompatible" ;
+     break;
+   case 4057 :
+   子_1_st = "global variables processing error" ;
+     break;
+   case 4058 :
+   子_1_st = "global variable not found" ;
+     break;
+   case 4059 :
+   子_1_st = "function is not allowed in testing mode" ;
+     break;
+   case 4060 :
+   子_1_st = "function is not confirmed" ;
+     break;
+   case 4061 :
+   子_1_st = "send mail error" ;
+     break;
+   case 4062 :
+   子_1_st = "string parameter expected" ;
+     break;
+   case 4063 :
+   子_1_st = "integer parameter expected" ;
+     break;
+   case 4064 :
+   子_1_st = "double parameter expected" ;
+     break;
+   case 4065 :
+   子_1_st = "array as parameter expected" ;
+     break;
+   case 4066 :
+   子_1_st = "requested history data in update state" ;
+     break;
+   case 4099 :
+   子_1_st = "end of file" ;
+     break;
+   case 4100 :
+   子_1_st = "some file error" ;
+     break;
+   case 4101 :
+   子_1_st = "wrong file name" ;
+     break;
+   case 4102 :
+   子_1_st = "too many opened files" ;
+     break;
+   case 4103 :
+   子_1_st = "cannot open file" ;
+     break;
+   case 4104 :
+   子_1_st = "incompatible access to a file" ;
+     break;
+   case 4105 :
+   子_1_st = "no order selected" ;
+     break;
+   case 4106 :
+   子_1_st = "unknown symbol" ;
+     break;
+   case 4107 :
+   子_1_st = "invalid price parameter for trade function" ;
+     break;
+   case 4108 :
+   子_1_st = "invalid ticket" ;
+     break;
+   case 4109 :
+   子_1_st = "trade is not allowed in the expert properties" ;
+     break;
+   case 4110 :
+   子_1_st = "longs are not allowed in the expert properties" ;
+     break;
+   case 4111 :
+   子_1_st = "shorts are not allowed in the expert properties" ;
+     break;
+   case 4200 :
+   子_1_st = "object is already exist" ;
+     break;
+   case 4201 :
+   子_1_st = "unknown object property" ;
+     break;
+   case 4202 :
+   子_1_st = "object is not exist" ;
+     break;
+   case 4203 :
+   子_1_st = "unknown object type" ;
+     break;
+   case 4204 :
+   子_1_st = "no object name" ;
+     break;
+   case 4205 :
+   子_1_st = "object coordinates error" ;
+     break;
+   case 4206 :
+   子_1_st = "no specified subwindow" ;
+     break;
+   default :
+   子_1_st = "unknown error" ;
+ }
+ return(子_1_st);
+ }
+//lizong_21 <<==--------   --------
+ void lizong_22( bool 木_0_bo)
+ {
+  double    子_1_do;
+  int       子_2_in;
+  int       子_3_in;
+  double    子_4_do;
+  long      子_5_lo;
+  double    子_6_do;
+  double    子_7_do;
+  datetime  子_8_da;
+  string    子_9_st;
+  int       子_10_in;
+  double    子_11_do;
+  long      子_12_lo;
+  double    子_13_do;
+  double    子_14_do;
+  datetime  子_15_da;
+  string    子_16_st;
+  int       子_17_in;
+//----- -----
+ long       临_lo_1;
+ long       临_lo_2;
+ int        临_in_3;
+ long       临_lo_4;
+ long       临_lo_5;
+ int        临_in_6;
+
+ 子_1_do = 总_140_do_3F0 / 100.0 + 1.0 ;
+ if ( ( !(AccountBalance()!=总_318_do_28D8) && !(木_0_bo) ) )   return;
+ 
+ if ( ( !(AccountBalance()>总_318_do_28D8 * 子_1_do) && !(AccountBalance()<总_318_do_28D8 / 子_1_do) && !(木_0_bo) ) )   return;
+ lizong_10(总_100_do_230,总_92_in_1EC); 
+ 子_2_in = OrdersTotal() ;
+ for (子_3_in = 子_2_in ; 子_3_in >= 0 ; 子_3_in --)
+ {
+   if ( OrderSelect(子_3_in,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 )   continue;
+   
+   if ( OrderType() == 4 && OrderLots()!=总_223_do_1AC4_si99[总_328_in_3100] )
+   {
+     子_4_do = OrderStopLoss() ;
+     子_5_lo = OrderTicket() ;
+     子_6_do = OrderTakeProfit() ;
+     子_7_do = OrderOpenPrice() ;
+     子_8_da = OrderExpiration() ;
+     子_9_st = OrderComment() ;
+     OrderDelete(子_5_lo,Red); 
+     子_10_in = OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_7_do,总_38_do_C0,子_4_do,子_6_do,子_9_st,总_93_in_1F0,子_8_da,Green) ;
+     临_lo_1 = 子_10_in;
+     临_lo_2 = 子_5_lo;
+     for (临_in_3 = 0 ; 临_in_3 < 100 ; 临_in_3=临_in_3 + 1)
+     {
+       if ( !(总_198_do_1070_si100si2[临_in_3][0]==临_lo_2) )   continue;
+       总_198_do_1070_si100si2[临_in_3][0] = 临_lo_1;
+       break;
+       
+     }
+     Print("Lotsize changed more than " + string(总_140_do_3F0) + "%... adjusting lotsize of pending orders"); 
+     Sleep(1000); 
+   }
+   if ( OrderType() != 5 || !(OrderLots()!=总_223_do_1AC4_si99[总_328_in_3100]) )   continue;
+   子_11_do = OrderStopLoss() ;
+   子_12_lo = OrderTicket() ;
+   子_13_do = OrderTakeProfit() ;
+   子_14_do = OrderOpenPrice() ;
+   子_15_da = OrderExpiration() ;
+   子_16_st = OrderComment() ;
+   OrderDelete(子_12_lo,Red); 
+   子_17_in = OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_14_do,总_38_do_C0,子_11_do,子_13_do,子_16_st,总_93_in_1F0,子_15_da,Green) ;
+   临_lo_4 = 子_17_in;
+   临_lo_5 = 子_12_lo;
+   for (临_in_6 = 0 ; 临_in_6 < 100 ; 临_in_6=临_in_6 + 1)
+   {
+     if ( !(总_198_do_1070_si100si2[临_in_6][0]==临_lo_5) )   continue;
+     总_198_do_1070_si100si2[临_in_6][0] = 临_lo_4;
+     break;
+     
+   }
+   Print("Lotsize changed more than " + string(总_140_do_3F0) + "%... adjusting lotsize of pending orders"); 
+   Sleep(1000); 
+   
+ }
+ }
+
+ void lizong_24()
+ {
+  int       子_1_in = 0;
+  int       子_2_in = 0;
+  int       子_3_in;
+  int       子_4_in;
+  int       子_5_in;
+  double    子_6_do;
+  int       子_7_in;
+  int       子_8_in;
+  int       子_9_in;
+  int       子_10_in;
+  int       子_11_in;
+  int       子_12_in;
+  int       子_13_in;
+  uint      子_14_ui;
+  bool      子_15_bo;
+  int       子_16_in;
+  string    子_17_st;
+  int       子_18_in;
+  int       子_19_in;
+  int       子_20_in;
+  string    子_21_st;
+  int       子_22_in;
+  int       子_23_in;
+  int       子_24_in;
+//----- -----
+
+ 子_3_in = 20 ;
+ 子_4_in = 300 ;
+ 子_5_in = 7 ;
+ 子_6_do = InfoPanelSizeAdjust ;
+ 子_7_in = 6 ;
+ 子_8_in = 4 ;
+ 子_9_in = 350 ;
+ 子_10_in = 350 ;
+ 子_11_in = 0 ;
+ 子_12_in = 5 ;
+ 子_13_in = 20 ;
+ 子_14_ui = LightSteelBlue ;
+ 子_15_bo = false ;
+ 子_16_in = 0 ;
+ if ( 总_17_bo_8C )
+ {
+   子_16_in = (总_378_in_5D80 + 3) * 总_362_do_5CC8 ;
+ }
+ ObjectCreate(0,"infopanel_rectangle",OBJ_RECTANGLE_LABEL,0,0,0.0); 
+ ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_XDISTANCE,子_12_in); 
+ ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_YDISTANCE,子_13_in); 
+ ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_XSIZE,long(子_9_in * InfoPanelSizeAdjust)); 
+ ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_YSIZE,long(子_10_in * InfoPanelSizeAdjust + 子_16_in)); 
+ ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_CORNER,0); 
+ ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_COLOR,0xFF0000); 
+ ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_BGCOLOR,子_14_ui); 
+ ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_BACK,0); 
+ ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_BORDER_COLOR,0xFF0000); 
+ ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_COLOR,0xFF0000); 
+ ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_BORDER_TYPE,0); 
+ ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_STYLE,0); 
+ ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_WIDTH,0x2); 
+ ObjectSetInteger(0,"infopanel_rectangle",OBJPROP_SELECTABLE,0); 
+ ObjectCreate(0,"line1",OBJ_LABEL,0,0,0.0); 
+ ObjectSetInteger(0,"line1",OBJPROP_CORNER,子_11_in); 
+ ObjectSetInteger(0,"line1",OBJPROP_YDISTANCE,子_13_in + 子_8_in); 
+ ObjectSetInteger(0,"line1",OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
+ if ( !(总_17_bo_8C) )
+ {
+   ObjectSetString(0,"line1",OBJPROP_TEXT,"The Gold Reaper V4.1"); 
+ }
+ else
+ {
+   ObjectSetString(0,"line1",OBJPROP_TEXT,"The Gold Reaper V4.1 - OneChartSetup"); 
+ }
+ ObjectSetInteger(0,"line1",OBJPROP_COLOR,总_329_ui_3104); 
+ ObjectCreate(0,"linec",OBJ_LABEL,0,0,0.0); 
+ ObjectSetInteger(0,"linec",OBJPROP_CORNER,子_11_in); 
+ ObjectSetInteger(0,"linec",OBJPROP_YDISTANCE,long(子_13_in + InfoPanelSizeAdjust * 20.0 + 子_8_in)); 
+ ObjectSetInteger(0,"linec",OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
+ ObjectSetString(0,"linec",OBJPROP_TEXT,"EA Developed by Wim Schrynemakers - 2024"); 
+ ObjectSetInteger(0,"linec",OBJPROP_COLOR,总_329_ui_3104); 
+ ObjectCreate(0,"line2",OBJ_LABEL,0,0,0.0); 
+ ObjectSetInteger(0,"line2",OBJPROP_CORNER,子_11_in); 
+ ObjectSetInteger(0,"line2",OBJPROP_YDISTANCE,long(子_13_in + InfoPanelSizeAdjust * 32.0 + 子_8_in)); 
+ ObjectSetInteger(0,"line2",OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
+ ObjectSetString(0,"line2",OBJPROP_TEXT,"------------------------------------------------------"); 
+ ObjectSetInteger(0,"line2",OBJPROP_COLOR,总_329_ui_3104); 
+ ObjectCreate(0,"lines",OBJ_LABEL,0,0,0.0); 
+ ObjectSetInteger(0,"lines",OBJPROP_CORNER,子_11_in); 
+ ObjectSetInteger(0,"lines",OBJPROP_YDISTANCE,long(子_13_in + InfoPanelSizeAdjust * 44.0 + 子_8_in)); 
+ ObjectSetInteger(0,"lines",OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
+ if ( 总_19_in_9C == 1 )
+ {
+   子_17_st = "conservative" ;
+ }
+ else
+ {
+   if ( 总_19_in_9C == 2 )
+   {
+     子_17_st = "moderate" ;
+   }
+   else
+   {
+     if ( 总_19_in_9C == 3 )
+     {
+       子_17_st = "intense" ;
+     }
+     else
+     {
+       if ( 总_19_in_9C == 4 )
+       {
+         子_17_st = "extreme" ;
+       }
+       else
+       {
+         if ( 总_19_in_9C == 0 )
+         {
+           子_17_st = "extreme conservative" ;
+         }
+         else
+         {
+           子_17_st = "manual strategy selection" ;
+         }
+       }
+     }
+   }
+ }
+ ObjectSetString(0,"lines",OBJPROP_TEXT,"Trade Frequency: " + 子_17_st); 
+ ObjectSetInteger(0,"lines",OBJPROP_COLOR,总_329_ui_3104); 
+ if ( Risk == 1234 )
+ {
+   ObjectCreate(0,"linet",OBJ_LABEL,0,0,0.0); 
+   ObjectSetInteger(0,"linet",OBJPROP_CORNER,子_11_in); 
+   ObjectSetInteger(0,"linet",OBJPROP_YDISTANCE,long(子_13_in + InfoPanelSizeAdjust * 60.0 + 子_8_in)); 
+   ObjectSetInteger(0,"linet",OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
+   ObjectSetString(0,"linet",OBJPROP_TEXT,"Max allowed DD: " + string(MaxAllowedDD) + "%"); 
+   ObjectSetInteger(0,"linet",OBJPROP_COLOR,总_329_ui_3104); 
+ }
+ else
+ {
+   if ( Risk == 3 )
+   {
+     ObjectCreate(0,"linet",OBJ_LABEL,0,0,0.0); 
+     ObjectSetInteger(0,"linet",OBJPROP_CORNER,子_11_in); 
+     ObjectSetInteger(0,"linet",OBJPROP_YDISTANCE,long(子_13_in + InfoPanelSizeAdjust * 60.0 + 子_8_in)); 
+     ObjectSetInteger(0,"linet",OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
+     ObjectSetString(0,"linet",OBJPROP_TEXT,"Max risk per strategy: " + string(MaxRiskPerStrategy_) + "%"); 
+     ObjectSetInteger(0,"linet",OBJPROP_COLOR,总_329_ui_3104); 
+   }
+   else
+   {
+     ObjectCreate(0,"linet",OBJ_LABEL,0,0,0.0); 
+     ObjectSetInteger(0,"linet",OBJPROP_CORNER,子_11_in); 
+     ObjectSetInteger(0,"linet",OBJPROP_YDISTANCE,long(子_13_in + InfoPanelSizeAdjust * 60.0 + 子_8_in)); 
+     ObjectSetInteger(0,"linet",OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
+     ObjectSetString(0,"linet",OBJPROP_TEXT,"Manual lotsize: " + string(StartLots) + "lots"); 
+     ObjectSetInteger(0,"linet",OBJPROP_COLOR,总_329_ui_3104); 
+   }
+ }
+ ObjectCreate(0,"lineopl" + IntegerToString(0,0,32),OBJ_LABEL,0,0,0.0); 
+ ObjectSetInteger(0,"lineopl" + IntegerToString(0,0,32),OBJPROP_CORNER,子_11_in); 
+ ObjectSetInteger(0,"lineopl" + IntegerToString(0,0,32),OBJPROP_YDISTANCE,子_13_in + InfoPanelSizeAdjust * 76.0 + 子_8_in); 
+ ObjectSetInteger(0,"lineopl" + IntegerToString(0,0,32),OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
+ ObjectSetString(0,"lineopl" + IntegerToString(0,0,32),OBJPROP_TEXT,"Open P/L: -"); 
+ ObjectSetInteger(0,"lineopl" + IntegerToString(0,0,32),OBJPROP_COLOR,总_329_ui_3104); 
+ ObjectCreate(0,"linea" + IntegerToString(0,0,32),OBJ_LABEL,0,0,0.0); 
+ ObjectSetInteger(0,"linea" + IntegerToString(0,0,32),OBJPROP_CORNER,子_11_in); 
+ ObjectSetInteger(0,"linea" + IntegerToString(0,0,32),OBJPROP_YDISTANCE,子_13_in + InfoPanelSizeAdjust * 92.0 + 子_8_in); 
+ ObjectSetInteger(0,"linea" + IntegerToString(0,0,32),OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
+ ObjectSetString(0,"linea" + IntegerToString(0,0,32),OBJPROP_TEXT,"Account Balance: -"); 
+ ObjectSetInteger(0,"linea" + IntegerToString(0,0,32),OBJPROP_COLOR,总_329_ui_3104); 
+ ObjectCreate(0,"linetp" + IntegerToString(0,0,32),OBJ_LABEL,0,0,0.0); 
+ ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_CORNER,子_11_in); 
+ ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_YDISTANCE,子_13_in + InfoPanelSizeAdjust * 108.0 + 子_8_in); 
+ ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
+ ObjectSetString(0,"linetp" + IntegerToString(0,0,32),OBJPROP_TEXT,"Total P/L so far: -"); 
+ ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_COLOR,总_329_ui_3104); 
+ 子_18_in = 0 ;
+ 子_19_in = 0 ;
+ 子_20_in = 0 ;
+ 子_22_in = 子_12_in + 子_7_in ;
+ 子_23_in = 子_13_in + InfoPanelSizeAdjust * 160.0 + 子_8_in ;
+ 子_21_st = "Strategy" ;
+ lizong_25(子_22_in,子_23_in,0,"Strategy",0,0,1,0,1.0); 
+ 子_18_in = 1 ;
+ 子_19_in = 1 ;
+ 子_21_st = "Closed PL" ;
+ if ( 总_152_in_43C == 1 )
+ {
+   子_21_st = "Closed PL*" ;
+ }
+ lizong_25(子_22_in,子_23_in,子_18_in,子_21_st,子_20_in,子_19_in,1,0,1.0); 
+ 子_18_in ++;
+ 子_19_in ++;
+ 子_21_st = "PL per trade" ;
+ if ( 总_152_in_43C == 2 )
+ {
+   子_21_st = "PL per trade*" ;
+ }
+ lizong_25(子_22_in,子_23_in,子_18_in,子_21_st,子_20_in,子_19_in,1,0,1.0); 
+ 子_18_in ++;
+ 子_19_in ++;
+ 子_21_st = "Lotsize" ;
+ lizong_25(子_22_in,子_23_in,子_18_in,"Lotsize",子_20_in,子_19_in,1,0,1.0); 
+ 子_18_in ++;
+ 子_19_in = 0 ;
+ 子_20_in ++;
+ 总_340_in_3310 = 子_18_in ;
+ for (子_24_in = 0 ; 子_24_in < 9 ; 子_24_in ++)
+ {
+   子_21_st="Strategy " + IntegerToString(子_24_in + 1,0,32);
+   lizong_25(子_22_in,子_23_in,子_18_in,子_21_st,子_20_in,子_19_in,1,0,1.0); 
+   子_18_in ++;
+   子_19_in ++;
+   子_21_st = DoubleToString(NormalizeDouble(总_400_do_67B4_si99[子_24_in],2),2) ;
+   lizong_25(子_22_in,子_23_in,子_18_in,子_21_st,子_20_in,子_19_in,1,0,1.0); 
+   子_18_in ++;
+   子_19_in ++;
+   子_21_st = DoubleToString(NormalizeDouble(总_345_do_3AAC_si99[子_24_in],2),2) ;
+   lizong_25(子_22_in,子_23_in,子_18_in,子_21_st,子_20_in,子_19_in,1,0,1.0); 
+   子_18_in ++;
+   子_19_in ++;
+   子_21_st = DoubleToString(NormalizeDouble(总_223_do_1AC4_si99[子_24_in],2),2) ;
+   lizong_25(子_22_in,子_23_in,子_18_in,子_21_st,子_20_in,子_19_in,1,0,1.0); 
+   子_18_in ++;
+   子_19_in = 0 ;
+   子_20_in ++;
+ }
+ }
+//lizong_24 <<==--------   --------
+ void lizong_25( int 木_0_in,int 木_1_in,int 木_2_in,string 木_3_st,int 木_4_in,int 木_5_in,int 木_6_in,uint 木_7_ui,double 木_8_do)
+ {
+ ObjectCreate(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJ_EDIT,0,0,0.0); 
+ ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_XDISTANCE,木_0_in + 木_5_in * 总_361_do_5CC0); 
+ ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_YDISTANCE,木_1_in + 木_4_in * 总_362_do_5CC8); 
+ ObjectSetString(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_TEXT,木_3_st); 
+ ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_BACK,0); 
+ ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_COLOR,木_7_ui); 
+ ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_BGCOLOR,总_364_ui_5CD4); 
+ ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_BORDER_COLOR,0); 
+ ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_FONTSIZE,总_372_in_5CFC * 木_8_do); 
+ ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_READONLY,0x1); 
+ ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_YSIZE,总_362_do_5CC8); 
+ ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_XSIZE,总_361_do_5CC0); 
+ ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_YSIZE,总_362_do_5CC8); 
+ if ( 木_6_in == 0 )
+ {
+   ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_ALIGN,0x1); 
+ }
+ if ( 木_6_in == 1 )
+ {
+   ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_ALIGN,0x2); 
+ }
+ if ( 木_6_in != 2 )   return;
+ ObjectSetInteger(0,"info_ea" + IntegerToString(木_2_in,0,32),OBJPROP_ALIGN,0); 
+ }
+//lizong_25 <<==--------   --------
+ void lizong_26()
+ {
+  int       子_1_in;
+  int       子_2_in;
+  int       子_3_in;
+  int       子_4_in;
+//----- -----
+
+ ObjectDelete(0,"line1"); 
+ ObjectDelete(0,"linec"); 
+ ObjectDelete(0,"line2"); 
+ ObjectDelete(0,"lines"); 
+ ObjectDelete(0,"linet"); 
+ ObjectDelete(0,"lineTradeStart"); 
+ for (子_1_in = 0 ; 子_1_in <= 99 ; 子_1_in ++)
+ {
+   ObjectDelete(0,"lineopl" + IntegerToString(子_1_in,0,32)); 
+   ObjectDelete(0,"linea" + IntegerToString(子_1_in,0,32)); 
+   ObjectDelete(0,"lineto" + IntegerToString(子_1_in,0,32)); 
+   ObjectDelete(0,"linetp" + IntegerToString(子_1_in,0,32)); 
+   ObjectDelete(0,"linetq" + IntegerToString(子_1_in,0,32)); 
+   for (子_2_in = 0 ; 子_2_in < 10 ; 子_2_in ++)
+   {
+     ObjectDelete(0,"tabel_info" + IntegerToString(子_1_in * 100 + 子_2_in,0,32)); 
+   }
+ }
+ ObjectDelete(0,"infopanel_rectangle"); 
+ for (子_3_in = 0 ; 子_3_in < 10 ; 子_3_in ++)
+ {
+   ObjectDelete(0,"tabel_heading" + IntegerToString(子_3_in,0,32)); 
+   ObjectDelete(0,"tabel_totals" + IntegerToString(子_3_in,0,32)); 
+ }
+ for (子_4_in = 0 ; 子_4_in < 总_360_in_5CB8 ; 子_4_in ++)
+ {
+   ObjectDelete(0,"horizontalrect" + IntegerToString(子_4_in,0,32)); 
+   ObjectDelete(0,"info_ea" + IntegerToString(子_4_in,0,32)); 
+ }
+ }
+//lizong_26 <<==--------   --------
+ void lizong_27()
+ {
+  string    子_1_st;
+//----- -----
+ double     临_do_1;
+ double     临_do_2;
+ int        临_in_3;
+ int        临_in_4;
+ int        临_in_5;
+ int        临_in_6;
+ int        临_in_7;
+ int        临_in_8;
+ int        临_in_9;
+ int        临_in_10;
+ int        临_in_11;
+ int        临_in_12;
+ int        临_in_13;
+ int        临_in_14;
+ int        临_in_15;
+ int        临_in_16;
+ int        临_in_17;
+ int        临_in_18;
+ int        临_in_19;
+
+ if ( !(ShowInfoPanel) )   return;
+ 
+ if ( ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) ) )   return;
+ 
+ if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
+ {
+   临_do_1 = 0.0;
+ }
+ else
+ {
+   临_do_2 = 0.0;
+   for (临_in_3 = OrdersTotal() ; 临_in_3 >= 0 ; 临_in_3=临_in_3 - 1)
+   {
+     if ( OrderSelect(临_in_3,0,0) != true )   continue;
+     
+     if ( ( OrderSymbol() != 总_336_st_3130 && !(总_17_bo_8C) ) )   continue;
+     临_in_4 = OrderMagicNumber();
+     临_in_5=ST1_MagicNumber + 1;
+     if ( 临_in_4 != 临_in_5 )
+     {
+       临_in_5 = OrderMagicNumber();
+       临_in_6=ST1_MagicNumber + 2;
+       if ( 临_in_5 != 临_in_6 )
+       {
+         临_in_6 = OrderMagicNumber();
+         临_in_7=ST1_MagicNumber + 3;
+         if ( 临_in_6 != 临_in_7 )
+         {
+           临_in_7 = OrderMagicNumber();
+           临_in_8=ST1_MagicNumber + 4;
+           if ( 临_in_7 != 临_in_8 )
+           {
+             临_in_8 = OrderMagicNumber();
+             临_in_9=ST1_MagicNumber + 5;
+             if ( 临_in_8 != 临_in_9 )
+             {
+               临_in_9 = OrderMagicNumber();
+               临_in_10=ST1_MagicNumber + 6;
+               if ( 临_in_9 != 临_in_10 )
+               {
+                 临_in_10 = OrderMagicNumber();
+                 临_in_11=ST1_MagicNumber + 7;
+                 if ( 临_in_10 != 临_in_11 )
+                 {
+                   临_in_11 = OrderMagicNumber();
+                   临_in_12=ST1_MagicNumber + 8;
+                   if ( 临_in_11 != 临_in_12 )
+                   {
+                     临_in_12 = OrderMagicNumber();
+                     临_in_13=ST1_MagicNumber + 9;
+                     if ( 临_in_12 != 临_in_13 )
+                     {
+                       临_in_13 = OrderMagicNumber();
+                       临_in_14=ST1_MagicNumber + 10;
+                       if ( 临_in_13 != 临_in_14 )
+                       {
+                         临_in_14 = OrderMagicNumber();
+                         临_in_15=ST1_MagicNumber + 11;
+                         if ( 临_in_14 != 临_in_15 )
+                         {
+                           临_in_15 = OrderMagicNumber();
+                           临_in_16=ST1_MagicNumber + 12;
+                           if ( 临_in_15 != 临_in_16 )
+                           {
+                             临_in_16 = OrderMagicNumber();
+                             临_in_17=ST1_MagicNumber + 13;
+                             if ( 临_in_16 != 临_in_17 )
+                             {
+                               临_in_17 = OrderMagicNumber();
+                               临_in_18=ST1_MagicNumber + 14;
+                               if ( 临_in_17 != 临_in_18 )
+                               {
+                                 临_in_18 = OrderMagicNumber();
+                                 临_in_19=ST1_MagicNumber + 15;
+                               if ( 临_in_18 != 临_in_19 )   continue;
+                               }
+                             }
+                           }
+                         }
+                       }
+                     }
+                   }
+                 }
+               }
+             }
+           }
+         }
+       }
+     }
+     if ( ( OrderType() != 0 && OrderType() != 1 ) )   continue;
+     临_do_2 = OrderProfit() + OrderSwap() + OrderCommission() + 临_do_2;
+     
+   }
+   总_323_do_2CA0_si30[总_328_in_3100] = 临_do_2;
+   临_do_1 = 临_do_2;
+ }
+ ObjectSetString(0,"lineopl" + IntegerToString(0,0,32),OBJPROP_TEXT,"Open P/L: " + DoubleToString(临_do_1,2)); 
+ ObjectSetString(0,"linea" + IntegerToString(0,0,32),OBJPROP_TEXT,"Account Balance: " + DoubleToString(AccountBalance(),2)); 
+ if ( 总_19_in_9C == 1 )
+ {
+   子_1_st = "conservative" ;
+ }
+ else
+ {
+   if ( 总_19_in_9C == 2 )
+   {
+     子_1_st = "moderate" ;
+   }
+   else
+   {
+     if ( 总_19_in_9C == 3 )
+     {
+       子_1_st = "intense" ;
+     }
+     else
+     {
+       if ( 总_19_in_9C == 4 )
+       {
+         子_1_st = "extreme" ;
+       }
+       else
+       {
+         if ( 总_19_in_9C == 0 )
+         {
+           子_1_st = "extreme conservative" ;
+         }
+         else
+         {
+           子_1_st = "manual strategy selection" ;
+         }
+       }
+     }
+   }
+ }
+ ObjectSetString(0,"lines",OBJPROP_TEXT,"Trade Frequency: " + 子_1_st); 
+ if ( Risk == 1234 )
+ {
+   ObjectSetString(0,"linet",OBJPROP_TEXT,"Max allowed DD: " + string(MaxAllowedDD) + "%"); 
+ }
+ else
+ {
+   if ( Risk == 3 )
+   {
+     ObjectSetString(0,"linet",OBJPROP_TEXT,"Max risk per strategy: " + string(MaxRiskPerStrategy_) + "%"); 
+   }
+   else
+   {
+     ObjectSetString(0,"linet",OBJPROP_TEXT,"Manual lotsize: " + string(StartLots) + "lots"); 
+   }
+ }
+ }
+//lizong_27 <<==--------   --------
+ void lizong_28()
+ {
+  int       子_1_in;
+  string    子_2_st;
+  int       子_3_in;
+//----- -----
+
+ if ( !(ShowInfoPanel) )   return;
+ 
+ if ( ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) ) )   return;
+ 子_1_in = 总_340_in_3310 ;
+ for (子_3_in = 0 ; 子_3_in < 9 ; 子_3_in ++)
+ {
+   子_2_st="Strategy " + IntegerToString(子_3_in + 1,0,32);
+   ObjectSetString(0,"info_ea" + IntegerToString(子_1_in,0,32),OBJPROP_TEXT,子_2_st); 
+   子_1_in ++;
+   子_2_st = DoubleToString(NormalizeDouble(总_400_do_67B4_si99[子_3_in],2),2) ;
+   ObjectSetString(0,"info_ea" + IntegerToString(子_1_in,0,32),OBJPROP_TEXT,子_2_st); 
+   子_1_in ++;
+   子_2_st = DoubleToString(NormalizeDouble(总_345_do_3AAC_si99[子_3_in],2),2) ;
+   ObjectSetString(0,"info_ea" + IntegerToString(子_1_in,0,32),OBJPROP_TEXT,子_2_st); 
+   子_1_in ++;
+   子_2_st = DoubleToString(NormalizeDouble(总_223_do_1AC4_si99[子_3_in],2),2) ;
+   ObjectSetString(0,"info_ea" + IntegerToString(子_1_in,0,32),OBJPROP_TEXT,子_2_st); 
+   子_1_in ++;
+ }
+ }
+//lizong_28 <<==--------   --------
+ void lizong_29()
+ {
+ double     临_do_1;
+ double     临_do_2;
+ int        临_in_3;
+ int        临_in_4;
+ int        临_in_5;
+ int        临_in_6;
+ int        临_in_7;
+ int        临_in_8;
+ int        临_in_9;
+ int        临_in_10;
+ int        临_in_11;
+ int        临_in_12;
+ int        临_in_13;
+ int        临_in_14;
+ int        临_in_15;
+ int        临_in_16;
+ int        临_in_17;
+ int        临_in_18;
+ int        临_in_19;
+ int        临_in_20;
+
+ if ( !(ShowInfoPanel) )   return;
+ 
+ if ( ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) ) )   return;
+ ObjectSetString(0,"lineto" + IntegerToString(0,0,32),OBJPROP_TEXT,"Total profits/losses so far: " + IntegerToString(lizong_30(0,9999999),0,32) + "/" + IntegerToString(lizong_31(0,9999999),0,32)); 
+ if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
+ {
+   临_do_1 = 0.0;
+ }
+ else
+ {
+   临_do_2 = 0.0;
+   临_in_3 = 0;
+   for (临_in_4 = HistoryTotal() ; 临_in_4 >= 0 ; 临_in_4=临_in_4 - 1)
+   {
+     if ( OrderSelect(临_in_4,0,1) != true )   continue;
+     
+     if ( ( OrderSymbol() != 总_336_st_3130 && !(总_17_bo_8C) ) )   continue;
+     临_in_5 = OrderMagicNumber();
+     临_in_6=ST1_MagicNumber + 1;
+     if ( 临_in_5 != 临_in_6 )
+     {
+       临_in_6 = OrderMagicNumber();
+       临_in_7=ST1_MagicNumber + 2;
+       if ( 临_in_6 != 临_in_7 )
+       {
+         临_in_7 = OrderMagicNumber();
+         临_in_8=ST1_MagicNumber + 3;
+         if ( 临_in_7 != 临_in_8 )
+         {
+           临_in_8 = OrderMagicNumber();
+           临_in_9=ST1_MagicNumber + 4;
+           if ( 临_in_8 != 临_in_9 )
+           {
+             临_in_9 = OrderMagicNumber();
+             临_in_10=ST1_MagicNumber + 5;
+             if ( 临_in_9 != 临_in_10 )
+             {
+               临_in_10 = OrderMagicNumber();
+               临_in_11=ST1_MagicNumber + 6;
+               if ( 临_in_10 != 临_in_11 )
+               {
+                 临_in_11 = OrderMagicNumber();
+                 临_in_12=ST1_MagicNumber + 7;
+                 if ( 临_in_11 != 临_in_12 )
+                 {
+                   临_in_12 = OrderMagicNumber();
+                   临_in_13=ST1_MagicNumber + 8;
+                   if ( 临_in_12 != 临_in_13 )
+                   {
+                     临_in_13 = OrderMagicNumber();
+                     临_in_14=ST1_MagicNumber + 9;
+                     if ( 临_in_13 != 临_in_14 )
+                     {
+                       临_in_14 = OrderMagicNumber();
+                       临_in_15=ST1_MagicNumber + 10;
+                       if ( 临_in_14 != 临_in_15 )
+                       {
+                         临_in_15 = OrderMagicNumber();
+                         临_in_16=ST1_MagicNumber + 11;
+                         if ( 临_in_15 != 临_in_16 )
+                         {
+                           临_in_16 = OrderMagicNumber();
+                           临_in_17=ST1_MagicNumber + 12;
+                           if ( 临_in_16 != 临_in_17 )
+                           {
+                             临_in_17 = OrderMagicNumber();
+                             临_in_18=ST1_MagicNumber + 13;
+                             if ( 临_in_17 != 临_in_18 )
+                             {
+                               临_in_18 = OrderMagicNumber();
+                               临_in_19=ST1_MagicNumber + 14;
+                               if ( 临_in_18 != 临_in_19 )
+                               {
+                                 临_in_19 = OrderMagicNumber();
+                                 临_in_20=ST1_MagicNumber + 15;
+                               if ( 临_in_19 != 临_in_20 )   continue;
+                               }
+                             }
+                           }
+                         }
+                       }
+                     }
+                   }
+                 }
+               }
+             }
+           }
+         }
+       }
+     }
+     临_in_3=临_in_3 + 1;
+     临_do_2 = 临_do_2 + OrderProfit() + OrderSwap() + OrderCommission();
+     if ( 临_in_3 >= 1000 )   break;
+     
+   }
+   总_326_do_300C_si30[总_328_in_3100] = 临_do_2;
+   临_do_1 = 临_do_2;
+ }
+ ObjectSetString(0,"linetp" + IntegerToString(0,0,32),OBJPROP_TEXT,"Total P/L so far: " + DoubleToString(NormalizeDouble(临_do_1,2),2)); 
+ }
+//lizong_29 <<==--------   --------
+ int lizong_30( int 木_0_in,int 木_1_in)
+ {
+  double    子_2_do;
+  int       子_3_in;
+  int       子_4_in;
+  int       子_5_in;
+//----- -----
+ int        临_in_1;
+ int        临_in_2;
+ int        临_in_3;
+ int        临_in_4;
+ int        临_in_5;
+ int        临_in_6;
+ int        临_in_7;
+ int        临_in_8;
+ int        临_in_9;
+ int        临_in_10;
+ int        临_in_11;
+ int        临_in_12;
+ int        临_in_13;
+ int        临_in_14;
+ int        临_in_15;
+ int        临_in_16;
+
+ if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
+ {
+   return(0); 
+ }
+ 子_2_do = 0.0 ;
+ 子_3_in = 0 ;
+ 子_4_in = 0 ;
+ for (子_5_in = HistoryTotal() ; 子_5_in >= 0 ; 子_5_in --)
+ {
+   if ( OrderSelect(子_5_in,0,1) != true )   continue;
+   
+   if ( ( OrderSymbol() != 总_336_st_3130 && !(总_17_bo_8C) ) )   continue;
+   临_in_1 = OrderMagicNumber();
+   临_in_2=ST1_MagicNumber + 1;
+   if ( 临_in_1 != 临_in_2 )
+   {
+     临_in_2 = OrderMagicNumber();
+     临_in_3=ST1_MagicNumber + 2;
+     if ( 临_in_2 != 临_in_3 )
+     {
+       临_in_3 = OrderMagicNumber();
+       临_in_4=ST1_MagicNumber + 3;
+       if ( 临_in_3 != 临_in_4 )
+       {
+         临_in_4 = OrderMagicNumber();
+         临_in_5=ST1_MagicNumber + 4;
+         if ( 临_in_4 != 临_in_5 )
+         {
+           临_in_5 = OrderMagicNumber();
+           临_in_6=ST1_MagicNumber + 5;
+           if ( 临_in_5 != 临_in_6 )
+           {
+             临_in_6 = OrderMagicNumber();
+             临_in_7=ST1_MagicNumber + 6;
+             if ( 临_in_6 != 临_in_7 )
+             {
+               临_in_7 = OrderMagicNumber();
+               临_in_8=ST1_MagicNumber + 7;
+               if ( 临_in_7 != 临_in_8 )
+               {
+                 临_in_8 = OrderMagicNumber();
+                 临_in_9=ST1_MagicNumber + 8;
+                 if ( 临_in_8 != 临_in_9 )
+                 {
+                   临_in_9 = OrderMagicNumber();
+                   临_in_10=ST1_MagicNumber + 9;
+                   if ( 临_in_9 != 临_in_10 )
+                   {
+                     临_in_10 = OrderMagicNumber();
+                     临_in_11=ST1_MagicNumber + 10;
+                     if ( 临_in_10 != 临_in_11 )
+                     {
+                       临_in_11 = OrderMagicNumber();
+                       临_in_12=ST1_MagicNumber + 11;
+                       if ( 临_in_11 != 临_in_12 )
+                       {
+                         临_in_12 = OrderMagicNumber();
+                         临_in_13=ST1_MagicNumber + 12;
+                         if ( 临_in_12 != 临_in_13 )
+                         {
+                           临_in_13 = OrderMagicNumber();
+                           临_in_14=ST1_MagicNumber + 13;
+                           if ( 临_in_13 != 临_in_14 )
+                           {
+                             临_in_14 = OrderMagicNumber();
+                             临_in_15=ST1_MagicNumber + 14;
+                             if ( 临_in_14 != 临_in_15 )
+                             {
+                               临_in_15 = OrderMagicNumber();
+                               临_in_16=ST1_MagicNumber + 15;
+                             if ( 临_in_15 != 临_in_16 )   continue;
+                             }
+                           }
+                         }
+                       }
+                     }
+                   }
+                 }
+               }
+             }
+           }
+         }
+       }
+     }
+   }
+   子_3_in ++;
+   if ( ( OrderType() == 0 || OrderType() == 1 ) )
+   {
+     if ( OrderType() == 0 )
+     {
+       子_2_do = OrderClosePrice() - OrderOpenPrice() ;
+     }
+     else
+     {
+       if ( OrderType() == 1 )
+       {
+         子_2_do = OrderOpenPrice() - OrderClosePrice() ;
+       }
+     }
+     if ( 子_2_do>0.0 )
+     {
+       子_4_in ++;
+     }
+   }
+   if ( 子_3_in >= 木_1_in )   break;
+   
+ }
+ 总_324_do_2DC4_si30[总_328_in_3100] = 子_4_in;
+ return(子_4_in); 
+ }
+//lizong_30 <<==--------   --------
+ int lizong_31( int 木_0_in,int 木_1_in)
+ {
+  double    子_2_do;
+  int       子_3_in;
+  int       子_4_in;
+  int       子_5_in;
+//----- -----
+ int        临_in_1;
+ int        临_in_2;
+ int        临_in_3;
+ int        临_in_4;
+ int        临_in_5;
+ int        临_in_6;
+ int        临_in_7;
+ int        临_in_8;
+ int        临_in_9;
+ int        临_in_10;
+ int        临_in_11;
+ int        临_in_12;
+ int        临_in_13;
+ int        临_in_14;
+ int        临_in_15;
+ int        临_in_16;
+
+ if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
+ {
+   return(0); 
+ }
+ 子_2_do = 0.0 ;
+ 子_3_in = 0 ;
+ 子_4_in = 0 ;
+ for (子_5_in = HistoryTotal() ; 子_5_in >= 0 ; 子_5_in --)
+ {
+   if ( OrderSelect(子_5_in,0,1) != true )   continue;
+   
+   if ( ( OrderSymbol() != 总_336_st_3130 && !(总_17_bo_8C) ) )   continue;
+   临_in_1 = OrderMagicNumber();
+   临_in_2=ST1_MagicNumber + 1;
+   if ( 临_in_1 != 临_in_2 )
+   {
+     临_in_2 = OrderMagicNumber();
+     临_in_3=ST1_MagicNumber + 2;
+     if ( 临_in_2 != 临_in_3 )
+     {
+       临_in_3 = OrderMagicNumber();
+       临_in_4=ST1_MagicNumber + 3;
+       if ( 临_in_3 != 临_in_4 )
+       {
+         临_in_4 = OrderMagicNumber();
+         临_in_5=ST1_MagicNumber + 4;
+         if ( 临_in_4 != 临_in_5 )
+         {
+           临_in_5 = OrderMagicNumber();
+           临_in_6=ST1_MagicNumber + 5;
+           if ( 临_in_5 != 临_in_6 )
+           {
+             临_in_6 = OrderMagicNumber();
+             临_in_7=ST1_MagicNumber + 6;
+             if ( 临_in_6 != 临_in_7 )
+             {
+               临_in_7 = OrderMagicNumber();
+               临_in_8=ST1_MagicNumber + 7;
+               if ( 临_in_7 != 临_in_8 )
+               {
+                 临_in_8 = OrderMagicNumber();
+                 临_in_9=ST1_MagicNumber + 8;
+                 if ( 临_in_8 != 临_in_9 )
+                 {
+                   临_in_9 = OrderMagicNumber();
+                   临_in_10=ST1_MagicNumber + 9;
+                   if ( 临_in_9 != 临_in_10 )
+                   {
+                     临_in_10 = OrderMagicNumber();
+                     临_in_11=ST1_MagicNumber + 10;
+                     if ( 临_in_10 != 临_in_11 )
+                     {
+                       临_in_11 = OrderMagicNumber();
+                       临_in_12=ST1_MagicNumber + 11;
+                       if ( 临_in_11 != 临_in_12 )
+                       {
+                         临_in_12 = OrderMagicNumber();
+                         临_in_13=ST1_MagicNumber + 12;
+                         if ( 临_in_12 != 临_in_13 )
+                         {
+                           临_in_13 = OrderMagicNumber();
+                           临_in_14=ST1_MagicNumber + 13;
+                           if ( 临_in_13 != 临_in_14 )
+                           {
+                             临_in_14 = OrderMagicNumber();
+                             临_in_15=ST1_MagicNumber + 14;
+                             if ( 临_in_14 != 临_in_15 )
+                             {
+                               临_in_15 = OrderMagicNumber();
+                               临_in_16=ST1_MagicNumber + 15;
+                             if ( 临_in_15 != 临_in_16 )   continue;
+                             }
+                           }
+                         }
+                       }
+                     }
+                   }
+                 }
+               }
+             }
+           }
+         }
+       }
+     }
+   }
+   子_3_in ++;
+   if ( OrderType() == 0 )
+   {
+     子_2_do = OrderClosePrice() - OrderOpenPrice() ;
+   }
+   else
+   {
+     if ( OrderType() == 1 )
+     {
+       子_2_do = OrderOpenPrice() - OrderClosePrice() ;
+     }
+   }
+   if ( 子_2_do<0.0 )
+   {
+     子_4_in ++;
+   }
+   if ( 子_3_in >= 木_1_in )   break;
+   
+ }
+ 总_325_do_2EE8_si30[总_328_in_3100] = 子_4_in;
+ return(子_4_in); 
+ }
+//lizong_31 <<==--------   --------
+ void lizong_32()
+ {
+  int       子_1_in = 0;
+  double    子_2_do_si99[99];
+  double    子_3_do_si99[99];
+  int       子_4_in;
+  int       子_5_in;
+  bool      子_6_bo;
+  int       子_7_in;
+  double    子_8_do;
+  int       子_9_in;
+  int       子_10_in;
+//----- -----
+ long       临_lo_1;
+ long       临_lo_2;
+ long       临_lo_3;
+ long       临_lo_4;
+ long       临_lo_5;
+
+ if ( ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) ) )   return;
+ for (子_4_in = 0 ; 子_4_in < 总_378_in_5D80 ; 子_4_in ++)
+ {
+   子_2_do_si99[子_4_in] = 0.0;
+   子_3_do_si99[子_4_in] = 0.0;
+   总_342_bo_3694_si99[子_4_in] = false;
+   总_343_in_372C_si99[子_4_in] = 0;
+   总_344_in_38EC_si99[子_4_in] = 0;
+ }
+ for (子_5_in = HistoryTotal() ; 子_5_in >= 0 ; 子_5_in --)
+ {
+   if ( OrderSelect(子_5_in,0,1) != true || OrderMagicNumber() != 总_93_in_1F0 )   continue;
+   子_6_bo = true ;
+   for (子_7_in = 0 ; 子_7_in < 总_378_in_5D80 ; 子_7_in ++)
+   {
+     if ( !(总_342_bo_3694_si99[子_7_in]) )
+     {
+       子_6_bo = false ;
+     }
+   }
+   if ( ( OrderCloseTime() <  TimeCurrent() - 总_153_in_440 * 24 * 60 * 60 && 子_6_bo ) )   break;
+   子_8_do = OrderLots() * 100.0 ;
+   if ( 总_151_in_438 == 1 )
+   {
+     子_8_do = 1.0 ;
+   }
+   子_9_in = 0 ;
+   if ( 总_378_in_5D80 <= 0 )   continue;
+   
+   for ( ; 子_9_in < 总_378_in_5D80 ; 子_9_in ++)
+   {
+     if ( 总_347_st_4144_si99[子_9_in] != OrderSymbol() )   continue;
+     
+     if ( ( OrderType() != 0 && OrderType() != 1 ) )   continue;
+     临_lo_1 = OrderCloseTime();
+     临_lo_2=TimeCurrent() - 总_153_in_440 * 24 * 60 * 60;
+     if ( 临_lo_1 <  临_lo_2 )
+     {
+       临_lo_2 = OrderCloseTime();
+       临_lo_3=TimeCurrent() - 总_153_in_440 * 24 * 60 * 60;
+     if ( (临_lo_2 >= 临_lo_3 || 总_342_bo_3694_si99[子_9_in]) )   continue;
+     }
+     总_343_in_372C_si99[子_9_in] ++;
+     if ( 总_343_in_372C_si99[子_9_in] >= 总_155_in_448 )
+     {
+       总_342_bo_3694_si99[子_9_in] = true;
+     }
+     子_2_do_si99[子_9_in] +=OrderProfit() / 子_8_do;
+     子_2_do_si99[子_9_in] +=OrderSwap() / 子_8_do;
+     子_2_do_si99[子_9_in] +=OrderCommission() / 子_8_do;
+     临_lo_4 = OrderCloseTime();
+     临_lo_5=TimeCurrent() - 总_154_in_444 * 24 * 60 * 60;
+     if ( 临_lo_4 < 临_lo_5 )   continue;
+     子_3_do_si99[子_9_in] +=OrderProfit() / 子_8_do;
+     子_3_do_si99[子_9_in] +=OrderSwap() / 子_8_do;
+     子_3_do_si99[子_9_in] +=OrderCommission() / 子_8_do;
+     总_344_in_38EC_si99[子_9_in] ++;
+     
+   }
+   
+ }
+ for (子_10_in = 0 ; 子_10_in < 总_378_in_5D80 ; 子_10_in ++)
+ {
+   总_349_do_46B4_si99[子_10_in] = 子_2_do_si99[子_10_in];
+   if ( 总_343_in_372C_si99[子_10_in] >  0 )
+   {
+     总_345_do_3AAC_si99[子_10_in] = NormalizeDouble(子_2_do_si99[子_10_in] / 总_343_in_372C_si99[子_10_in],2);
+   }
+   else
+   {
+     总_345_do_3AAC_si99[子_10_in] = 0.0;
+   }
+   总_350_do_4A00_si99[子_10_in] = 子_3_do_si99[子_10_in];
+   if ( 总_344_in_38EC_si99[子_10_in] >  0 )
+   {
+     总_346_do_3DF8_si99[子_10_in] = NormalizeDouble(子_3_do_si99[子_10_in] / 总_344_in_38EC_si99[子_10_in],2);
+   }
+   else
+   {
+     总_346_do_3DF8_si99[子_10_in] = 0.0;
+   }
+ }
+ }
+//lizong_32 <<==--------   --------
+ void lizong_33()
+ {
+  int       子_1_in;
+  double    子_2_do;
+  int       子_3_in;
+  int       子_4_in;
+  int       子_5_in;
+  int       子_6_in;
+  bool      子_7_bo;
+  int       子_8_in;
+  int       子_9_in;
+  int       子_10_in;
+  int       子_11_in;
+//----- -----
+
+ lizong_32(); 
+ for (子_1_in = 0 ; 子_1_in < 总_378_in_5D80 ; 子_1_in ++)
+ {
+   子_2_do = 总_349_do_46B4_si99[子_1_in] ;
+   子_3_in = 1 ;
+   for (子_4_in = 0 ; 子_4_in < 总_378_in_5D80 ; 子_4_in ++)
+   {
+     if ( 子_4_in == 子_1_in || !(总_349_do_46B4_si99[子_4_in]>子_2_do) )   continue;
+     子_3_in ++;
+     
+   }
+   总_356_in_5B14_si99[子_1_in] = 子_3_in;
+ }
+ for (子_5_in = 0 ; 子_5_in < 总_378_in_5D80 ; 子_5_in ++)
+ {
+   子_6_in = 总_356_in_5B14_si99[子_5_in] ;
+   子_7_bo = true ;
+   do
+   {
+     子_7_bo = false ;
+     子_8_in = 0 ;
+     if ( 总_378_in_5D80 <= 0 )   continue;
+     
+     for ( ; 子_8_in < 总_378_in_5D80 ; 子_8_in ++)
+     {
+       if ( 子_8_in == 子_5_in || 总_356_in_5B14_si99[子_8_in] != 总_356_in_5B14_si99[子_5_in] )   continue;
+       总_356_in_5B14_si99[子_8_in] ++;
+       子_7_bo = true ;
+       
+     }
+     
+   }
+   while(子_7_bo);
+   
+ }
+ for (子_9_in = 0 ; 子_9_in < 总_378_in_5D80 ; 子_9_in ++)
+ {
+   总_354_do_5730_si99[子_9_in] = 1.0;
+ }
+ for (子_10_in = 1 ; 子_10_in <= 总_378_in_5D80 ; 子_10_in ++)
+ {
+   for (子_11_in = 0 ; 子_11_in < 总_378_in_5D80 ; 子_11_in ++)
+   {
+     if ( 总_356_in_5B14_si99[子_11_in] == 子_10_in )
+     {
+       总_339_in_3184_si99[子_10_in - 1] = 子_11_in;
+     }
+   }
+ }
+ }
+//lizong_33 <<==--------   --------
+ void lizong_34()
+ {
+  int       子_1_in;
+  double    子_2_do;
+  int       子_3_in;
+  int       子_4_in;
+  int       子_5_in;
+  int       子_6_in;
+  bool      子_7_bo;
+  int       子_8_in;
+  int       子_9_in;
+  int       子_10_in;
+  int       子_11_in;
+//----- -----
+
+ lizong_32(); 
+ for (子_1_in = 0 ; 子_1_in < 总_378_in_5D80 ; 子_1_in ++)
+ {
+   子_2_do = 总_345_do_3AAC_si99[子_1_in] ;
+   子_3_in = 1 ;
+   for (子_4_in = 0 ; 子_4_in < 总_378_in_5D80 ; 子_4_in ++)
+   {
+     if ( 子_4_in == 子_1_in || !(总_345_do_3AAC_si99[子_4_in]>子_2_do) )   continue;
+     子_3_in ++;
+     
+   }
+   总_356_in_5B14_si99[子_1_in] = 子_3_in;
+ }
+ for (子_5_in = 0 ; 子_5_in < 总_378_in_5D80 ; 子_5_in ++)
+ {
+   子_6_in = 总_356_in_5B14_si99[子_5_in] ;
+   子_7_bo = true ;
+   do
+   {
+     子_7_bo = false ;
+     子_8_in = 0 ;
+     if ( 总_378_in_5D80 <= 0 )   continue;
+     
+     for ( ; 子_8_in < 总_378_in_5D80 ; 子_8_in ++)
+     {
+       if ( 子_8_in == 子_5_in || 总_356_in_5B14_si99[子_8_in] != 总_356_in_5B14_si99[子_5_in] )   continue;
+       总_356_in_5B14_si99[子_8_in] ++;
+       子_7_bo = true ;
+       
+     }
+     
+   }
+   while(子_7_bo);
+   
+ }
+ for (子_9_in = 0 ; 子_9_in < 总_378_in_5D80 ; 子_9_in ++)
+ {
+   总_354_do_5730_si99[子_9_in] = 1.0;
+ }
+ for (子_10_in = 1 ; 子_10_in <= 总_378_in_5D80 ; 子_10_in ++)
+ {
+   for (子_11_in = 0 ; 子_11_in < 总_378_in_5D80 ; 子_11_in ++)
+   {
+     if ( 总_356_in_5B14_si99[子_11_in] == 子_10_in )
+     {
+       总_339_in_3184_si99[子_10_in - 1] = 子_11_in;
+     }
+   }
+ }
+ }
+//lizong_34 <<==--------   --------
+ double lizong_35( double 木_0_do)
+ {
+  double    子_2_do;
+  string    子_3_st;
+//----- -----
+
+ 子_2_do = 木_0_do ;
+ if ( ( AccountCurrency() == "USD" || AccountCurrency() == "usd" ) )
+ {
+   子_2_do = 木_0_do ;
+ }
+ if ( ( AccountCurrency() == "EUR" || AccountCurrency() == "eur" ) )
+ {
+   子_3_st="EURUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountCurrency() == "GBP" || AccountCurrency() == "gbp" ) )
+ {
+   子_3_st="GBPUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountCurrency() == "AUD" || AccountCurrency() == "aud" ) )
+ {
+   子_3_st="AUDUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountCurrency() == "JPY" || AccountCurrency() == "jpy" || AccountCurrency() == "YEN" || AccountCurrency() == "yen" ) )
+ {
+   子_3_st="USDJPY" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountCurrency() == "CHF" || AccountCurrency() == "chf" ) )
+ {
+   子_3_st="USDCHF" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountCurrency() == "HKD" || AccountCurrency() == "hkd" ) )
+ {
+   子_3_st="USDHKD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountCurrency() == "SGD" || AccountCurrency() == "sgd" ) )
+ {
+   子_3_st="USDSGD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountCurrency() == "PLN" || AccountCurrency() == "pln" ) )
+ {
+   子_3_st="USDPLN" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountCurrency() == "RUB" || AccountCurrency() == "rub" ) )
+ {
+   子_3_st="USDRUB" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountCurrency() == "BTC" || AccountCurrency() == "btc" ) )
+ {
+   子_3_st="BTCUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountCurrency() == "ETH" || AccountCurrency() == "eth" ) )
+ {
+   子_3_st="ETHUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountCurrency() == "BCH" || AccountCurrency() == "bch" ) )
+ {
+   子_3_st="BCHUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountCurrency() == "BCC" || AccountCurrency() == "bcc" ) )
+ {
+   子_3_st="BCCUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountCurrency() == "XRP" || AccountCurrency() == "xrp" ) )
+ {
+   子_3_st="XRPUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountCurrency() == "LTC" || AccountCurrency() == "ltc" ) )
+ {
+   子_3_st="LTCUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountCurrency() == "XMR" || AccountCurrency() == "xmr" ) )
+ {
+   子_3_st="XMRUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountCurrency() == "DSH" || AccountCurrency() == "dsh" ) )
+ {
+   子_3_st="DSHUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountCurrency() == "EOS" || AccountCurrency() == "eos" ) )
+ {
+   子_3_st="EOSUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountCurrency() == "TRX" || AccountCurrency() == "trx" ) )
+ {
+   子_3_st="TRXUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountCurrency() == "ADA" || AccountCurrency() == "ada" ) )
+ {
+   子_3_st="ADAUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountCurrency() == "BSV" || AccountCurrency() == "bsv" ) )
+ {
+   子_3_st="BSVUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountCurrency() == "XLM" || AccountCurrency() == "xlm" ) )
+ {
+   子_3_st="XLMUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountCurrency() == "GLD" || AccountCurrency() == "gld" ) )
+ {
+   子_3_st="GLDUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountCurrency() == "ZEC" || AccountCurrency() == "zec" ) )
+ {
+   子_3_st="ZECUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountCurrency() == "XEM" || AccountCurrency() == "xem" ) )
+ {
+   子_3_st="XEMUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ return(子_2_do); 
+ }
+//lizong_35 <<==--------   --------
+ double lizong_36( double 木_0_do)
+ {
+  double    子_2_do;
+  string    子_3_st;
+//----- -----
+
+ 子_2_do = 木_0_do ;
+ if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "USD" || AccountInfoString(ACCOUNT_CURRENCY) == "usd" ) )
+ {
+   子_2_do = 木_0_do ;
+ }
+ if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "EUR" || AccountInfoString(ACCOUNT_CURRENCY) == "eur" ) )
+ {
+   子_3_st="EURUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "GBP" || AccountInfoString(ACCOUNT_CURRENCY) == "gbp" ) )
+ {
+   子_3_st="GBPUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "AUD" || AccountInfoString(ACCOUNT_CURRENCY) == "aud" ) )
+ {
+   子_3_st="AUDUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "JPY" || AccountInfoString(ACCOUNT_CURRENCY) == "jpy" || AccountInfoString(ACCOUNT_CURRENCY) == "YEN" || AccountInfoString(ACCOUNT_CURRENCY) == "yen" ) )
+ {
+   子_3_st="USDJPY" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "CHF" || AccountInfoString(ACCOUNT_CURRENCY) == "chf" ) )
+ {
+   子_3_st="USDCHF" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "HKD" || AccountInfoString(ACCOUNT_CURRENCY) == "hkd" ) )
+ {
+   子_3_st="USDHKD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "RUB" || AccountInfoString(ACCOUNT_CURRENCY) == "rub" ) )
+ {
+   子_3_st="USDRUB" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "CNH" || AccountInfoString(ACCOUNT_CURRENCY) == "cnh" ) )
+ {
+   子_3_st="USDCNH" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
+   }
+   else
+   {
+     子_3_st="USDCNY" + 总_299_st_2850;
+     if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+     {
+       子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
+     }
+   }
+ }
+ if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "CNY" || AccountInfoString(ACCOUNT_CURRENCY) == "cny" ) )
+ {
+   子_3_st="USDCNH" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
+   }
+   else
+   {
+     子_3_st="USDCNY" + 总_299_st_2850;
+     if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+     {
+       子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
+     }
+   }
+ }
+ if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "SGD" || AccountInfoString(ACCOUNT_CURRENCY) == "sgd" ) )
+ {
+   子_3_st="USDSGD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "BTC" || AccountInfoString(ACCOUNT_CURRENCY) == "btc" ) )
+ {
+   子_3_st="BTCUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "ETH" || AccountInfoString(ACCOUNT_CURRENCY) == "eth" ) )
+ {
+   子_3_st="ETHUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "BCH" || AccountInfoString(ACCOUNT_CURRENCY) == "bch" ) )
+ {
+   子_3_st="BCHUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "BCC" || AccountInfoString(ACCOUNT_CURRENCY) == "bcc" ) )
+ {
+   子_3_st="BCCUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "XRP" || AccountInfoString(ACCOUNT_CURRENCY) == "xrp" ) )
+ {
+   子_3_st="XRPUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "LTC" || AccountInfoString(ACCOUNT_CURRENCY) == "ltc" ) )
+ {
+   子_3_st="LTCUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "XMR" || AccountInfoString(ACCOUNT_CURRENCY) == "xmr" ) )
+ {
+   子_3_st="XMRUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "DSH" || AccountInfoString(ACCOUNT_CURRENCY) == "dsh" ) )
+ {
+   子_3_st="DSHUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "EOS" || AccountInfoString(ACCOUNT_CURRENCY) == "eos" ) )
+ {
+   子_3_st="EOSUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "TRX" || AccountInfoString(ACCOUNT_CURRENCY) == "trx" ) )
+ {
+   子_3_st="TRXUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "ADA" || AccountInfoString(ACCOUNT_CURRENCY) == "ada" ) )
+ {
+   子_3_st="ADAUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "BSV" || AccountInfoString(ACCOUNT_CURRENCY) == "bsv" ) )
+ {
+   子_3_st="BSVUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "XLM" || AccountInfoString(ACCOUNT_CURRENCY) == "xlm" ) )
+ {
+   子_3_st="XLMUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "GLD" || AccountInfoString(ACCOUNT_CURRENCY) == "gld" ) )
+ {
+   子_3_st="GLDUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "ZEC" || AccountInfoString(ACCOUNT_CURRENCY) == "zec" ) )
+ {
+   子_3_st="ZECUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "XEM" || AccountInfoString(ACCOUNT_CURRENCY) == "xem" ) )
+ {
+   子_3_st="XEMUSD" + 总_299_st_2850;
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
+   {
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
+   }
+ }
+ return(MathRound(子_2_do)); 
+ }
+//lizong_36 <<==--------   --------
+ void lizong_37()
+ {
+ double     临_do_1;
+ double     临_do_2;
+ double     临_do_3;
+ double     临_do_4;
+ double     临_do_5;
+ double     临_do_6;
+ double     临_do_7;
+ double     临_do_8;
+ double     临_do_9;
+ double     临_do_10;
+ double     临_do_11;
+ double     临_do_12;
+
+ 总_71_in_174 = 1440 ;
+ 总_72_in_178 = 15 ;
+ 总_73_in_17C = 24 ;
+ 总_74_in_180 = 3 ;
+ 总_77_in_188 = 105 ;
+ 总_80_do_198 = 45.0 ;
+ 总_81_do_1A0 = 0.0 ;
+ 临_do_1 = AdjustEntry + -275.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_2 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_2 = 0.0;
+ }
+ 总_83_do_1B0 = 临_do_1 + 临_do_2 ;
+ 临_do_2 = AdjustEntry + -160.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_3 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_3 = 0.0;
+ }
+ 总_84_do_1B8 = 临_do_2 + 临_do_3 ;
+ 总_86_in_1C8 = 5 ;
+ 总_88_do_1D0 = 30.0 ;
+ 总_89_in_1D8 = 35 ;
+ 总_99_in_22C = 1 ;
+ 临_do_3 = AdjustSL + 6100.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_4 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_4 = 0.0;
+ }
+ 总_100_do_230 = 临_do_3 + 临_do_4 ;
+ 临_do_4 = AdjustTP + 1450.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_5 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_5 = 0.0;
+ }
+ 总_101_do_238 = 临_do_4 + 临_do_5 ;
+ 临_do_5 = AdjustTrailSL + 1800.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_6 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_6 = 0.0;
+ }
+ 总_103_do_250 = 临_do_5 + 临_do_6 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_7 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_7 = 0.0;
+ }
+ 总_104_do_258 = 临_do_7 + 1800.0 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_8 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_8 = 0.0;
+ }
+ 总_105_do_260 = 临_do_8 + 5000.0 ;
+ 总_106_do_268 = 0.1 ;
+ 总_107_do_270 = 0.0 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_9 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_9 = 0.0;
+ }
+ 总_109_do_280 = 临_do_9 + 1600.0 ;
+ 临_do_9 = AdjustTrailTP + 700.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_10 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_10 = 0.0;
+ }
+ 总_108_do_278 = 临_do_9 + 临_do_10 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_11 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_11 = 0.0;
+ }
+ 总_113_do_2A8 = 临_do_11 + 930.0 ;
+ 临_do_11 = AdjustBreakEven + 120.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_12 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_12 = 0.0;
+ }
+ 总_114_do_2B0 = 临_do_11 + 临_do_12 ;
+ 总_117_in_2C8 = 60 ;
+ 总_118_in_2CC = 50 ;
+ 总_119_in_2D0 = 14 ;
+ 总_120_in_2D4 = 12 ;
+ 总_121_in_2D8 = 300 ;
+ 总_123_do_2E0 = 22.0 ;
+ 总_87_in_1CC = 5 ;
+ if ( !(RemoveCommentSuffix) )
+ {
+   总_334_st_3120=ST1_Comment + "_XAUUSD_1";
+ }
+ 总_93_in_1F0=ST1_MagicNumber + 1;
+ 总_397_do_6768 = lizong_35(145.0) ;
+ if ( !(UseVariableValues) )   return;
+ 总_7_do_50 = 2000.0 ;
+ 总_397_do_6768 = lizong_35(60.0) ;
+ }
+//lizong_37 <<==--------   --------
+ void lizong_38()
+ {
+ double     临_do_1;
+ double     临_do_2;
+ double     临_do_3;
+ double     临_do_4;
+ double     临_do_5;
+ double     临_do_6;
+ double     临_do_7;
+ double     临_do_8;
+ double     临_do_9;
+ double     临_do_10;
+ double     临_do_11;
+ double     临_do_12;
+ double     临_do_13;
+
+ 总_71_in_174 = 240 ;
+ 总_72_in_178 = 60 ;
+ 总_73_in_17C = 12 ;
+ 总_74_in_180 = 8 ;
+ 总_77_in_188 = 90 ;
+ 总_80_do_198 = 1050.0 ;
+ 总_81_do_1A0 = 0.0 ;
+ 临_do_1 = AdjustEntry + -40.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_2 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_2 = 0.0;
+ }
+ 总_83_do_1B0 = 临_do_1 + 临_do_2 ;
+ 临_do_2 = AdjustEntry + -100.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_3 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_3 = 0.0;
+ }
+ 总_84_do_1B8 = 临_do_2 + 临_do_3 ;
+ 总_86_in_1C8 = 2 ;
+ 总_88_do_1D0 = 130.0 ;
+ 总_89_in_1D8 = 192 ;
+ 总_99_in_22C = 5 ;
+ if ( !(UseHL_TrailingSL) )
+ {
+   临_do_3 = AdjustSL + 700.0;
+   if ( Randomization>0.0 )
+   {
+     临_do_4 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+   }
+   else
+   {
+     临_do_4 = 0.0;
+   }
+   总_100_do_230 = 临_do_3 + 临_do_4 ;
+ }
+ else
+ {
+   临_do_4 = AdjustSL + 800.0;
+   if ( Randomization>0.0 )
+   {
+     临_do_5 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+   }
+   else
+   {
+     临_do_5 = 0.0;
+   }
+   总_100_do_230 = 临_do_4 + 临_do_5 ;
+ }
+ 临_do_5 = AdjustTP + 4900.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_6 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_6 = 0.0;
+ }
+ 总_101_do_238 = 临_do_5 + 临_do_6 ;
+ 临_do_6 = AdjustTrailSL + 1300.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_7 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_7 = 0.0;
+ }
+ 总_103_do_250 = 临_do_6 + 临_do_7 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_8 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_8 = 0.0;
+ }
+ 总_104_do_258 = 临_do_8 + 1450.0 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_9 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_9 = 0.0;
+ }
+ 总_105_do_260 = 临_do_9 + 2000.0 ;
+ 总_106_do_268 = 0.1 ;
+ 总_107_do_270 = 0.0 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_10 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_10 = 0.0;
+ }
+ 总_109_do_280 = 临_do_10 + 1400.0 ;
+ 临_do_10 = AdjustTrailTP + 200.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_11 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_11 = 0.0;
+ }
+ 总_108_do_278 = 临_do_10 + 临_do_11 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_12 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_12 = 0.0;
+ }
+ 总_113_do_2A8 = 临_do_12 + 500.0 ;
+ 临_do_12 = AdjustBreakEven + 200.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_13 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_13 = 0.0;
+ }
+ 总_114_do_2B0 = 临_do_12 + 临_do_13 ;
+ 总_117_in_2C8 = 60 ;
+ 总_118_in_2CC = 50 ;
+ 总_119_in_2D0 = 14 ;
+ 总_120_in_2D4 = 6 ;
+ 总_121_in_2D8 = 400 ;
+ 总_123_do_2E0 = 32.0 ;
+ 总_87_in_1CC = 99 ;
+ if ( !(RemoveCommentSuffix) )
+ {
+   总_334_st_3120=ST1_Comment + "_XAUUSD_4";
+ }
+ 总_93_in_1F0=ST1_MagicNumber + 2;
+ 总_397_do_6768 = lizong_35(57.0) ;
+ if ( !(UseVariableValues) )   return;
+ 总_7_do_50 = 1600.0 ;
+ 总_397_do_6768 = lizong_35(52.0) ;
+ }
+//lizong_38 <<==--------   --------
+ void lizong_39()
+ {
+ double     临_do_1;
+ double     临_do_2;
+ double     临_do_3;
+ double     临_do_4;
+ double     临_do_5;
+ double     临_do_6;
+ double     临_do_7;
+ double     临_do_8;
+ double     临_do_9;
+ double     临_do_10;
+ double     临_do_11;
+ double     临_do_12;
+
+ 总_71_in_174 = 1440 ;
+ 总_72_in_178 = 60 ;
+ 总_73_in_17C = 15 ;
+ 总_74_in_180 = 3 ;
+ 总_77_in_188 = 230 ;
+ 总_80_do_198 = 550.0 ;
+ 总_81_do_1A0 = 0.0 ;
+ 临_do_1 = AdjustEntry + -170.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_2 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_2 = 0.0;
+ }
+ 总_83_do_1B0 = 临_do_1 + 临_do_2 ;
+ 临_do_2 = AdjustEntry + -70.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_3 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_3 = 0.0;
+ }
+ 总_84_do_1B8 = 临_do_2 + 临_do_3 ;
+ 总_86_in_1C8 = 1 ;
+ 总_88_do_1D0 = 480.0 ;
+ 总_89_in_1D8 = 480 ;
+ 总_99_in_22C = 1 ;
+ 临_do_3 = AdjustSL + 1000.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_4 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_4 = 0.0;
+ }
+ 总_100_do_230 = 临_do_3 + 临_do_4 ;
+ 临_do_4 = AdjustTP + 4100.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_5 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_5 = 0.0;
+ }
+ 总_101_do_238 = 临_do_4 + 临_do_5 ;
+ 临_do_5 = AdjustTrailSL + 450.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_6 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_6 = 0.0;
+ }
+ 总_103_do_250 = 临_do_5 + 临_do_6 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_7 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_7 = 0.0;
+ }
+ 总_104_do_258 = 临_do_7 + 1400.0 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_8 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_8 = 0.0;
+ }
+ 总_105_do_260 = 临_do_8 + 5000.0 ;
+ 总_106_do_268 = 0.1 ;
+ 总_107_do_270 = 0.0 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_9 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_9 = 0.0;
+ }
+ 总_109_do_280 = 临_do_9 + 1600.0 ;
+ 临_do_9 = AdjustTrailTP + 400.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_10 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_10 = 0.0;
+ }
+ 总_108_do_278 = 临_do_9 + 临_do_10 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_11 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_11 = 0.0;
+ }
+ 总_113_do_2A8 = 临_do_11 + 500.0 ;
+ 临_do_11 = AdjustBreakEven + 100.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_12 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_12 = 0.0;
+ }
+ 总_114_do_2B0 = 临_do_11 + 临_do_12 ;
+ 总_117_in_2C8 = 60 ;
+ 总_118_in_2CC = 50 ;
+ 总_119_in_2D0 = 1 ;
+ 总_120_in_2D4 = 5 ;
+ 总_121_in_2D8 = 700 ;
+ 总_123_do_2E0 = 22.0 ;
+ 总_87_in_1CC = 99 ;
+ if ( !(RemoveCommentSuffix) )
+ {
+   总_334_st_3120=ST1_Comment + "_XAUUSD_2";
+ }
+ 总_93_in_1F0=ST1_MagicNumber + 5;
+ 总_397_do_6768 = lizong_35(30.0) ;
+ if ( !(UseVariableValues) )   return;
+ 总_7_do_50 = 2000.0 ;
+ 总_397_do_6768 = lizong_35(30.0) ;
+ }
+//lizong_39 <<==--------   --------
+ void lizong_40()
+ {
+ double     临_do_1;
+ double     临_do_2;
+ double     临_do_3;
+ double     临_do_4;
+ double     临_do_5;
+ double     临_do_6;
+ double     临_do_7;
+ double     临_do_8;
+ double     临_do_9;
+ double     临_do_10;
+ double     临_do_11;
+ double     临_do_12;
+ double     临_do_13;
+
+ 总_71_in_174 = 1440 ;
+ 总_72_in_178 = 60 ;
+ 总_73_in_17C = 7 ;
+ 总_74_in_180 = 2 ;
+ 总_77_in_188 = 20 ;
+ 总_80_do_198 = 250.0 ;
+ 总_81_do_1A0 = 0.0 ;
+ 临_do_1 = AdjustEntry + -130.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_2 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_2 = 0.0;
+ }
+ 总_83_do_1B0 = 临_do_1 + 临_do_2 ;
+ 临_do_2 = AdjustEntry + -120.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_3 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_3 = 0.0;
+ }
+ 总_84_do_1B8 = 临_do_2 + 临_do_3 ;
+ 总_86_in_1C8 = 1 ;
+ 总_88_do_1D0 = 980.0 ;
+ 总_89_in_1D8 = 432 ;
+ 总_99_in_22C = 1 ;
+ if ( !(UseHL_TrailingSL) )
+ {
+   临_do_3 = AdjustSL + 600.0;
+   if ( Randomization>0.0 )
+   {
+     临_do_4 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+   }
+   else
+   {
+     临_do_4 = 0.0;
+   }
+   总_100_do_230 = 临_do_3 + 临_do_4 ;
+ }
+ else
+ {
+   临_do_4 = AdjustSL + 700.0;
+   if ( Randomization>0.0 )
+   {
+     临_do_5 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+   }
+   else
+   {
+     临_do_5 = 0.0;
+   }
+   总_100_do_230 = 临_do_4 + 临_do_5 ;
+ }
+ 临_do_5 = AdjustTP + 3300.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_6 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_6 = 0.0;
+ }
+ 总_101_do_238 = 临_do_5 + 临_do_6 ;
+ 临_do_6 = AdjustTrailSL + 500.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_7 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_7 = 0.0;
+ }
+ 总_103_do_250 = 临_do_6 + 临_do_7 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_8 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_8 = 0.0;
+ }
+ 总_104_do_258 = 临_do_8 + 400.0 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_9 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_9 = 0.0;
+ }
+ 总_105_do_260 = 临_do_9 + 5000.0 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_10 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_10 = 0.0;
+ }
+ 总_109_do_280 = 临_do_10 + 1000.0 ;
+ 临_do_10 = AdjustTrailTP + 2000.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_11 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_11 = 0.0;
+ }
+ 总_108_do_278 = 临_do_10 + 临_do_11 ;
+ 总_106_do_268 = 0.1 ;
+ 总_107_do_270 = 0.0 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_12 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_12 = 0.0;
+ }
+ 总_113_do_2A8 = 临_do_12 + 400.0 ;
+ 临_do_12 = AdjustBreakEven;
+ if ( Randomization>0.0 )
+ {
+   临_do_13 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_13 = 0.0;
+ }
+ 总_114_do_2B0 = 临_do_12 + 临_do_13 ;
+ 总_117_in_2C8 = 60 ;
+ 总_118_in_2CC = 50 ;
+ 总_119_in_2D0 = 7 ;
+ 总_120_in_2D4 = 4 ;
+ 总_121_in_2D8 = 100 ;
+ 总_123_do_2E0 = 0.0 ;
+ 总_87_in_1CC = 99 ;
+ if ( !(RemoveCommentSuffix) )
+ {
+   总_334_st_3120=ST1_Comment + "_XAUUSD_3";
+ }
+ 总_93_in_1F0=ST1_MagicNumber + 8;
+ 总_397_do_6768 = lizong_35(32.0) ;
+ if ( !(UseVariableValues) )   return;
+ 总_7_do_50 = 2000.0 ;
+ 总_397_do_6768 = lizong_35(35.0) ;
+ }
+//lizong_40 <<==--------   --------
+ void lizong_41()
+ {
+ double     临_do_1;
+ double     临_do_2;
+ double     临_do_3;
+ double     临_do_4;
+ double     临_do_5;
+ double     临_do_6;
+ double     临_do_7;
+ double     临_do_8;
+ double     临_do_9;
+ double     临_do_10;
+ double     临_do_11;
+ double     临_do_12;
+
+ 总_71_in_174 = 60 ;
+ 总_72_in_178 = 5 ;
+ 总_73_in_17C = 26 ;
+ 总_74_in_180 = 24 ;
+ 总_77_in_188 = 140 ;
+ 总_80_do_198 = 120.0 ;
+ 总_81_do_1A0 = 0.0 ;
+ 临_do_1 = AdjustEntry + -115.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_2 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_2 = 0.0;
+ }
+ 总_83_do_1B0 = 临_do_1 + 临_do_2 ;
+ 临_do_2 = AdjustEntry + -145.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_3 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_3 = 0.0;
+ }
+ 总_84_do_1B8 = 临_do_2 + 临_do_3 ;
+ 总_86_in_1C8 = 5 ;
+ 总_88_do_1D0 = 55.0 ;
+ 总_89_in_1D8 = 20 ;
+ 总_99_in_22C = 1 ;
+ 临_do_3 = AdjustSL + 10100.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_4 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_4 = 0.0;
+ }
+ 总_100_do_230 = 临_do_3 + 临_do_4 ;
+ 临_do_4 = AdjustTP + 800.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_5 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_5 = 0.0;
+ }
+ 总_101_do_238 = 临_do_4 + 临_do_5 ;
+ 临_do_5 = AdjustTrailSL + 500.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_6 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_6 = 0.0;
+ }
+ 总_103_do_250 = 临_do_5 + 临_do_6 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_7 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_7 = 0.0;
+ }
+ 总_104_do_258 = 临_do_7 + 1200.0 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_8 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_8 = 0.0;
+ }
+ 总_105_do_260 = 临_do_8 + 5000.0 ;
+ 总_106_do_268 = 0.1 ;
+ 总_107_do_270 = 0.0 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_9 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_9 = 0.0;
+ }
+ 总_109_do_280 = 临_do_9 + 1950.0 ;
+ 临_do_9 = AdjustTrailTP + 350.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_10 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_10 = 0.0;
+ }
+ 总_108_do_278 = 临_do_9 + 临_do_10 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_11 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_11 = 0.0;
+ }
+ 总_113_do_2A8 = 临_do_11 + 330.0 ;
+ 临_do_11 = AdjustBreakEven + 80.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_12 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_12 = 0.0;
+ }
+ 总_114_do_2B0 = 临_do_11 + 临_do_12 ;
+ 总_117_in_2C8 = 60 ;
+ 总_118_in_2CC = 50 ;
+ 总_119_in_2D0 = 0 ;
+ 总_120_in_2D4 = 0 ;
+ 总_121_in_2D8 = 100 ;
+ 总_123_do_2E0 = 0.0 ;
+ 总_87_in_1CC = 5 ;
+ if ( !(RemoveCommentSuffix) )
+ {
+   总_334_st_3120=ST1_Comment + "_XAUUSD_6";
+ }
+ 总_93_in_1F0=ST1_MagicNumber + 9;
+ 总_397_do_6768 = lizong_35(348.0) ;
+ if ( !(UseVariableValues) )   return;
+ 总_7_do_50 = 2400.0 ;
+ 总_397_do_6768 = lizong_35(140.0) ;
+ }
+//lizong_41 <<==--------   --------
+ void lizong_42()
+ {
+ double     临_do_1;
+ double     临_do_2;
+ double     临_do_3;
+ double     临_do_4;
+ double     临_do_5;
+ double     临_do_6;
+ double     临_do_7;
+ double     临_do_8;
+ double     临_do_9;
+ double     临_do_10;
+ double     临_do_11;
+ double     临_do_12;
+
+ 总_71_in_174 = 60 ;
+ 总_72_in_178 = 15 ;
+ 总_73_in_17C = 30 ;
+ 总_74_in_180 = 19 ;
+ 总_77_in_188 = 110 ;
+ 总_80_do_198 = 160.0 ;
+ 总_81_do_1A0 = 0.0 ;
+ 临_do_1 = AdjustEntry + -120.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_2 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_2 = 0.0;
+ }
+ 总_83_do_1B0 = 临_do_1 + 临_do_2 ;
+ 临_do_2 = AdjustEntry + -110.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_3 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_3 = 0.0;
+ }
+ 总_84_do_1B8 = 临_do_2 + 临_do_3 ;
+ 总_86_in_1C8 = 3 ;
+ 总_88_do_1D0 = 55.0 ;
+ 总_89_in_1D8 = 30 ;
+ 总_99_in_22C = 1 ;
+ 临_do_3 = AdjustSL + 5300.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_4 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_4 = 0.0;
+ }
+ 总_100_do_230 = 临_do_3 + 临_do_4 ;
+ 临_do_4 = AdjustTP + 900.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_5 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_5 = 0.0;
+ }
+ 总_101_do_238 = 临_do_4 + 临_do_5 ;
+ 临_do_5 = AdjustTrailSL + 495.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_6 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_6 = 0.0;
+ }
+ 总_103_do_250 = 临_do_5 + 临_do_6 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_7 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_7 = 0.0;
+ }
+ 总_104_do_258 = 临_do_7 + 400.0 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_8 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_8 = 0.0;
+ }
+ 总_105_do_260 = 临_do_8 + 5000.0 ;
+ 总_106_do_268 = 0.1 ;
+ 总_107_do_270 = 0.0 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_9 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_9 = 0.0;
+ }
+ 总_109_do_280 = 临_do_9 + 1900.0 ;
+ 临_do_9 = AdjustTrailTP + 250.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_10 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_10 = 0.0;
+ }
+ 总_108_do_278 = 临_do_9 + 临_do_10 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_11 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_11 = 0.0;
+ }
+ 总_113_do_2A8 = 临_do_11 + 260.0 ;
+ 临_do_11 = AdjustBreakEven + 80.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_12 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_12 = 0.0;
+ }
+ 总_114_do_2B0 = 临_do_11 + 临_do_12 ;
+ 总_117_in_2C8 = 60 ;
+ 总_118_in_2CC = 50 ;
+ 总_119_in_2D0 = 0 ;
+ 总_120_in_2D4 = 0 ;
+ 总_121_in_2D8 = 100 ;
+ 总_123_do_2E0 = 0.0 ;
+ 总_87_in_1CC = 99 ;
+ if ( !(RemoveCommentSuffix) )
+ {
+   总_334_st_3120=ST1_Comment + "_XAUUSD_5";
+ }
+ 总_93_in_1F0=ST1_MagicNumber + 12;
+ 总_397_do_6768 = lizong_35(281.0) ;
+ if ( !(UseVariableValues) )   return;
+ 总_7_do_50 = 2600.0 ;
+ 总_397_do_6768 = lizong_35(110.0) ;
+ }
+//lizong_42 <<==--------   --------
+ void lizong_43()
+ {
+ double     临_do_1;
+ double     临_do_2;
+ double     临_do_3;
+ double     临_do_4;
+ double     临_do_5;
+ double     临_do_6;
+ double     临_do_7;
+ double     临_do_8;
+ double     临_do_9;
+ double     临_do_10;
+ double     临_do_11;
+ double     临_do_12;
+
+ 总_71_in_174 = 60 ;
+ 总_72_in_178 = 15 ;
+ 总_73_in_17C = 7 ;
+ 总_74_in_180 = 5 ;
+ 总_77_in_188 = 200 ;
+ 总_80_do_198 = 40.0 ;
+ 总_81_do_1A0 = 0.0 ;
+ 临_do_1 = AdjustEntry + -150.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_2 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_2 = 0.0;
+ }
+ 总_83_do_1B0 = 临_do_1 + 临_do_2 ;
+ 临_do_2 = AdjustEntry + -145.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_3 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_3 = 0.0;
+ }
+ 总_84_do_1B8 = 临_do_2 + 临_do_3 ;
+ 总_86_in_1C8 = 3 ;
+ 总_88_do_1D0 = 5.0 ;
+ 总_89_in_1D8 = 15 ;
+ 总_99_in_22C = 1 ;
+ 临_do_3 = AdjustSL + 3900.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_4 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_4 = 0.0;
+ }
+ 总_100_do_230 = 临_do_3 + 临_do_4 ;
+ 临_do_4 = AdjustTP + 1350.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_5 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_5 = 0.0;
+ }
+ 总_101_do_238 = 临_do_4 + 临_do_5 ;
+ 临_do_5 = AdjustTrailSL + 445.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_6 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_6 = 0.0;
+ }
+ 总_103_do_250 = 临_do_5 + 临_do_6 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_7 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_7 = 0.0;
+ }
+ 总_104_do_258 = 临_do_7 + 355.0 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_8 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_8 = 0.0;
+ }
+ 总_105_do_260 = 临_do_8 + 5000.0 ;
+ 总_106_do_268 = 0.1 ;
+ 总_107_do_270 = 0.0 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_9 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_9 = 0.0;
+ }
+ 总_109_do_280 = 临_do_9 + 1850.0 ;
+ 临_do_9 = AdjustTrailTP + 250.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_10 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_10 = 0.0;
+ }
+ 总_108_do_278 = 临_do_9 + 临_do_10 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_11 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_11 = 0.0;
+ }
+ 总_113_do_2A8 = 临_do_11 + 160.0 ;
+ 临_do_11 = AdjustBreakEven + 50.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_12 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_12 = 0.0;
+ }
+ 总_114_do_2B0 = 临_do_11 + 临_do_12 ;
+ 总_117_in_2C8 = 60 ;
+ 总_118_in_2CC = 50 ;
+ 总_119_in_2D0 = 1 ;
+ 总_120_in_2D4 = 9 ;
+ 总_121_in_2D8 = 1500 ;
+ 总_123_do_2E0 = 46.0 ;
+ 总_87_in_1CC = 99 ;
+ if ( !(RemoveCommentSuffix) )
+ {
+   总_334_st_3120=ST1_Comment + "_XAUUSD_9";
+ }
+ 总_93_in_1F0=ST1_MagicNumber + 13;
+ 总_397_do_6768 = lizong_35(968.0) ;
+ if ( !(UseVariableValues) )   return;
+ 总_7_do_50 = 1900.0 ;
+ 总_397_do_6768 = lizong_35(700.0) ;
+ }
+//lizong_43 <<==--------   --------
+ void lizong_44()
+ {
+ double     临_do_1;
+ double     临_do_2;
+ double     临_do_3;
+ double     临_do_4;
+ double     临_do_5;
+ double     临_do_6;
+ double     临_do_7;
+ double     临_do_8;
+ double     临_do_9;
+ double     临_do_10;
+ double     临_do_11;
+ double     临_do_12;
+
+ 总_71_in_174 = 60 ;
+ 总_72_in_178 = 15 ;
+ 总_73_in_17C = 25 ;
+ 总_74_in_180 = 23 ;
+ 总_77_in_188 = 145 ;
+ 总_80_do_198 = 10.0 ;
+ 总_81_do_1A0 = 0.0 ;
+ 临_do_1 = AdjustEntry + -60.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_2 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_2 = 0.0;
+ }
+ 总_83_do_1B0 = 临_do_1 + 临_do_2 ;
+ 临_do_2 = AdjustEntry + -145.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_3 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_3 = 0.0;
+ }
+ 总_84_do_1B8 = 临_do_2 + 临_do_3 ;
+ 总_86_in_1C8 = 5 ;
+ 总_88_do_1D0 = 90.0 ;
+ 总_89_in_1D8 = 60 ;
+ 总_99_in_22C = 1 ;
+ 临_do_3 = AdjustSL + 2250.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_4 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_4 = 0.0;
+ }
+ 总_100_do_230 = 临_do_3 + 临_do_4 ;
+ 临_do_4 = AdjustTP + 1450.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_5 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_5 = 0.0;
+ }
+ 总_101_do_238 = 临_do_4 + 临_do_5 ;
+ 临_do_5 = AdjustTrailSL + 450.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_6 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_6 = 0.0;
+ }
+ 总_103_do_250 = 临_do_5 + 临_do_6 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_7 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_7 = 0.0;
+ }
+ 总_104_do_258 = 临_do_7 + 900.0 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_8 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_8 = 0.0;
+ }
+ 总_105_do_260 = 临_do_8 + 5000.0 ;
+ 总_106_do_268 = 0.1 ;
+ 总_107_do_270 = 0.0 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_9 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_9 = 0.0;
+ }
+ 总_109_do_280 = 临_do_9 + 2800.0 ;
+ 临_do_9 = AdjustTrailTP + 350.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_10 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_10 = 0.0;
+ }
+ 总_108_do_278 = 临_do_9 + 临_do_10 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_11 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_11 = 0.0;
+ }
+ 总_113_do_2A8 = 临_do_11 + 340.0 ;
+ 临_do_11 = AdjustBreakEven + 30.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_12 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_12 = 0.0;
+ }
+ 总_114_do_2B0 = 临_do_11 + 临_do_12 ;
+ 总_117_in_2C8 = 60 ;
+ 总_118_in_2CC = 50 ;
+ 总_119_in_2D0 = 12 ;
+ 总_120_in_2D4 = 17 ;
+ 总_121_in_2D8 = 1000 ;
+ 总_123_do_2E0 = 45.0 ;
+ 总_87_in_1CC = 5 ;
+ if ( !(RemoveCommentSuffix) )
+ {
+   总_334_st_3120=ST1_Comment + "_XAUUSD_7";
+ }
+ 总_93_in_1F0=ST1_MagicNumber + 14;
+ 总_397_do_6768 = lizong_35(149.0) ;
+ if ( !(UseVariableValues) )   return;
+ 总_7_do_50 = 2600.0 ;
+ 总_397_do_6768 = lizong_35(90.0) ;
+ }
+//lizong_44 <<==--------   --------
+ void lizong_45()
+ {
+ double     临_do_1;
+ double     临_do_2;
+ double     临_do_3;
+ double     临_do_4;
+ double     临_do_5;
+ double     临_do_6;
+ double     临_do_7;
+ double     临_do_8;
+ double     临_do_9;
+ double     临_do_10;
+ double     临_do_11;
+ double     临_do_12;
+
+ 总_71_in_174 = 60 ;
+ 总_72_in_178 = 15 ;
+ 总_73_in_17C = 26 ;
+ 总_74_in_180 = 20 ;
+ 总_77_in_188 = 235 ;
+ 总_80_do_198 = 80.0 ;
+ 总_81_do_1A0 = 0.0 ;
+ 临_do_1 = AdjustEntry + -140.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_2 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_2 = 0.0;
+ }
+ 总_83_do_1B0 = 临_do_1 + 临_do_2 ;
+ 临_do_2 = AdjustEntry + -170.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_3 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_3 = 0.0;
+ }
+ 总_84_do_1B8 = 临_do_2 + 临_do_3 ;
+ 总_86_in_1C8 = 5 ;
+ 总_88_do_1D0 = 5.0 ;
+ 总_89_in_1D8 = 55 ;
+ 总_99_in_22C = 1 ;
+ 临_do_3 = AdjustSL + 1900.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_4 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_4 = 0.0;
+ }
+ 总_100_do_230 = 临_do_3 + 临_do_4 ;
+ 临_do_4 = AdjustTP + 1200.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_5 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_5 = 0.0;
+ }
+ 总_101_do_238 = 临_do_4 + 临_do_5 ;
+ 临_do_5 = AdjustTrailSL + 1250.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_6 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_6 = 0.0;
+ }
+ 总_103_do_250 = 临_do_5 + 临_do_6 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_7 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_7 = 0.0;
+ }
+ 总_104_do_258 = 临_do_7 + 650.0 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_8 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_8 = 0.0;
+ }
+ 总_105_do_260 = 临_do_8 + 5000.0 ;
+ 总_106_do_268 = 0.1 ;
+ 总_107_do_270 = 0.0 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_9 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_9 = 0.0;
+ }
+ 总_109_do_280 = 临_do_9 + 1950.0 ;
+ 临_do_9 = AdjustTrailTP + 250.0;
+ if ( Randomization>0.0 )
+ {
+   临_do_10 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_10 = 0.0;
+ }
+ 总_108_do_278 = 临_do_9 + 临_do_10 ;
+ if ( Randomization>0.0 )
+ {
+   临_do_11 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_11 = 0.0;
+ }
+ 总_113_do_2A8 = 临_do_11 + 270.0 ;
+ 临_do_11 = AdjustBreakEven;
+ if ( Randomization>0.0 )
+ {
+   临_do_12 = Randomization * 2.0 * MathRand() / 32768.0 + (0.0 - Randomization);
+ }
+ else
+ {
+   临_do_12 = 0.0;
+ }
+ 总_114_do_2B0 = 临_do_11 + 临_do_12 ;
+ 总_117_in_2C8 = 60 ;
+ 总_118_in_2CC = 50 ;
+ 总_119_in_2D0 = 15 ;
+ 总_120_in_2D4 = 3 ;
+ 总_121_in_2D8 = 1200 ;
+ 总_123_do_2E0 = 16.0 ;
+ 总_87_in_1CC = 20 ;
+ if ( !(RemoveCommentSuffix) )
+ {
+   总_334_st_3120=ST1_Comment + "_XAUUSD_8";
+ }
+ 总_93_in_1F0=ST1_MagicNumber + 15;
+ 总_397_do_6768 = lizong_35(276.0) ;
+ if ( !(UseVariableValues) )   return;
+ 总_7_do_50 = 2800.0 ;
+ 总_397_do_6768 = lizong_35(130.0) ;
+ }
+//lizong_45 <<==--------   --------
+ void lizong_46()
+ {
+  double    子_1_do;
+  int       子_2_in;
+  double    子_3_do;
+  double    子_4_do;
+  double    子_5_do;
+//----- -----
+ double     临_do_1;
+ long       临_lo_2;
+ int        临_in_3;
+ int        临_in_4;
+ int        临_in_5;
+ int        临_in_6;
+ int        临_in_7;
+ int        临_in_8;
+ int        临_in_9;
+ int        临_in_10;
+ int        临_in_11;
+ int        临_in_12;
+ int        临_in_13;
+ int        临_in_14;
+ int        临_in_15;
+ int        临_in_16;
+ int        临_in_17;
+ int        临_in_18;
+ int        临_in_19;
+
+ 临_do_1 = AccountEquity();
+ if ( 临_do_1==AccountBalance() )   return;
+ 子_1_do = 0.0 ;
+ if ( AccountEquity()>总_384_do_5DA0 )
+ {
+   总_384_do_5DA0 = AccountEquity() ;
+ }
+ for (子_2_in = HistoryTotal() ; 子_2_in >= 0 ; 子_2_in --)
+ {
+   if ( OrderSelect(子_2_in,0,1) != true )   continue;
+   临_lo_2 = OrderCloseTime();
+   if ( 临_lo_2 < iTime(总_336_st_3130,PERIOD_D1,0) )   continue;
+   子_3_do = OrderProfit() + OrderSwap() + OrderCommission() ;
+   子_1_do = 子_3_do + 子_1_do ;
+   
+ }
+ 子_4_do = AccountEquity() - AccountBalance() ;
+ 子_5_do = 子_4_do + 子_1_do ;
+ if ( !( -(子_5_do)>总_384_do_5DA0 * PropFirmMaxDailyDD / 100.0) )   return;
+ 
+ if ( !(总_382_bo_5D98) )
+ {
+   Print("Max Daily Drawdown reached, closing trades and skipping rest of the day"); 
+ }
+ for (临_in_3 = OrdersTotal() ; 临_in_3 >= 0 ; 临_in_3=临_in_3 - 1)
+ {
+   if ( OrderSelect(临_in_3,0,0) != true || OrderSymbol() != 总_336_st_3130 )   continue;
+   临_in_4 = OrderMagicNumber();
+   临_in_5=ST1_MagicNumber + 1;
+   if ( 临_in_4 != 临_in_5 )
+   {
+     临_in_5 = OrderMagicNumber();
+     临_in_6=ST1_MagicNumber + 2;
+     if ( 临_in_5 != 临_in_6 )
+     {
+       临_in_6 = OrderMagicNumber();
+       临_in_7=ST1_MagicNumber + 3;
+       if ( 临_in_6 != 临_in_7 )
+       {
+         临_in_7 = OrderMagicNumber();
+         临_in_8=ST1_MagicNumber + 4;
+         if ( 临_in_7 != 临_in_8 )
+         {
+           临_in_8 = OrderMagicNumber();
+           临_in_9=ST1_MagicNumber + 5;
+           if ( 临_in_8 != 临_in_9 )
+           {
+             临_in_9 = OrderMagicNumber();
+             临_in_10=ST1_MagicNumber + 6;
+             if ( 临_in_9 != 临_in_10 )
+             {
+               临_in_10 = OrderMagicNumber();
+               临_in_11=ST1_MagicNumber + 7;
+               if ( 临_in_10 != 临_in_11 )
+               {
+                 临_in_11 = OrderMagicNumber();
+                 临_in_12=ST1_MagicNumber + 8;
+                 if ( 临_in_11 != 临_in_12 )
+                 {
+                   临_in_12 = OrderMagicNumber();
+                   临_in_13=ST1_MagicNumber + 9;
+                   if ( 临_in_12 != 临_in_13 )
+                   {
+                     临_in_13 = OrderMagicNumber();
+                     临_in_14=ST1_MagicNumber + 10;
+                     if ( 临_in_13 != 临_in_14 )
+                     {
+                       临_in_14 = OrderMagicNumber();
+                       临_in_15=ST1_MagicNumber + 11;
+                       if ( 临_in_14 != 临_in_15 )
+                       {
+                         临_in_15 = OrderMagicNumber();
+                         临_in_16=ST1_MagicNumber + 12;
+                         if ( 临_in_15 != 临_in_16 )
+                         {
+                           临_in_16 = OrderMagicNumber();
+                           临_in_17=ST1_MagicNumber + 13;
+                           if ( 临_in_16 != 临_in_17 )
+                           {
+                             临_in_17 = OrderMagicNumber();
+                             临_in_18=ST1_MagicNumber + 14;
+                             if ( 临_in_17 != 临_in_18 )
+                             {
+                               临_in_18 = OrderMagicNumber();
+                               临_in_19=ST1_MagicNumber + 15;
+                             if ( 临_in_18 != 临_in_19 )   continue;
+                             }
+                           }
+                         }
+                       }
+                     }
+                   }
+                 }
+               }
+             }
+           }
+         }
+       }
+     }
+   }
+   if ( OrderType() == 0 )
+   {
+     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),总_38_do_C0,Red); 
+   }
+   if ( OrderType() == 1 )
+   {
+     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),总_38_do_C0,Red); 
+   }
+   if ( ( OrderType() != 4 && OrderType() != 5 ) )   continue;
+   OrderDelete(OrderTicket(),Red); 
+   
+ }
+ 总_382_bo_5D98 = true ;
+ 总_384_do_5DA0 = 0.0 ;
+ }
+//lizong_46 <<==--------   --------
+ int lizong_47()
+ {
+  string    子_2_st;
+  int       子_3_in;
+  string    子_4_st;
+  long      子_5_lo;
+  int       子_6_in;
+  char      子_7_ch_ko[];
+  char      子_8_ch_ko[];
+//----- -----
+ string     临_st_1;
+ string     临_st_2;
+
+ ResetLastError();
+ if ( WebRequest("GET","https://www.worldtimeserver.com/time-zones/utc/",NULL,NULL,10000,子_7_ch_ko,0,子_8_ch_ko,临_st_1) == -1 )
+ {
+   Print("Error when reading GMT URL. Error code  =",GetLastError()); 
+   MessageBox("Add the address \'https://www.worldtimeserver.com/\' in the list of allowed URLs on tab \'Expert Advisors\'","Error",64); 
+   临_st_2 = "999";
+ }
+ else
+ {
+   临_st_2 = CharArrayToString(子_8_ch_ko,0,0,0);
+ }
+ 子_2_st = 临_st_2 ;
+ if ( 子_2_st == "999" )
+ {
+   return(999); 
+ }
+ 子_3_in = StringFind(子_2_st,"\"serverTimeStamp\" value=",0) ;
+ 子_4_st = StringSubstr(子_2_st,子_3_in + 25,10) ;
+ 子_5_lo = ulong(子_4_st) ;
+ Print("GMT time = ",子_5_lo); 
+ Print("Broker time = ",TimeCurrent()); 
+ 子_6_in=TimeHour(TimeCurrent()) - TimeHour(子_5_lo);
+ if ( 子_6_in <  -12 )
+ {
+   子_6_in +=24;
+ }
+ if ( 子_6_in >  12 )
+ {
+   子_6_in -=24;
+ }
+ Print("GMT_Offset detected: " + string(子_6_in)); 
+ if ( ( 子_6_in < -12 || 子_6_in >  12 ) )
+ {
+   Print("Error in detecting GMT offset with URL"); 
+   return(999); 
+ }
+ if ( 子_5_lo <  TimeCurrent() - 0x15180 )
+ {
+   Print("Error in detecting GMT time with URL"); 
+   return(999); 
+ }
+ return(子_6_in); 
+ }
+//lizong_47 <<==--------   --------
+ bool lizong_48()
+ {
+  int       子_2_in;
+  datetime  子_3_da;
+  datetime  子_4_da;
+  int       子_5_in;
+  int       子_6_in;
+//----- -----
+
+ 子_2_in = TimeYear(TimeCurrent()) ;
+ 子_3_da = 0 ;
+ 子_4_da = 0 ;
+ if ( 子_2_in <  1987 )
+ {
+   Print("AmericanDST(): Invalid year."); 
+   return(false); 
+ }
+ 子_5_in = 0 ;
+ 子_6_in = 0 ;
+ if ( 子_2_in >= 1987 && 子_2_in <= 2006 )
+ {
+   子_5_in = MathMod(子_2_in * 6 + 2 - 子_2_in / 4,7.0) + 1.0 ;
+   子_6_in = 31.0 - (MathMod(子_2_in * 5 / 4 + 1,7.0)) ;
+   子_3_da=StringToTime(StringConcatenate(子_2_in,".04.01")) + (子_5_in - 1) * 86400 + 0x1C20;
+   子_4_da=StringToTime(StringConcatenate(子_2_in,".10.01")) + (子_6_in - 1) * 86400 + 0x1C20;
+ }
+ else
+ {
+   if ( 子_2_in >= 2007 )
+   {
+     子_5_in = 14.0 - (MathMod(子_2_in * 5 / 4 + 1,7.0)) ;
+     子_6_in = 7.0 - (MathMod(子_2_in * 5 / 4 + 1,7.0)) ;
+     子_3_da=StringToTime(StringConcatenate(子_2_in,".03.01")) + (子_5_in - 1) * 86400 + 0x1C20;
+     子_4_da=StringToTime(StringConcatenate(子_2_in,".11.01")) + (子_6_in - 1) * 86400 + 0x1C20;
+   }
+ }
+ if ( TimeDayOfYear(TimeCurrent()) >  TimeDayOfYear(子_3_da) && TimeDayOfYear(TimeCurrent()) <  TimeDayOfYear(子_4_da) )
+ {
+   return(true); 
+ }
+ return(false); 
+ }
+//<<==lizong_48 <<==
 
