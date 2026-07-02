@@ -9296,7 +9296,11 @@ g_startLots_rw=StartLots;
  // khac nhau giua 2 nen tang (da kiem chung qua log thuc te). Doi sang ban WebRequest
  // 7-tham-so cua MQL5 de tu dat header giong trinh duyet chuan, tang kha nang nhan
  // duoc dung dinh dang trang nhu MT4.
- if ( WebRequest("GET","https://www.worldtimeserver.com/time-zones/utc/","User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36\r\n",10000,子_7_ch_ko,子_8_ch_ko,临_st_1) == -1 )
+ int 临_in_webres = WebRequest("GET","https://www.worldtimeserver.com/time-zones/utc/","User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36\r\n",10000,子_7_ch_ko,子_8_ch_ko,临_st_1);
+ Print("DEBUG WebRequest tra ve (ma HTTP status, -1 = loi ket noi/quyen) = ",临_in_webres);
+ Print("DEBUG response headers = ",临_st_1);
+ Print("DEBUG GetLastError sau WebRequest = ",GetLastError());
+ if ( 临_in_webres == -1 )
  {
    Print("Error when reading GMT URL. Error code  =",GetLastError());
    MessageBox("Add the address \'https://www.worldtimeserver.com/\' in the list of allowed URLs on tab \'Expert Advisors\'","Error",64);
