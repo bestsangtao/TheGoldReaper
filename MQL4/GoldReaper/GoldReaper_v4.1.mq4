@@ -501,6 +501,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
                                       // OrderDelete/OrderClose/OrderModify (dung o cac cho code goc
                                       // chua bao gio quan tam ket qua) ma khong doi hanh vi.
   int       g_discardResultInt = 0;  // tuong tu nhung cho OrderSend (tra ve int, khong phai bool)
+  long      g_onlyUpRunId = 0;       // ma rieng cho moi lan chay Strategy Tester, dung de tach biet dinh OnlyUp giua cac lan backtest (xem OnlyUpPeakGVName)
 
 
  int init()
@@ -519,6 +520,12 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  // khi dung o duoi (IsDemo() ket qua bi bo qua). Gan ro rang de tat canh bao
  // ma khong doi hanh vi (van luon la false nhu truoc).
  bool       临_bo_1 = false;
+
+ // Sinh ma rieng cho lan chay Strategy Tester nay (xem OnlyUpPeakGVName) -
+ // GetTickCount() (mili-giay tu luc terminal khoi dong) + so ngau nhien de
+ // moi lan backtest deu co ma khac nhau, tranh trung khi nhieu agent toi uu
+ // hoa chay song song va bat dau o cung mot thoi diem.
+ g_onlyUpRunId = (long)GetTickCount() * 1000 + MathRand() ;
 
  总_401_do_6AD0 = AccountInfoDouble(ACCOUNT_BALANCE) ;
  if ( UseEquity )
@@ -6488,7 +6495,17 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
 //lizong_26 <<==--------   --------
  string OnlyUpPeakGVName()
  {
- return("GR_OnlyUpPeak_" + Symbol() + "_" + IntegerToString(ST1_MagicNumber));
+ // Tach biet hoan toan dinh giua cac "phien": trong Strategy Tester, moi lan
+ // chay (launch) mang mot g_onlyUpRunId rieng (sinh moi lan OnInit) nen khong
+ // bao gio doc phai dinh con sot tu lan backtest truoc - moi lan backtest doc
+ // lap 100% nhung van cap nhat/luu dinh binh thuong trong suot lan chay do.
+ // Ngoai Tester (live/demo that), tach theo so tai khoan (ACCOUNT_LOGIN) de
+ // tai khoan live va demo khac nhau khong dung chung 1 dinh.
+ if ( MQLInfoInteger(MQL_TESTER) == 1 )
+ {
+   return("GR_OnlyUpPeak_TESTER_" + Symbol() + "_" + IntegerToString(ST1_MagicNumber) + "_" + IntegerToString(g_onlyUpRunId));
+ }
+ return("GR_OnlyUpPeak_" + Symbol() + "_" + IntegerToString(ST1_MagicNumber) + "_" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)));
  }
 //OnlyUpPeakGVName <<==--------   --------
  void lizong_27()

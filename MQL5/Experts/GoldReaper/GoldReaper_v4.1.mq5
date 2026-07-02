@@ -500,6 +500,7 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
   double    总_402_do_6AD8 = 0.0;
   bool      g_nfpFromCalendar = false;      // true neu 总_391_da_5DFC_si300[] dang lay tu Lich MQL5 (khong con dung mang hardcode)
   datetime  g_nfpCalendarBuiltDay = 0;      // ngay (00:00, GMT) lan gan nhat da thu lam moi tu Lich MQL5
+  long      g_onlyUpRunId = 0;              // ma rieng cho moi lan chay Strategy Tester, dung de tach biet dinh OnlyUp giua cac lan backtest (xem OnlyUpPeakGVName)
 
 //+------------------------------------------------------------------+
 //| Lay ngay NFP (Non-Farm Payrolls) tu Lich kinh te (Economic       |
@@ -568,6 +569,12 @@ g_startLots_rw=StartLots;
  // ro rang de giu dung hanh vi ban goc (bien nay khong duoc gan truoc khi
  // dung o duoi, IsDemo() ket qua bi bo qua trong ca ban mq4 goc).
  bool       临_bo_1 = false;
+
+ // Sinh ma rieng cho lan chay Strategy Tester nay (xem OnlyUpPeakGVName) -
+ // GetTickCount() (mili-giay tu luc terminal khoi dong) + so ngau nhien de
+ // moi lan backtest deu co ma khac nhau, tranh trung khi nhieu agent toi uu
+ // hoa chay song song va bat dau o cung mot thoi diem.
+ g_onlyUpRunId = (long)GetTickCount() * 1000 + MathRand() ;
 
  总_401_do_6AD0 = AccountInfoDouble(ACCOUNT_BALANCE) ;
  if ( UseEquity )
@@ -6555,7 +6562,17 @@ g_startLots_rw=StartLots;
 //lizong_26 <<==--------   --------
  string OnlyUpPeakGVName()
  {
- return("GR_OnlyUpPeak_" + Symbol() + "_" + IntegerToString(ST1_MagicNumber));
+ // Tach biet hoan toan dinh giua cac "phien": trong Strategy Tester, moi lan
+ // chay (launch) mang mot g_onlyUpRunId rieng (sinh moi lan OnInit) nen khong
+ // bao gio doc phai dinh con sot tu lan backtest truoc - moi lan backtest doc
+ // lap 100% nhung van cap nhat/luu dinh binh thuong trong suot lan chay do.
+ // Ngoai Tester (live/demo that), tach theo so tai khoan (ACCOUNT_LOGIN) de
+ // tai khoan live va demo khac nhau khong dung chung 1 dinh.
+ if ( MQLInfoInteger(MQL_TESTER) == 1 )
+ {
+   return("GR_OnlyUpPeak_TESTER_" + Symbol() + "_" + IntegerToString(ST1_MagicNumber) + "_" + IntegerToString(g_onlyUpRunId));
+ }
+ return("GR_OnlyUpPeak_" + Symbol() + "_" + IntegerToString(ST1_MagicNumber) + "_" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)));
  }
 //OnlyUpPeakGVName <<==--------   --------
  string GetNextNFPText()
