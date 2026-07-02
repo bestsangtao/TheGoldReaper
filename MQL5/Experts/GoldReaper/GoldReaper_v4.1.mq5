@@ -6385,6 +6385,15 @@ ObjectSetInteger(0,"linetp"+IntegerToString(0,0,32),OBJPROP_YDISTANCE,(int)(lv_i
 ObjectSetInteger(0,"linetp"+IntegerToString(0,0,32),OBJPROP_XDISTANCE,lv_i12+lv_i7);
 ObjectSetString(0,"linetp"+IntegerToString(0,0,32),OBJPROP_TEXT,"Total P/L so far: -");
 ObjectSetInteger(0,"linetp"+IntegerToString(0,0,32),OBJPROP_COLOR,g_panelFgColor);
+if(EnableNFP_Filter)
+{
+ObjectCreate(0,"linenfp"+IntegerToString(0,0,32),OBJ_LABEL,0,0,0.0);
+ObjectSetInteger(0,"linenfp"+IntegerToString(0,0,32),OBJPROP_CORNER,lv_i11);
+ObjectSetInteger(0,"linenfp"+IntegerToString(0,0,32),OBJPROP_YDISTANCE,(int)(lv_i13+InfoPanelSizeAdjust*124.0+lv_i8));
+ObjectSetInteger(0,"linenfp"+IntegerToString(0,0,32),OBJPROP_XDISTANCE,lv_i12+lv_i7);
+ObjectSetString(0,"linenfp"+IntegerToString(0,0,32),OBJPROP_TEXT,"Next NFP: -");
+ObjectSetInteger(0,"linenfp"+IntegerToString(0,0,32),OBJPROP_COLOR,g_panelFgColor);
+}
 lv_i18=0;
 lv_i19=0;
 lv_i20=0;
@@ -6486,6 +6495,7 @@ ObjectDelete(0,"linea"+IntegerToString(lv_i1,0,32));
 ObjectDelete(0,"lineto"+IntegerToString(lv_i1,0,32));
 ObjectDelete(0,"linetp"+IntegerToString(lv_i1,0,32));
 ObjectDelete(0,"linetq"+IntegerToString(lv_i1,0,32));
+ObjectDelete(0,"linenfp"+IntegerToString(lv_i1,0,32));
 for(lv_i2=0;lv_i2<10;lv_i2++)
 {
 ObjectDelete(0,"tabel_info"+IntegerToString(lv_i1*100+lv_i2,0,32));
@@ -6504,6 +6514,22 @@ ObjectDelete(0,"info_ea"+IntegerToString(lv_i4,0,32));
 }
 }
 // DeleteChartObjects<<==-------- --------
+string GetNextNFPText()
+{
+datetime lv_best=0;
+int lv_i;
+for(lv_i=0;lv_i<240;lv_i++)
+{
+if(g_nfpDates[lv_i]<=0) continue;
+if(g_nfpDates[lv_i]>=g_autoResetTime)
+{
+if(lv_best==0||g_nfpDates[lv_i]<lv_best) lv_best=g_nfpDates[lv_i];
+}
+}
+if(lv_best==0) return("Next NFP: -");
+return("Next NFP: "+TimeToString(lv_best+g_nfpGMTOfs*3600,TIME_DATE|TIME_SECONDS));
+}
+// GetNextNFPText<<==-------- --------
 void DrawPanelBackground()
 {
 string errorStr;
@@ -6626,6 +6652,10 @@ tmp_d1=tmp_d2;
 }
 ObjectSetString(0,"lineopl"+IntegerToString(0,0,32),OBJPROP_TEXT,"Open P/L: "+DoubleToString(tmp_d1,2));
 ObjectSetString(0,"linea"+IntegerToString(0,0,32),OBJPROP_TEXT,"Account Balance: "+DoubleToString(AccountBalance(),2));
+if(EnableNFP_Filter)
+{
+ObjectSetString(0,"linenfp"+IntegerToString(0,0,32),OBJPROP_TEXT,GetNextNFPText());
+}
 if(g_minBarsBetween==1)
 {
 errorStr="conservative";
