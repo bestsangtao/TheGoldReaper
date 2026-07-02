@@ -570,11 +570,18 @@ void BuildNFPDatesFromCalendar()
    int lv_n=CalendarValueHistoryByEvent((ulong)lv_nfpId,lv_values,lv_from,lv_to);
    if(lv_n<=0) return;
 
+   // MqlCalendarValue.time tra ve theo GIO SERVER (theo tai lieu MQL5), trong khi
+   // g_nfpDates[] va toan bo logic loc NFP con lai (g_autoResetTime, GetNextNFPText)
+   // dang quy uoc luu GIO GMT (giong mang hardcode cu) roi moi quy doi sang gio server
+   // luc so sanh/hien thi bang g_nfpGMTOfs. Vi vay phai TRU offset o day truoc khi luu,
+   // de khong bi quy doi 2 lan (sai lech dung bang so gio offset).
+   int lv_offsetNow=IsAmericanDST()?Broker_GMT_OFFSET_Summer:Broker_GMT_OFFSET_Winter;
+
    int lv_count=0;
    for(lv_i=0;lv_i<lv_n && lv_count<300;lv_i++)
    {
       if(lv_values[lv_i].time<=0) continue;
-      g_nfpDates[lv_count]=lv_values[lv_i].time;
+      g_nfpDates[lv_count]=lv_values[lv_i].time-lv_offsetNow*3600;
       lv_count++;
    }
    if(lv_count<=0) return;
