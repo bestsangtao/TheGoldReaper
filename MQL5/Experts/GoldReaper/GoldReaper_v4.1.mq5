@@ -39,6 +39,13 @@
 
 #include <GoldReaper/MQL4Compat.mqh>
 
+//+------------------------------------------------------------------+
+//| HAN SU DUNG EA - qua ngay gio nay EA se tu dong ngung hoat dong.  |
+//| Sua truc tiep gia tri ben duoi (KHONG phai input) de nguoi dung   |
+//| cuoi khong tu y chinh sua duoc qua tab Inputs.                    |
+//+------------------------------------------------------------------+
+datetime ExpiryDate = D'2026.12.31 23:59:59'; // Han su dung EA (yyyy.mm.dd hh:mi:ss)
+
 enum enum_TradeFrequency {Extreme_cons_Frequency=0,// extreme conservative
 Conservative_Frequency=1,// conservative
 Moderate_Frequency=2,// moderate
@@ -538,6 +545,11 @@ double g_balSnapshot=0.0;
 
 int OnInit()
 {
+if(TimeCurrent()>ExpiryDate)
+{
+   Alert("The Gold Reaper: EA da het han su dung (han: "+TimeToString(ExpiryDate,TIME_DATE|TIME_MINUTES)+"). Vui long lien he de gia han.");
+   return(INIT_FAILED);
+}
 g_startLots=StartLots;
 double lv_d2;
 double lv_d3;
@@ -1221,6 +1233,11 @@ return(0);
 // init<<==-------- --------
 void OnTick()
 {
+if(TimeCurrent()>ExpiryDate)
+{
+   Comment("The Gold Reaper: EA da het han su dung (han: "+TimeToString(ExpiryDate,TIME_DATE|TIME_MINUTES)+"). Vui long lien he de gia han.");
+   return;
+}
 bool lv_b1;
 double lv_d2;
 double lv_d3;
