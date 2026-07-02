@@ -498,7 +498,60 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
   double    总_400_do_67B4_si99[99];
   double    总_401_do_6AD0 = 0.0;
   double    总_402_do_6AD8 = 0.0;
+  bool      g_nfpFromCalendar = false;      // true neu 总_391_da_5DFC_si300[] dang lay tu Lich MQL5 (khong con dung mang hardcode)
+  datetime  g_nfpCalendarBuiltDay = 0;      // ngay (00:00, GMT) lan gan nhat da thu lam moi tu Lich MQL5
 
+//+------------------------------------------------------------------+
+//| Lay ngay NFP (Non-Farm Payrolls) tu Lich kinh te (Economic       |
+//| Calendar) co san cua MQL5, thay cho mang 总_391_da_5DFC_si300[]   |
+//| ma hoa cung. Neu khong tim/lay duoc (vi du: khong kha dung trong |
+//| Strategy Tester cua broker nay) thi GIU NGUYEN mang hardcode co  |
+//| san de kiem thu nguoc (backtest) van chay binh thuong.           |
+//+------------------------------------------------------------------+
+ void BuildNFPDatesFromCalendar()
+ {
+  g_nfpCalendarBuiltDay = (datetime)(TimeCurrent() - TimeCurrent() % 86400) ;
+  MqlCalendarEvent 临_events[];
+  int       临_evTotal = CalendarEventByCountry("US",临_events) ;
+  long      临_nfpId = -1;
+  int       临_i;
+//----- -----
+ if ( 临_evTotal <= 0 )   return;
+ for (临_i = 0 ; 临_i < 临_evTotal ; 临_i ++)
+ {
+   if ( StringFind(临_events[临_i].name,"Nonfarm Payrolls") >= 0 || StringFind(临_events[临_i].name,"Non-Farm Payrolls") >= 0 || StringFind(临_events[临_i].name,"Non Farm Payrolls") >= 0 )
+   {
+     临_nfpId = (long)临_events[临_i].id ;
+     break;
+   }
+ }
+ if ( 临_nfpId < 0 )   return;
+ MqlCalendarValue 临_values[];
+ datetime  临_from = D'2007.01.01 00:00';
+ datetime  临_to = TimeCurrent() + 400 * 24 * 60 * 60 ;
+ int       临_n = CalendarValueHistoryByEvent((ulong)临_nfpId,临_values,临_from,临_to) ;
+ if ( 临_n <= 0 )   return;
+ // 总_390_da_5DC0 (GMT hien tai) da duoc tinh xong truoc khi ham nay duoc goi (xem
+ // OnTick). MqlCalendarValue.time tra ve theo GIO SERVER, trong khi
+ // 总_391_da_5DFC_si300[] va toan bo bo loc NFP con lai dang quy uoc luu GIO GMT roi
+ // moi cong offset de quy doi sang gio server luc so sanh/hien thi. TimeCurrent()-
+ // 总_390_da_5DC0 chinh la offset GMT bo loc dang dung tai thoi diem nay (du la tu
+ // AutoGMT/WebRequest thanh cong hay phai roi ve TimeGMT()), nen dung gia tri nay de
+ // tru truoc khi luu, tranh bi quy doi 2 lan.
+ long      临_offsetSeconds = (long)(TimeCurrent() - 总_390_da_5DC0) ;
+ int       临_count = 0;
+ for (临_i = 0 ; 临_i < 临_n && 临_count < 300 ; 临_i ++)
+ {
+   if ( 临_values[临_i].time <= 0 )   continue;
+   总_391_da_5DFC_si300[临_count] = (datetime)(临_values[临_i].time - 临_offsetSeconds) ;
+   临_count ++;
+ }
+ if ( 临_count <= 0 )   return;
+ for (临_i = 临_count ; 临_i < 300 ; 临_i ++)   总_391_da_5DFC_si300[临_i] = 0 ;
+ g_nfpFromCalendar = true ;
+ Print("NFP: da lay ",临_count," ngay tu Lich MQL5 (thay cho mang hardcode).");
+ }
+//BuildNFPDatesFromCalendar <<==--------   --------
 
  int OnInit()
  {
@@ -1402,6 +1455,14 @@ g_startLots_rw=StartLots;
  {
    总_390_da_5DC0=TimeCurrent() - 总_395_in_6760 * 3600;
  }
+ // Lich MQL5 khong kha dung/dang tin cay trong Strategy Tester (backtest) nen chi
+ // lam moi tu Lich MQL5 khi dang chay live/demo that; kiem thu nguoc luon dung mang
+ // 总_391_da_5DFC_si300[] ma hoa cung ben tren (da cap nhat toi het nam 2026) de dam
+ // bao ket qua backtest 100% xac dinh, lap lai duoc.
+ if ( MQLInfoInteger(MQL_TESTER) != 1 && TimeCurrent() - TimeCurrent() % 86400 > g_nfpCalendarBuiltDay )
+ {
+   BuildNFPDatesFromCalendar();
+ }
  if ( TradeFrequency == 5 && Risk == 1234 )
  {
    子_2_do = lizong_36(AccountInfoDouble(ACCOUNT_BALANCE)) ;
@@ -2241,7 +2302,7 @@ g_startLots_rw=StartLots;
  }
  if ( EnableNFP_Filter )
  {
-   if ( Year() <= 2026 )
+   if ( Year() <= 2026 || g_nfpFromCalendar )
    {
      子_3_lo = 0 ;
      for (子_4_in = 0 ; 子_4_in < 300 ; 子_4_in ++)
