@@ -9392,7 +9392,7 @@ if(lv_s2=="999")
 {
 return(999);
 }
-lv_i3=StringFind(lv_s2,"\"serverTimeStamp\"value=",0);
+lv_i3=StringFind(lv_s2,"\"serverTimeStamp\" value=",0);
 lv_s4=StringSubstr(lv_s2,lv_i3+25,10);
 lv_l5 = (long)ulong(lv_s4);
 Print("GMT time = ",lv_l5);
