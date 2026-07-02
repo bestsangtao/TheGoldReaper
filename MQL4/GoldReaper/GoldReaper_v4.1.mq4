@@ -520,7 +520,20 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  {
    总_401_do_6AD0 = ForceBalanceToUse ;
  }
- 总_402_do_6AD8 = 总_401_do_6AD0 ;
+ // OnlyUp cai tien: doc lai muc so du cao nhat da luu trong GlobalVariable
+ // cua terminal (ton tai xuyen suot restart EA/MT4), thay vi luon reset ve
+ // so du hien tai moi lan khoi dong nhu truoc - tranh mat muc dinh cao da
+ // dat duoc truoc do.
+ if ( OnlyUp && GlobalVariableCheck(OnlyUpPeakGVName()) )
+ {
+   总_402_do_6AD8 = GlobalVariableGet(OnlyUpPeakGVName()) ;
+   if ( 总_401_do_6AD0>总_402_do_6AD8 )   总_402_do_6AD8 = 总_401_do_6AD0 ;
+ }
+ else
+ {
+   总_402_do_6AD8 = 总_401_do_6AD0 ;
+ }
+ GlobalVariableSet(OnlyUpPeakGVName(),总_402_do_6AD8) ;
  总_392_bo_675C = false ;
  总_393_bo_675D = false ;
  总_391_da_5DFC_si300[0] = D'2026.12.04 12:30';
@@ -1234,6 +1247,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  if ( 总_401_do_6AD0>总_402_do_6AD8 )
  {
    总_402_do_6AD8 = 总_401_do_6AD0 ;
+   if ( OnlyUp )   GlobalVariableSet(OnlyUpPeakGVName(),总_402_do_6AD8) ;
  }
  if ( FakeOutFilter == 0 )
  {
@@ -3166,6 +3180,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  if ( 总_401_do_6AD0>总_402_do_6AD8 )
  {
    总_402_do_6AD8 = 总_401_do_6AD0 ;
+   if ( OnlyUp )   GlobalVariableSet(OnlyUpPeakGVName(),总_402_do_6AD8) ;
  }
  子_3_do = 木_0_do ;
  if ( ( 总_190_in_518 == 2 || 总_190_in_518 == 4 ) )
@@ -6447,6 +6462,11 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  }
  }
 //lizong_26 <<==--------   --------
+ string OnlyUpPeakGVName()
+ {
+ return("GR_OnlyUpPeak_" + Symbol() + "_" + IntegerToString(ST1_MagicNumber));
+ }
+//OnlyUpPeakGVName <<==--------   --------
  void lizong_27()
  {
   string    子_1_st;
