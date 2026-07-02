@@ -502,6 +502,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
                                       // chua bao gio quan tam ket qua) ma khong doi hanh vi.
   int       g_discardResultInt = 0;  // tuong tu nhung cho OrderSend (tra ve int, khong phai bool)
   long      g_onlyUpRunId = 0;       // ma rieng cho moi lan chay Strategy Tester, dung de tach biet dinh OnlyUp giua cac lan backtest (xem OnlyUpPeakGVName)
+  datetime  g_nfpFFBuiltDay = 0;     // ngay (00:00, GMT) lan gan nhat da thu lam moi tu Forex Factory JSON feed (xem RefreshNFPFromForexFactory)
 
 
  int init()
@@ -1411,6 +1412,12 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  else
  {
    总_390_da_5DC0=TimeCurrent() - 总_395_in_6760 * 3600;
+ }
+ // Lam moi 1 lan/ngay tu Forex Factory (xem RefreshNFPFromForexFactory), chi khi
+ // dang chay live/demo that de ket qua backtest luon dung mang cung, on dinh.
+ if ( MQLInfoInteger(MQL_TESTER) != 1 && TimeCurrent() - TimeCurrent() % 86400 > g_nfpFFBuiltDay )
+ {
+   RefreshNFPFromForexFactory();
  }
  if ( TradeFrequency == 5 && Risk == 1234 )
  {
@@ -6536,6 +6543,73 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  return("Next NFP: " + TimeToString(临_da_best + 总_395_in_6760 * 3600,TIME_DATE|TIME_SECONDS));
  }
 //GetNextNFPText <<==--------   --------
+//+------------------------------------------------------------------+
+//| MQL4 khong co API Lich kinh te nhu MQL5, nen lay ngay NFP chinh  |
+//| xac cho "tuan nay" tu feed JSON cong khai cua Forex Factory      |
+//| (khong yeu cau header dac biet, khong bi chan bot - da kiem      |
+//| chung bang curl truoc khi dung). Feed nay CHI co du lieu trong   |
+//| pham vi 1 tuan (khong co tuy chon lay ca thang/nam nhu Lich      |
+//| MQL5), nen chi dung de LAM CHINH XAC HON ngay/gio NFP cua thang  |
+//| hien tai trong mang 总_391_da_5DFC_si300[] ma hoa cung (vi du khi |
+//| lich bi doi do nghi le/chinh phu dong cua) - khong the thay the  |
+//| hoan toan mang do. Neu khong lay duoc hoac tuan nay khong co su  |
+//| kien NFP thi GIU NGUYEN gia tri cu, khong lam gi ca (an toan     |
+//| tuyet doi, khong bao gio lam hong bo loc/hien thi).              |
+//+------------------------------------------------------------------+
+ void RefreshNFPFromForexFactory()
+ {
+  char      临_data[];
+  char      临_result[];
+  string    临_headers;
+  string    临_json;
+  int       临_pos;
+  int       临_datePos;
+  string    临_iso;
+  int       临_year;
+  int       临_month;
+  int       临_day;
+  int       临_hour;
+  int       临_minute;
+  string    临_tzSign;
+  int       临_tzH;
+  int       临_tzM;
+  datetime  临_local;
+  int       临_offsetSec;
+  datetime  临_utc;
+  int       临_i;
+//----- -----
+ g_nfpFFBuiltDay = TimeCurrent() - TimeCurrent() % 86400 ;
+ ResetLastError();
+ if ( WebRequest("GET","https://nfs.faireconomy.media/ff_calendar_thisweek.json",NULL,NULL,5000,临_data,0,临_result,临_headers) == -1 )   return;
+ 临_json = CharArrayToString(临_result,0,0,0) ;
+ 临_pos = StringFind(临_json,"\"title\":\"Non-Farm Employment Change\"",0) ;
+ if ( 临_pos < 0 )   return;
+ 临_datePos = StringFind(临_json,"\"date\":\"",临_pos) ;
+ if ( 临_datePos < 0 )   return;
+ 临_iso = StringSubstr(临_json,临_datePos + 8,25) ;
+ if ( StringLen(临_iso) < 25 )   return;
+ 临_year = (int)StringSubstr(临_iso,0,4) ;
+ 临_month = (int)StringSubstr(临_iso,5,2) ;
+ 临_day = (int)StringSubstr(临_iso,8,2) ;
+ 临_hour = (int)StringSubstr(临_iso,11,2) ;
+ 临_minute = (int)StringSubstr(临_iso,14,2) ;
+ 临_tzSign = StringSubstr(临_iso,19,1) ;
+ 临_tzH = (int)StringSubstr(临_iso,20,2) ;
+ 临_tzM = (int)StringSubstr(临_iso,23,2) ;
+ 临_local = StringToTime(IntegerToString(临_year,0,32) + "." + IntegerToString(临_month,0,32) + "." + IntegerToString(临_day,0,32) + " " + IntegerToString(临_hour,0,32) + ":" + IntegerToString(临_minute,0,32)) ;
+ 临_offsetSec = (临_tzSign == "-" ? -1 : 1) * (临_tzH * 3600 + 临_tzM * 60) ;
+ 临_utc = 临_local - 临_offsetSec ;
+ for (临_i = 0 ; 临_i < 300 ; 临_i ++)
+ {
+   if ( 总_391_da_5DFC_si300[临_i] <= 0 )   continue;
+   if ( TimeYear(总_391_da_5DFC_si300[临_i]) == 临_year && TimeMonth(总_391_da_5DFC_si300[临_i]) == 临_month )
+   {
+     总_391_da_5DFC_si300[临_i] = 临_utc ;
+     break;
+   }
+ }
+ }
+//RefreshNFPFromForexFactory <<==--------   --------
  void lizong_27()
  {
   string    子_1_st;
