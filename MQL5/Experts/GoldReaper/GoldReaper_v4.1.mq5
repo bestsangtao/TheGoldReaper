@@ -516,11 +516,19 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
   int       临_evTotal = CalendarEventByCountry("US",临_events) ;
   long      临_nfpId = -1;
   int       临_i;
+  string    临_code;
 //----- -----
  if ( 临_evTotal <= 0 )   return;
  for (临_i = 0 ; 临_i < 临_evTotal ; 临_i ++)
  {
-   if ( StringFind(临_events[临_i].name,"Nonfarm Payrolls") >= 0 || StringFind(临_events[临_i].name,"Non-Farm Payrolls") >= 0 || StringFind(临_events[临_i].name,"Non Farm Payrolls") >= 0 )
+   // MqlCalendarEvent.name tra ve theo NGON NGU CUA TERMINAL (tai lieu MQL5)
+   // nen so sanh chuoi tieng Anh co the khong bao gio khop neu terminal dat
+   // ngon ngu khac. event_code moi la ma dinh danh CO DINH, khong phu thuoc
+   // ngon ngu (vi du "NONFARM-PAYROLLS") - dung field nay lam chinh, giu lai
+   // kiem tra .name nhu du phong.
+   临_code = 临_events[临_i].event_code ;
+   StringToUpper(临_code) ;
+   if ( StringFind(临_code,"NONFARM") >= 0 || StringFind(临_events[临_i].name,"Nonfarm Payrolls") >= 0 || StringFind(临_events[临_i].name,"Non-Farm Payrolls") >= 0 || StringFind(临_events[临_i].name,"Non Farm Payrolls") >= 0 )
    {
      临_nfpId = (long)临_events[临_i].id ;
      break;
@@ -573,7 +581,11 @@ g_startLots_rw=StartLots;
  // Sinh ma rieng cho lan chay Strategy Tester nay (xem OnlyUpPeakGVName) -
  // GetTickCount() (mili-giay tu luc terminal khoi dong) + so ngau nhien de
  // moi lan backtest deu co ma khac nhau, tranh trung khi nhieu agent toi uu
- // hoa chay song song va bat dau o cung mot thoi diem.
+ // hoa chay song song va bat dau o cung mot thoi diem. MathRand() bat buoc
+ // phai MathSrand() truoc thi moi cho ra chuoi so khac nhau giua cac lan
+ // chay (theo tai lieu MQL5) - neu khong se luon ra cung 1 gia tri co dinh
+ // moi lan khoi dong, lam mat tac dung chong trung.
+ MathSrand((int)GetTickCount()) ;
  g_onlyUpRunId = (long)GetTickCount() * 1000 + MathRand() ;
 
  总_401_do_6AD0 = AccountInfoDouble(ACCOUNT_BALANCE) ;
@@ -598,7 +610,10 @@ g_startLots_rw=StartLots;
  {
    总_402_do_6AD8 = 总_401_do_6AD0 ;
  }
- GlobalVariableSet(OnlyUpPeakGVName(),总_402_do_6AD8) ;
+ // Chi ghi GlobalVariable khi OnlyUp dang bat - 2 diem ghi con lai (OnTick,
+ // lizong_10) da lam dung dieu nay, sua lai cho khop de khong tao GlobalVariable
+ // vo ich khi tinh nang OnlyUp dang tat.
+ if ( OnlyUp )   GlobalVariableSet(OnlyUpPeakGVName(),总_402_do_6AD8) ;
  总_392_bo_675C = false ;
  总_393_bo_675D = false ;
  总_391_da_5DFC_si300[0] = D'2026.12.04 12:30';
@@ -1465,7 +1480,7 @@ g_startLots_rw=StartLots;
  // lam moi tu Lich MQL5 khi dang chay live/demo that; kiem thu nguoc luon dung mang
  // 总_391_da_5DFC_si300[] ma hoa cung ben tren (da cap nhat toi het nam 2026) de dam
  // bao ket qua backtest 100% xac dinh, lap lai duoc.
- if ( MQLInfoInteger(MQL_TESTER) != 1 && TimeCurrent() - TimeCurrent() % 86400 > g_nfpCalendarBuiltDay )
+ if ( EnableNFP_Filter && MQLInfoInteger(MQL_TESTER) != 1 && TimeCurrent() - TimeCurrent() % 86400 > g_nfpCalendarBuiltDay )
  {
    BuildNFPDatesFromCalendar();
  }

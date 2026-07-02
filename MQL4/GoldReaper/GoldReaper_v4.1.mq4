@@ -526,7 +526,11 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  // Sinh ma rieng cho lan chay Strategy Tester nay (xem OnlyUpPeakGVName) -
  // GetTickCount() (mili-giay tu luc terminal khoi dong) + so ngau nhien de
  // moi lan backtest deu co ma khac nhau, tranh trung khi nhieu agent toi uu
- // hoa chay song song va bat dau o cung mot thoi diem.
+ // hoa chay song song va bat dau o cung mot thoi diem. MathRand() bat buoc
+ // phai MathSrand() truoc thi moi cho ra chuoi so khac nhau giua cac lan
+ // chay (theo tai lieu MQL5) - neu khong se luon ra cung 1 gia tri co dinh
+ // moi lan khoi dong, lam mat tac dung chong trung.
+ MathSrand((int)GetTickCount()) ;
  g_onlyUpRunId = (long)GetTickCount() * 1000 + MathRand() ;
 
  总_401_do_6AD0 = AccountInfoDouble(ACCOUNT_BALANCE) ;
@@ -551,7 +555,10 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  {
    总_402_do_6AD8 = 总_401_do_6AD0 ;
  }
- GlobalVariableSet(OnlyUpPeakGVName(),总_402_do_6AD8) ;
+ // Chi ghi GlobalVariable khi OnlyUp dang bat - 2 diem ghi con lai (OnTick,
+ // lizong_10) da lam dung dieu nay, sua lai cho khop de khong tao GlobalVariable
+ // vo ich khi tinh nang OnlyUp dang tat.
+ if ( OnlyUp )   GlobalVariableSet(OnlyUpPeakGVName(),总_402_do_6AD8) ;
  总_392_bo_675C = false ;
  总_393_bo_675D = false ;
  总_391_da_5DFC_si300[0] = D'2026.12.04 12:30';
@@ -1416,7 +1423,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  }
  // Lam moi 1 lan/ngay tu Forex Factory (xem RefreshNFPFromForexFactory), chi khi
  // dang chay live/demo that de ket qua backtest luon dung mang cung, on dinh.
- if ( MQLInfoInteger(MQL_TESTER) != 1 && TimeCurrent() - TimeCurrent() % 86400 > g_nfpFFBuiltDay )
+ if ( EnableNFP_Filter && MQLInfoInteger(MQL_TESTER) != 1 && TimeCurrent() - TimeCurrent() % 86400 > g_nfpFFBuiltDay )
  {
    RefreshNFPFromForexFactory();
  }
