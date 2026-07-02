@@ -2164,7 +2164,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
      for (临_in_6 = OrdersTotal() ; 临_in_6 >= 0 ; 临_in_6=临_in_6 - 1)
      {
        if ( OrderSelect(临_in_6,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
-       (void)OrderDelete(OrderTicket(),0xFFFFFFFF); 
+       OrderDelete(OrderTicket(),0xFFFFFFFF); 
        
      }
      if ( 临_in_5 == 2 )
@@ -2172,7 +2172,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
        for (临_in_7 = OrdersTotal() ; 临_in_7 >= 0 ; 临_in_7=临_in_7 - 1)
        {
          if ( OrderSelect(临_in_7,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
-         (void)OrderDelete(OrderTicket(),0xFFFFFFFF); 
+         OrderDelete(OrderTicket(),0xFFFFFFFF); 
          
        }
      }
@@ -2180,7 +2180,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
      for (临_in_9 = OrdersTotal() ; 临_in_9 >= 0 ; 临_in_9=临_in_9 - 1)
      {
        if ( OrderSelect(临_in_9,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
-       (void)OrderDelete(OrderTicket(),0xFFFFFFFF); 
+       OrderDelete(OrderTicket(),0xFFFFFFFF); 
        
      }
      if ( 临_in_8 == 2 )
@@ -2188,7 +2188,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
        for (临_in_10 = OrdersTotal() ; 临_in_10 >= 0 ; 临_in_10=临_in_10 - 1)
        {
          if ( OrderSelect(临_in_10,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
-         (void)OrderDelete(OrderTicket(),0xFFFFFFFF); 
+         OrderDelete(OrderTicket(),0xFFFFFFFF); 
          
        }
      }
@@ -2198,7 +2198,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
        do
        {
          if ( OrderSelect(1,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
-         (void)OrderDelete(OrderTicket(),0xFFFFFFFF); 
+         OrderDelete(OrderTicket(),0xFFFFFFFF); 
          
        }
        while( - 1 >= 0);
@@ -2209,7 +2209,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
        for (临_in_12 = OrdersTotal() ; 临_in_12 >= 0 ; 临_in_12=临_in_12 - 1)
        {
          if ( OrderSelect(临_in_12,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
-         (void)OrderDelete(OrderTicket(),0xFFFFFFFF); 
+         OrderDelete(OrderTicket(),0xFFFFFFFF); 
          
        }
      }
@@ -2219,7 +2219,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
        do
        {
          if ( OrderSelect(1,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
-         (void)OrderDelete(OrderTicket(),0xFFFFFFFF); 
+         OrderDelete(OrderTicket(),0xFFFFFFFF); 
          
        }
        while( - 1 >= 0);
@@ -2230,7 +2230,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
        for (临_in_14 = OrdersTotal() ; 临_in_14 >= 0 ; 临_in_14=临_in_14 - 1)
        {
          if ( OrderSelect(临_in_14,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
-         (void)OrderDelete(OrderTicket(),0xFFFFFFFF); 
+         OrderDelete(OrderTicket(),0xFFFFFFFF); 
          
        }
      }
@@ -2266,7 +2266,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
          for (临_in_18 = OrdersTotal() ; 临_in_18 >= 0 ; 临_in_18=临_in_18 - 1)
          {
            if ( OrderSelect(临_in_18,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
-           (void)OrderDelete(OrderTicket(),0xFFFFFFFF); 
+           OrderDelete(OrderTicket(),0xFFFFFFFF); 
            
          }
          if ( 临_in_17 == 2 )
@@ -2274,7 +2274,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
            for (临_in_19 = OrdersTotal() ; 临_in_19 >= 0 ; 临_in_19=临_in_19 - 1)
            {
              if ( OrderSelect(临_in_19,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
-             (void)OrderDelete(OrderTicket(),0xFFFFFFFF); 
+             OrderDelete(OrderTicket(),0xFFFFFFFF); 
              
            }
          }
@@ -2282,7 +2282,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
          for (临_in_21 = OrdersTotal() ; 临_in_21 >= 0 ; 临_in_21=临_in_21 - 1)
          {
            if ( OrderSelect(临_in_21,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
-           (void)OrderDelete(OrderTicket(),0xFFFFFFFF); 
+           OrderDelete(OrderTicket(),0xFFFFFFFF); 
            
          }
          if ( 临_in_20 == 2 )
@@ -2290,7 +2290,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
            for (临_in_22 = OrdersTotal() ; 临_in_22 >= 0 ; 临_in_22=临_in_22 - 1)
            {
              if ( OrderSelect(临_in_22,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
-             (void)OrderDelete(OrderTicket(),0xFFFFFFFF); 
+             OrderDelete(OrderTicket(),0xFFFFFFFF); 
              
            }
          }
@@ -2300,7 +2300,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
            do
            {
              if ( OrderSelect(1,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
-             (void)OrderDelete(OrderTicket(),0xFFFFFFFF); 
+             OrderDelete(OrderTicket(),0xFFFFFFFF); 
              
            }
            while( - 1 >= 0);
@@ -2311,7 +2311,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
            for (临_in_24 = OrdersTotal() ; 临_in_24 >= 0 ; 临_in_24=临_in_24 - 1)
            {
              if ( OrderSelect(临_in_24,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
-             (void)OrderDelete(OrderTicket(),0xFFFFFFFF); 
+             OrderDelete(OrderTicket(),0xFFFFFFFF); 
              
            }
          }
@@ -2321,7 +2321,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
            do
            {
              if ( OrderSelect(1,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
-             (void)OrderDelete(OrderTicket(),0xFFFFFFFF); 
+             OrderDelete(OrderTicket(),0xFFFFFFFF); 
              
            }
            while( - 1 >= 0);
@@ -2332,7 +2332,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
            for (临_in_26 = OrdersTotal() ; 临_in_26 >= 0 ; 临_in_26=临_in_26 - 1)
            {
              if ( OrderSelect(临_in_26,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
-             (void)OrderDelete(OrderTicket(),0xFFFFFFFF); 
+             OrderDelete(OrderTicket(),0xFFFFFFFF); 
              
            }
          }
@@ -2417,10 +2417,10 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
            }
            if ( OrderType() == 0 )
            {
-             (void)OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),99999,Red); 
+             OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),99999,Red); 
            }
            if ( OrderType() != 1 )   continue;
-           (void)OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),99999,Red); 
+           OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),99999,Red); 
            
          }
        }
@@ -2449,7 +2449,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
            for (临_in_45 = OrdersTotal() ; 临_in_45 >= 0 ; 临_in_45=临_in_45 - 1)
            {
              if ( OrderSelect(临_in_45,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
-             (void)OrderDelete(OrderTicket(),0xFFFFFFFF); 
+             OrderDelete(OrderTicket(),0xFFFFFFFF); 
              
            }
            if ( 临_in_44 == 2 )
@@ -2457,7 +2457,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
              for (临_in_46 = OrdersTotal() ; 临_in_46 >= 0 ; 临_in_46=临_in_46 - 1)
              {
                if ( OrderSelect(临_in_46,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
-               (void)OrderDelete(OrderTicket(),0xFFFFFFFF); 
+               OrderDelete(OrderTicket(),0xFFFFFFFF); 
                
              }
            }
@@ -2465,7 +2465,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
            for (临_in_48 = OrdersTotal() ; 临_in_48 >= 0 ; 临_in_48=临_in_48 - 1)
            {
              if ( OrderSelect(临_in_48,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
-             (void)OrderDelete(OrderTicket(),0xFFFFFFFF); 
+             OrderDelete(OrderTicket(),0xFFFFFFFF); 
              
            }
            if ( 临_in_47 == 2 )
@@ -2473,7 +2473,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
              for (临_in_49 = OrdersTotal() ; 临_in_49 >= 0 ; 临_in_49=临_in_49 - 1)
              {
                if ( OrderSelect(临_in_49,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
-               (void)OrderDelete(OrderTicket(),0xFFFFFFFF); 
+               OrderDelete(OrderTicket(),0xFFFFFFFF); 
                
              }
            }
@@ -2483,7 +2483,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
              do
              {
                if ( OrderSelect(1,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
-               (void)OrderDelete(OrderTicket(),0xFFFFFFFF); 
+               OrderDelete(OrderTicket(),0xFFFFFFFF); 
                
              }
              while( - 1 >= 0);
@@ -2494,7 +2494,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
              for (临_in_51 = OrdersTotal() ; 临_in_51 >= 0 ; 临_in_51=临_in_51 - 1)
              {
                if ( OrderSelect(临_in_51,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
-               (void)OrderDelete(OrderTicket(),0xFFFFFFFF); 
+               OrderDelete(OrderTicket(),0xFFFFFFFF); 
                
              }
            }
@@ -2504,7 +2504,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
              do
              {
                if ( OrderSelect(1,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
-               (void)OrderDelete(OrderTicket(),0xFFFFFFFF); 
+               OrderDelete(OrderTicket(),0xFFFFFFFF); 
                
              }
              while( - 1 >= 0);
@@ -2515,7 +2515,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
              for (临_in_53 = OrdersTotal() ; 临_in_53 >= 0 ; 临_in_53=临_in_53 - 1)
              {
                if ( OrderSelect(临_in_53,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
-               (void)OrderDelete(OrderTicket(),0xFFFFFFFF); 
+               OrderDelete(OrderTicket(),0xFFFFFFFF); 
                
              }
            }
@@ -2600,10 +2600,10 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
              }
              if ( OrderType() == 0 )
              {
-               (void)OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),99999,Red); 
+               OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),99999,Red); 
              }
              if ( OrderType() != 1 )   continue;
-             (void)OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),99999,Red); 
+             OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),99999,Red); 
              
            }
          }
@@ -2706,14 +2706,14 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
        }
        if ( OrderType() == 0 )
        {
-         (void)OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
+         OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
        }
        if ( OrderType() == 1 )
        {
-         (void)OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
+         OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
        }
        if ( ( OrderType() != 4 && OrderType() != 5 ) )   continue;
-       (void)OrderDelete(OrderTicket(),Red); 
+       OrderDelete(OrderTicket(),Red); 
        
      }
      Print("Weekend starting! closing trades.."); 
@@ -2765,7 +2765,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
      }
      if ( 临_lo_91 != 0 )
      {
-       (void)OrderDelete((int)临_lo_91,Green); 
+       OrderDelete((int)临_lo_91,Green); 
        临_lo_93 = 临_lo_91;
        for (临_in_94 = 0 ; 临_in_94 < 100 ; 临_in_94=临_in_94 + 1)
        {
@@ -2798,7 +2798,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
      }
      if ( 临_lo_98 != 0 )
      {
-       (void)OrderDelete((int)临_lo_98,Green); 
+       OrderDelete((int)临_lo_98,Green); 
        临_lo_100 = 临_lo_98;
        for (临_in_101 = 0 ; 临_in_101 < 100 ; 临_in_101=临_in_101 + 1)
        {
@@ -3090,7 +3090,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
          break;
          
        }
-       (void)OrderDelete(OrderTicket(),Green); 
+       OrderDelete(OrderTicket(),Green); 
      }
      else
      {
@@ -3104,7 +3104,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
          break;
          
        }
-       (void)OrderDelete(OrderTicket(),Green); 
+       OrderDelete(OrderTicket(),Green); 
      }
    }
    if ( OrderType() != 5 )   continue;
@@ -3136,7 +3136,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
        break;
        
      }
-     (void)OrderDelete(OrderTicket(),Green); 
+     OrderDelete(OrderTicket(),Green); 
       continue;
    }
    Print("Spread too high..(" + string(总_1_do_0) + ") deleting order " + string(OrderTicket())); 
@@ -3149,7 +3149,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
      break;
      
    }
-   (void)OrderDelete(OrderTicket(),Green); 
+   OrderDelete(OrderTicket(),Green); 
    
  }
  return(false); 
@@ -3627,7 +3627,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
      临_lo_1 = TimeCurrent();
      临_lo_2=OrderOpenTime() + 总_234_in_1E20;
      if ( 临_lo_1 < 临_lo_2 )   continue;
-     (void)OrderDelete(OrderTicket(),Red); 
+     OrderDelete(OrderTicket(),Red); 
      
    }
  }
@@ -3648,7 +3648,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
    for (临_in_6 = OrdersTotal() ; 临_in_6 >= 0 ; 临_in_6=临_in_6 - 1)
    {
      if ( OrderSelect(临_in_6,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
-     (void)OrderDelete(OrderTicket(),0xFFFFFFFF); 
+     OrderDelete(OrderTicket(),0xFFFFFFFF); 
      
    }
    if ( 临_in_5 == 2 )
@@ -3656,7 +3656,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
      for (临_in_7 = OrdersTotal() ; 临_in_7 >= 0 ; 临_in_7=临_in_7 - 1)
      {
        if ( OrderSelect(临_in_7,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
-       (void)OrderDelete(OrderTicket(),0xFFFFFFFF); 
+       OrderDelete(OrderTicket(),0xFFFFFFFF); 
        
      }
    }
@@ -3677,14 +3677,14 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  for (临_in_11 = OrdersTotal() ; 临_in_11 >= 0 ; 临_in_11=临_in_11 - 1)
  {
    if ( OrderSelect(临_in_11,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
-   (void)OrderDelete(OrderTicket(),0xFFFFFFFF); 
+   OrderDelete(OrderTicket(),0xFFFFFFFF); 
    
  }
  if ( 临_in_10 != 2 )   return;
  for (临_in_12 = OrdersTotal() ; 临_in_12 >= 0 ; 临_in_12=临_in_12 - 1)
  {
    if ( OrderSelect(临_in_12,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
-   (void)OrderDelete(OrderTicket(),0xFFFFFFFF); 
+   OrderDelete(OrderTicket(),0xFFFFFFFF); 
    
  }
  }
@@ -4238,12 +4238,12 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
        if ( ( 子_7_do==0.0 || 子_7_do==0.0 ) )
        {
          子_7_do = NormalizeDouble(子_10_do - 总_100_do_230 * 总_229_do_1E00,总_190_in_518) ;
-         (void)OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
+         OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
        }
        if ( ( 子_8_do==0.0 || 子_8_do==0.0 ) )
        {
          子_8_do = NormalizeDouble(总_101_do_238 * 总_229_do_1E00 + 子_10_do,总_190_in_518) ;
-         (void)OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
+         OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
        }
      }
      if ( 子_14_in == 0 && ( ( 子_15_in == 总_93_in_1F0 && 总_69_in_160 == 1 && 子_16_st == 总_336_st_3130 ) || (总_69_in_160 == 2 && ( 总_95_in_204 == 0 || (总_95_in_204 == 1 && 子_16_st == 总_336_st_3130) ) && ( 子_15_in == 总_96_in_208 || 总_96_in_208 == 0 ) && (子_11_st == 总_97_st_210 || 总_97_st_210 == "")) ) )
@@ -4251,36 +4251,36 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
        if ( ( 子_7_do==0.0 || 子_7_do==0.0 ) )
        {
          子_7_do = NormalizeDouble(子_10_do - 总_100_do_230 * 总_229_do_1E00,总_190_in_518) ;
-         (void)OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
+         OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
        }
        if ( ( 子_8_do==0.0 || 子_8_do==0.0 ) )
        {
          子_8_do = NormalizeDouble(总_101_do_238 * 总_229_do_1E00 + 子_10_do,总_190_in_518) ;
-         (void)OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
+         OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
        }
        if ( 总_53_bo_11C && iTime(总_336_st_3130,总_52_in_118,总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,总_52_in_118,0) >  子_13_da && iClose(总_336_st_3130,总_52_in_118,1)<iOpen(总_336_st_3130,总_52_in_118,1) && iClose(总_336_st_3130,总_52_in_118,1)<子_10_do )
        {
-         (void)OrderClose((int)子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),0,Red); 
+         OrderClose((int)子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),0,Red); 
          Print("closing candle confirmation"); 
        }
        if ( 总_55_bo_124 && iTime(总_336_st_3130,总_54_in_120,总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,总_54_in_120,0) >  子_13_da && iClose(总_336_st_3130,总_54_in_120,1)<iOpen(总_336_st_3130,总_54_in_120,1) && iClose(总_336_st_3130,总_54_in_120,1)<子_10_do )
        {
-         (void)OrderClose((int)子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),0,Red); 
+         OrderClose((int)子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),0,Red); 
          Print("closing candle confirmation"); 
        }
        if ( 总_57_bo_12C && iTime(总_336_st_3130,总_56_in_128,总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,总_56_in_128,0) >  子_13_da && iClose(总_336_st_3130,总_56_in_128,1)<iOpen(总_336_st_3130,总_56_in_128,1) && iClose(总_336_st_3130,总_56_in_128,1)<子_10_do )
        {
-         (void)OrderClose((int)子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),0,Red); 
+         OrderClose((int)子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),0,Red); 
          Print("closing candle confirmation"); 
        }
        if ( 总_59_bo_134 && iTime(总_336_st_3130,总_58_in_130,总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,总_58_in_130,0) >  子_13_da && iClose(总_336_st_3130,总_58_in_130,1)<iOpen(总_336_st_3130,总_58_in_130,1) && iClose(总_336_st_3130,总_58_in_130,1)<子_10_do )
        {
-         (void)OrderClose((int)子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),0,Red); 
+         OrderClose((int)子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),0,Red); 
          Print("closing candle confirmation"); 
        }
        if ( 总_61_bo_13C && iTime(总_336_st_3130,总_60_in_138,总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,总_60_in_138,0) >  子_13_da && iClose(总_336_st_3130,总_60_in_138,1)<iOpen(总_336_st_3130,总_60_in_138,1) && iClose(总_336_st_3130,总_60_in_138,1)<子_10_do )
        {
-         (void)OrderClose((int)子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),0,Red); 
+         OrderClose((int)子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),0,Red); 
          Print("closing candle confirmation"); 
        }
        总_247_do_2500 = 总_129_do_318 ;
@@ -4339,12 +4339,12 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
        if ( 子_7_do<NormalizeDouble(子_10_do - (总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 - 总_1_do_0,总_190_in_518) )
        {
          子_7_do = NormalizeDouble(子_10_do - (总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 - 总_1_do_0,总_190_in_518) ;
-         (void)OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF); 
+         OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF); 
        }
        if ( MarketInfo(总_336_st_3130,MODE_BID)<子_10_do - (总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 - 总_1_do_0 )
        {
          RefreshRates(); 
-         (void)OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_1_do_0,Red); 
+         OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_1_do_0,Red); 
          return(true); 
        }
        子_20_bo = false ;
@@ -4394,10 +4394,10 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
                  
                  if ( OrderType() == 0 )
                  {
-                   (void)OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
+                   OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                  }
                  if ( OrderType() != 1 )   continue;
-                 (void)OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
+                 OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
                  
                }
              }
@@ -4428,7 +4428,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
                  
                  if ( OrderMagicNumber() == 总_93_in_1F0 && OrderTicket() == 临_lo_18 )
                  {
-                   (void)OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),3,Red); 
+                   OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),3,Red); 
                  }
                  if ( OrderMagicNumber() != 总_168_in_4A8 )   continue;
                  临_st_11 = OrderComment();
@@ -4436,10 +4436,10 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
                  
                  if ( OrderType() == 0 )
                  {
-                   (void)OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
+                   OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                  }
                  if ( OrderType() != 1 )   continue;
-                 (void)OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
+                 OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
                  
                }
                总_194_bo_530 = false ;
@@ -4474,7 +4474,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
                      
                      if ( OrderMagicNumber() == 总_93_in_1F0 && OrderTicket() == 子_9_lo )
                      {
-                       (void)OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),3,Red); 
+                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),3,Red); 
                      }
                      if ( OrderMagicNumber() != 总_168_in_4A8 )   continue;
                      临_st_11 = OrderComment();
@@ -4482,10 +4482,10 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
                      
                      if ( OrderType() == 0 )
                      {
-                       (void)OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
+                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                      }
                      if ( OrderType() != 1 )   continue;
-                     (void)OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
+                     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
                      
                    }
                  }
@@ -4510,7 +4510,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
                      
                      if ( OrderMagicNumber() == 总_93_in_1F0 && OrderTicket() == 子_9_lo )
                      {
-                       (void)OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),3,Red); 
+                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),3,Red); 
                      }
                      if ( OrderMagicNumber() != 总_168_in_4A8 )   continue;
                      临_st_22 = OrderComment();
@@ -4518,10 +4518,10 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
                      
                      if ( OrderType() == 0 )
                      {
-                       (void)OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
+                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                      }
                      if ( OrderType() != 1 )   continue;
-                     (void)OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
+                     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
                      
                    }
                  }
@@ -4695,7 +4695,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
              {
                总_250_in_2518 = 0 ;
                子_7_do = NormalizeDouble(总_131_do_328 * 总_229_do_1E00 + 子_7_do,总_190_in_518) ;
-               (void)OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF); 
+               OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF); 
                子_2_bo = true ;
              }
            }
@@ -4964,12 +4964,12 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
        if ( ( 子_7_do==0.0 || 子_7_do==0.0 ) )
        {
          子_7_do = NormalizeDouble(总_100_do_230 * 总_229_do_1E00 + 子_10_do,总_190_in_518) ;
-         (void)OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
+         OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
        }
        if ( ( 子_8_do==0.0 || 子_8_do==0.0 ) )
        {
          子_8_do = NormalizeDouble(子_10_do - 总_101_do_238 * 总_229_do_1E00,总_190_in_518) ;
-         (void)OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
+         OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
        }
      }
      if ( 子_14_in == 1 && ( ( 子_15_in == 总_93_in_1F0 && 总_69_in_160 == 1 && 子_16_st == 总_336_st_3130 ) || (总_69_in_160 == 2 && ( 总_95_in_204 == 0 || (总_95_in_204 == 1 && 子_16_st == 总_336_st_3130) ) && ( 子_15_in == 总_96_in_208 || 总_96_in_208 == 0 ) && (子_11_st == 总_97_st_210 || 总_97_st_210 == "")) ) )
@@ -4977,12 +4977,12 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
        if ( ( 子_7_do==0.0 || 子_7_do==0.0 ) )
        {
          子_7_do = NormalizeDouble(总_100_do_230 * 总_229_do_1E00 + 子_10_do,总_190_in_518) ;
-         (void)OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
+         OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
        }
        if ( ( 子_8_do==0.0 || 子_8_do==0.0 ) )
        {
          子_8_do = NormalizeDouble(子_10_do - 总_101_do_238 * 总_229_do_1E00,总_190_in_518) ;
-         (void)OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
+         OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
        }
        if ( 总_53_bo_11C && iTime(总_336_st_3130,总_52_in_118,总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,总_52_in_118,0) >  子_13_da && iClose(总_336_st_3130,总_52_in_118,1)>iOpen(总_336_st_3130,总_52_in_118,1) && iClose(总_336_st_3130,总_52_in_118,1)>子_10_do )
        {
@@ -5065,7 +5065,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
        if ( 子_7_do>NormalizeDouble((总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 + 子_10_do + 总_1_do_0,总_190_in_518) )
        {
          子_7_do = NormalizeDouble((总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 + 子_10_do + 总_1_do_0,总_190_in_518) ;
-         (void)OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF); 
+         OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF); 
        }
        if ( MarketInfo(总_336_st_3130,MODE_ASK)>(总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 + 子_10_do + 总_1_do_0 )
        {
@@ -5120,10 +5120,10 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
                  
                  if ( OrderType() == 0 )
                  {
-                   (void)OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
+                   OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                  }
                  if ( OrderType() != 1 )   continue;
-                 (void)OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
+                 OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
                  
                }
              }
@@ -5162,10 +5162,10 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
                  
                  if ( OrderType() == 0 )
                  {
-                   (void)OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
+                   OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                  }
                  if ( OrderType() != 1 )   continue;
-                 (void)OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
+                 OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
                  
                }
                总_195_bo_531 = false ;
@@ -5204,10 +5204,10 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
                      
                      if ( OrderType() == 0 )
                      {
-                       (void)OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
+                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                      }
                      if ( OrderType() != 1 )   continue;
-                     (void)OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
+                     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
                      
                    }
                  }
@@ -5244,10 +5244,10 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
                      
                      if ( OrderType() == 0 )
                      {
-                       (void)OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
+                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                      }
                      if ( OrderType() != 1 )   continue;
-                     (void)OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
+                     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
                      
                    }
                  }
@@ -5421,7 +5421,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
              {
                总_250_in_2518 = 0 ;
                子_7_do = NormalizeDouble(子_7_do - 总_131_do_328 * 总_229_do_1E00,总_190_in_518) ;
-               (void)OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF); 
+               OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF); 
                子_2_bo = true ;
              }
            }
@@ -9300,14 +9300,14 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
    }
    if ( OrderType() == 0 )
    {
-     (void)OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
+     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
    }
    if ( OrderType() == 1 )
    {
-     (void)OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
+     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
    }
    if ( ( OrderType() != 4 && OrderType() != 5 ) )   continue;
-   (void)OrderDelete(OrderTicket(),Red); 
+   OrderDelete(OrderTicket(),Red); 
    
  }
  总_382_bo_5D98 = true ;
