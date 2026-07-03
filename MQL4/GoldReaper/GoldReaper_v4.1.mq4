@@ -9507,8 +9507,7 @@ void ThongBaoThieuLink()
  ResetLastError();
  if ( WebRequest("GET","https://www.worldtimeserver.com/time-zones/utc/",NULL,NULL,10000,子_7_ch_ko,0,子_8_ch_ko,临_st_1) == -1 )
  {
-   Print("Error when reading GMT URL. Error code  =",GetLastError()); 
-   MessageBox("Add the address \'https://www.worldtimeserver.com/\' in the list of allowed URLs on tab \'Expert Advisors\'","Error",64); 
+   Print("Error when reading GMT URL. Error code  =",GetLastError());
    临_st_2 = "999";
  }
  else
