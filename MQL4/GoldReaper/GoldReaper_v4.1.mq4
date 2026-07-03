@@ -6395,7 +6395,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
    ObjectSetInteger(0,"linenfp" + IntegerToString(0,0,32),OBJPROP_CORNER,子_11_in);
    ObjectSetInteger(0,"linenfp" + IntegerToString(0,0,32),OBJPROP_YDISTANCE,(long)(子_13_in + InfoPanelSizeAdjust * 124.0 + 子_8_in));
    ObjectSetInteger(0,"linenfp" + IntegerToString(0,0,32),OBJPROP_XDISTANCE,子_12_in + 子_7_in);
-   ObjectSetString(0,"linenfp" + IntegerToString(0,0,32),OBJPROP_TEXT,"Next NFP: -");
+   ObjectSetString(0,"linenfp" + IntegerToString(0,0,32),OBJPROP_TEXT,"no news coming up");
    ObjectSetInteger(0,"linenfp" + IntegerToString(0,0,32),OBJPROP_COLOR,总_329_ui_3104);
    ObjectSetInteger(0,"linenfp" + IntegerToString(0,0,32),OBJPROP_FONTSIZE,总_372_in_5CFC);
  }
@@ -6540,12 +6540,12 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  // Chi hien thi khi da co xac nhan THAT tu Forex Factory cho tuan hien tai
  // (xem RefreshNFPFromForexFactory) - khong doan/uoc luong tu mang ma hoa
  // cung nua. Neu tuan nay chua kiem tra, hoac da kiem tra nhung khong co
- // NFP, hoac ngay da qua -> khong hien thi gi (tra ve "-").
+ // NFP, hoac ngay da qua -> hien "no news coming up" (giong panel v4.3).
  if ( g_nfpFFDate > 0 && g_nfpFFDate >= 总_390_da_5DC0 )
  {
    return("Next NFP: " + TimeToString(g_nfpFFDate + 总_395_in_6760 * 3600,TIME_DATE|TIME_SECONDS));
  }
- return("Next NFP: -");
+ return("no news coming up");
  }
 //GetNextNFPText <<==--------   --------
 //+------------------------------------------------------------------+
