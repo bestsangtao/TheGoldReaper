@@ -7,8 +7,9 @@
 //| OrdersTotal/HistoryTotal, MarketInfo, AccountBalance/Equity,       |
 //| Time*()/Year()/Month()/Day()/Hour()/Minute()/Seconds()/DayOfWeek(),|
 //| iMA()/iFractals() kieu tra ve gia tri truc tiep...) trong khi thuc |
-//| thi ben duoi hoan toan bang API MQL5 (Position/Order/Deal, lop     |
-//| CTrade chuan cua MetaQuotes de gui/sua/dong/huy lenh, SymbolInfo*, |
+//| thi ben duoi hoan toan bang API MQL5 (Position/Order/Deal,         |
+//| OrderSend(MqlTradeRequest&,MqlTradeResult&) dong bo truc tiep -    |
+//| khong qua CTrade - de gui/sua/dong/huy lenh, SymbolInfo*,          |
 //| AccountInfo*, TimeToStruct...).                                    |
 //|                                                                    |
 //| QUAN TRONG:                                                        |
@@ -228,12 +229,23 @@ int TradeRetcodeToMT4Error(uint retcode)
 }
 
 //====================================================================
-// Doi tuong CTrade dung chung cho toan bo cac ham gui/sua/dong/huy
-// lenh ben duoi (thay cho tu dung MqlTradeRequest/OrderSend). CTrade
-// tu chon filling mode phu hop qua SetTypeFillingBySymbol().
+// Gui lenh truc tiep bang OrderSend(MqlTradeRequest&,MqlTradeResult&)
+// dong bo nguyen sinh cua MQL5 - KHONG qua lop CTrade. CTrade them 1
+// lop trung gian (kiem tra trang thai, log, tach rieng ham cho tung
+// loai lenh...) phia tren cung 1 loi goi OrderSend() nay, nen ban than
+// no khong lam lenh "vao nhanh hon" ma chi lam cham hon so voi tu xay
+// MqlTradeRequest va goi thang OrderSend() nhu 1 EA MQL5 viet tay (goi
+// la "lenh tho"). Ham nay van dong bo 100% (cho server tra loi that
+// truoc khi return, giong CTrade truoc day) nen an toan/logic khong
+// doi - chi bo bot lop trung gian de dat toc do bang lenh tho.
 //====================================================================
-#include <Trade/Trade.mqh>
-CTrade g_mt4trade;
+ENUM_ORDER_TYPE_FILLING MT4SelectFilling(string symbol)
+{
+   long mask=SymbolInfoInteger(symbol,SYMBOL_FILLING_MODE);
+   if((mask&SYMBOL_FILLING_FOK)!=0)  return ORDER_FILLING_FOK;
+   if((mask&SYMBOL_FILLING_IOC)!=0)  return ORDER_FILLING_IOC;
+   return ORDER_FILLING_RETURN;
+}
 
 //====================================================================
 // OrderSend() kieu MQL4 (11 tham so) -> tra ve ticket (>=0) hoac -1
@@ -242,39 +254,49 @@ long OrderSend(string symbol,int cmd,double volume,double price,int slippage,
                double stoploss,double takeprofit,string comment="",int magic=0,
                datetime expiration=0,color arrow_color=clrNONE)
 {
-   g_mt4trade.SetExpertMagicNumber((ulong)magic);
-   g_mt4trade.SetDeviationInPoints((ulong)MathMax(slippage,0));
+   MqlTradeRequest request;
+   MqlTradeResult  result;
+   ZeroMemory(request);
+   ZeroMemory(result);
+   request.symbol=symbol;
+   request.volume=volume;
+   request.sl=stoploss;
+   request.tp=takeprofit;
+   request.comment=comment;
+   request.magic=(ulong)magic;
+   request.deviation=(ulong)MathMax(slippage,0);
+   request.type_filling=MT4SelectFilling(symbol);
 
-   bool ok=false;
    if(cmd==OP_BUY || cmd==OP_SELL)
    {
-      g_mt4trade.SetTypeFillingBySymbol(symbol);
-      if(cmd==OP_BUY)
-         ok=g_mt4trade.Buy(volume,symbol,0.0,stoploss,takeprofit,comment); // gia thi truong hien tai
-      else
-         ok=g_mt4trade.Sell(volume,symbol,0.0,stoploss,takeprofit,comment);
+      request.action=TRADE_ACTION_DEAL;
+      request.type=(cmd==OP_BUY)?ORDER_TYPE_BUY:ORDER_TYPE_SELL;
+      request.price=(cmd==OP_BUY)?SymbolInfoDouble(symbol,SYMBOL_ASK):SymbolInfoDouble(symbol,SYMBOL_BID);
    }
    else
    {
-      ENUM_ORDER_TYPE type=WRONG_VALUE;
+      request.action=TRADE_ACTION_PENDING;
       switch(cmd)
       {
-         case OP_BUYLIMIT:  type=ORDER_TYPE_BUY_LIMIT;  break;
-         case OP_SELLLIMIT: type=ORDER_TYPE_SELL_LIMIT; break;
-         case OP_BUYSTOP:   type=ORDER_TYPE_BUY_STOP;   break;
-         case OP_SELLSTOP:  type=ORDER_TYPE_SELL_STOP;  break;
+         case OP_BUYLIMIT:  request.type=ORDER_TYPE_BUY_LIMIT;  break;
+         case OP_SELLLIMIT: request.type=ORDER_TYPE_SELL_LIMIT; break;
+         case OP_BUYSTOP:   request.type=ORDER_TYPE_BUY_STOP;   break;
+         case OP_SELLSTOP:  request.type=ORDER_TYPE_SELL_STOP;  break;
       }
-      g_mt4trade.SetTypeFilling(ORDER_FILLING_RETURN);
-      ENUM_ORDER_TYPE_TIME typeTime=(expiration>0)?ORDER_TIME_SPECIFIED:ORDER_TIME_GTC;
-      ok=g_mt4trade.OrderOpen(symbol,type,volume,0.0,price,stoploss,takeprofit,typeTime,expiration,comment);
+      request.price=price;
+      request.type_time=(expiration>0)?ORDER_TIME_SPECIFIED:ORDER_TIME_GTC;
+      request.expiration=expiration;
+      request.type_filling=ORDER_FILLING_RETURN;
    }
 
-   g_mt4_lastError=TradeRetcodeToMT4Error(g_mt4trade.ResultRetcode());
-   if(ok && (g_mt4trade.ResultRetcode()==TRADE_RETCODE_DONE || g_mt4trade.ResultRetcode()==TRADE_RETCODE_DONE_PARTIAL || g_mt4trade.ResultRetcode()==TRADE_RETCODE_PLACED))
+   bool ok=::OrderSend(request,result);
+   if(!ok && result.retcode==0) result.retcode=TRADE_RETCODE_ERROR;
+   g_mt4_lastError=TradeRetcodeToMT4Error(result.retcode);
+   if(ok && (result.retcode==TRADE_RETCODE_DONE || result.retcode==TRADE_RETCODE_DONE_PARTIAL || result.retcode==TRADE_RETCODE_PLACED))
    {
       g_mt4_lastError=0;
-      ulong ticket=g_mt4trade.ResultOrder();
-      if(ticket==0) ticket=g_mt4trade.ResultDeal();
+      ulong ticket=result.order;
+      if(ticket==0) ticket=result.deal;
       g_mt4_lastTicket=(long)ticket;
       return g_mt4_lastTicket;
    }
@@ -287,15 +309,28 @@ long OrderSend(string symbol,int cmd,double volume,double price,int slippage,
 //====================================================================
 bool OrderModify(long ticket,double price,double stoploss,double takeprofit,datetime expiration,color arrow_color=clrNONE)
 {
-   bool ok=false;
+   MqlTradeRequest request;
+   MqlTradeResult  result;
+   ZeroMemory(request);
+   ZeroMemory(result);
+
    if(PositionSelectByTicket((ulong)ticket))
    {
-      ok=g_mt4trade.PositionModify((ulong)ticket,stoploss,takeprofit);
+      request.action=TRADE_ACTION_SLTP;
+      request.position=(ulong)ticket;
+      request.symbol=PositionGetString(POSITION_SYMBOL);
+      request.sl=stoploss;
+      request.tp=takeprofit;
    }
    else if(::OrderSelect((ulong)ticket))
    {
-      ENUM_ORDER_TYPE_TIME typeTime=(expiration>0)?ORDER_TIME_SPECIFIED:ORDER_TIME_GTC;
-      ok=g_mt4trade.OrderModify((ulong)ticket,price,stoploss,takeprofit,typeTime,expiration,0.0);
+      request.action=TRADE_ACTION_MODIFY;
+      request.order=(ulong)ticket;
+      request.price=price;
+      request.sl=stoploss;
+      request.tp=takeprofit;
+      request.type_time=(expiration>0)?ORDER_TIME_SPECIFIED:ORDER_TIME_GTC;
+      request.expiration=expiration;
    }
    else
    {
@@ -303,8 +338,10 @@ bool OrderModify(long ticket,double price,double stoploss,double takeprofit,date
       return false;
    }
 
-   g_mt4_lastError=TradeRetcodeToMT4Error(g_mt4trade.ResultRetcode());
-   if(ok && (g_mt4trade.ResultRetcode()==TRADE_RETCODE_DONE || g_mt4trade.ResultRetcode()==TRADE_RETCODE_DONE_PARTIAL))
+   bool ok=::OrderSend(request,result);
+   if(!ok && result.retcode==0) result.retcode=TRADE_RETCODE_ERROR;
+   g_mt4_lastError=TradeRetcodeToMT4Error(result.retcode);
+   if(ok && (result.retcode==TRADE_RETCODE_DONE || result.retcode==TRADE_RETCODE_DONE_PARTIAL))
    {
       g_mt4_lastError=0;
       return true;
@@ -324,19 +361,34 @@ bool OrderClose(long ticket,double lots,double price,int slippage,color arrow_co
    }
    string symbol=PositionGetString(POSITION_SYMBOL);
    double volume=PositionGetDouble(POSITION_VOLUME);
+   long   posType=PositionGetInteger(POSITION_TYPE);
    double closeLots=(lots>0.0 && lots<volume)?lots:volume;
 
-   g_mt4trade.SetDeviationInPoints((ulong)MathMax(slippage,0));
-   g_mt4trade.SetTypeFillingBySymbol(symbol);
-
-   bool ok;
-   if(closeLots<volume)
-      ok=g_mt4trade.PositionClosePartial((ulong)ticket,closeLots);
+   MqlTradeRequest request;
+   MqlTradeResult  result;
+   ZeroMemory(request);
+   ZeroMemory(result);
+   request.action=TRADE_ACTION_DEAL;
+   request.position=(ulong)ticket;
+   request.symbol=symbol;
+   request.volume=closeLots;
+   request.deviation=(ulong)MathMax(slippage,0);
+   request.type_filling=MT4SelectFilling(symbol);
+   if(posType==POSITION_TYPE_BUY)
+   {
+      request.type=ORDER_TYPE_SELL;
+      request.price=SymbolInfoDouble(symbol,SYMBOL_BID);
+   }
    else
-      ok=g_mt4trade.PositionClose((ulong)ticket);
+   {
+      request.type=ORDER_TYPE_BUY;
+      request.price=SymbolInfoDouble(symbol,SYMBOL_ASK);
+   }
 
-   g_mt4_lastError=TradeRetcodeToMT4Error(g_mt4trade.ResultRetcode());
-   if(ok && (g_mt4trade.ResultRetcode()==TRADE_RETCODE_DONE || g_mt4trade.ResultRetcode()==TRADE_RETCODE_DONE_PARTIAL))
+   bool ok=::OrderSend(request,result);
+   if(!ok && result.retcode==0) result.retcode=TRADE_RETCODE_ERROR;
+   g_mt4_lastError=TradeRetcodeToMT4Error(result.retcode);
+   if(ok && (result.retcode==TRADE_RETCODE_DONE || result.retcode==TRADE_RETCODE_DONE_PARTIAL))
    {
       g_mt4_lastError=0;
       return true;
@@ -349,9 +401,17 @@ bool OrderClose(long ticket,double lots,double price,int slippage,color arrow_co
 //====================================================================
 bool OrderDelete(long ticket,color arrow_color=clrNONE)
 {
-   bool ok=g_mt4trade.OrderDelete((ulong)ticket);
-   g_mt4_lastError=TradeRetcodeToMT4Error(g_mt4trade.ResultRetcode());
-   if(ok && g_mt4trade.ResultRetcode()==TRADE_RETCODE_DONE)
+   MqlTradeRequest request;
+   MqlTradeResult  result;
+   ZeroMemory(request);
+   ZeroMemory(result);
+   request.action=TRADE_ACTION_REMOVE;
+   request.order=(ulong)ticket;
+
+   bool ok=::OrderSend(request,result);
+   if(!ok && result.retcode==0) result.retcode=TRADE_RETCODE_ERROR;
+   g_mt4_lastError=TradeRetcodeToMT4Error(result.retcode);
+   if(ok && result.retcode==TRADE_RETCODE_DONE)
    {
       g_mt4_lastError=0;
       return true;

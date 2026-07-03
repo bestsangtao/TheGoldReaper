@@ -35,11 +35,15 @@ dau file). Tom tat:
   `OrderTicket/OrderType/OrderLots/OrderOpenPrice/.../OrderComment` ->
   anh xa sang Position/Order/History deal cua MQL5.
 - Vao/sua/dong/huy lenh (`OrderSend/OrderModify/OrderClose/OrderDelete`
-  kieu MQL4) duoc thuc thi ben trong bang lop **CTrade** chuan cua
-  MetaQuotes (`Trade/Trade.mqh`) thay vi tu dung `MqlTradeRequest` thu
-  cong - tan dung filling-mode tu dong (`SetTypeFillingBySymbol`) va
-  cac ham `Buy/Sell/OrderOpen/PositionModify/PositionClose(Partial)/
-  OrderDelete` da duoc MetaQuotes kiem thu san.
+  kieu MQL4) tu xay `MqlTradeRequest` va goi thang ham nguyen sinh
+  `OrderSend(MqlTradeRequest&,MqlTradeResult&)` cua MQL5 (dong bo,
+  cho ket qua that tu server truoc khi tra ve - giong het 1 EA MQL5
+  viet tay), **khong qua lop CTrade** - CTrade chi them 1 lop trung
+  gian (kiem tra trang thai, log, tach ham rieng cho tung loai lenh)
+  phia tren cung 1 loi goi `OrderSend()` nay nen bo qua no giup toc do
+  vao/sua/dong/huy lenh nhanh bang dung "lenh tho". Filling-mode
+  (FOK/IOC/RETURN) duoc tu chon qua `SYMBOL_FILLING_MODE` cua symbol
+  (uu tien FOK > IOC > RETURN, giong logic CTrade dung truoc day).
 - `MarketInfo()`, `AccountBalance()/AccountEquity()/AccountCurrency()`,
   `AccountFreeMarginCheck()` -> `SymbolInfo*`/`AccountInfo*`.
 - `Year()/Month()/Day()/Hour()/Minute()/Seconds()/DayOfWeek()` va cac
