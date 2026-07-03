@@ -35,11 +35,17 @@ dau file). Tom tat:
   `OrderTicket/OrderType/OrderLots/OrderOpenPrice/.../OrderComment` ->
   anh xa sang Position/Order/History deal cua MQL5.
 - Vao/sua/dong/huy lenh (`OrderSend/OrderModify/OrderClose/OrderDelete`
-  kieu MQL4) duoc thuc thi ben trong bang lop **CTrade** chuan cua
-  MetaQuotes (`Trade/Trade.mqh`) thay vi tu dung `MqlTradeRequest` thu
-  cong - tan dung filling-mode tu dong (`SetTypeFillingBySymbol`) va
-  cac ham `Buy/Sell/OrderOpen/PositionModify/PositionClose(Partial)/
-  OrderDelete` da duoc MetaQuotes kiem thu san.
+  kieu MQL4) duoc thuc thi bang `OrderSendAsync()` (gui lenh khong
+  dong bo) thay vi `CTrade` (dong bo, cho MetaQuotes xu ly xong moi
+  tra ve) de giam do tre khi vao/thoat lenh. Sau khi goi
+  `OrderSendAsync()`, EA cho ket qua thuc te tra ve qua su kien
+  `OnTradeTransaction()` (khop bang `request_id`, timeout toi da 5
+  giay) roi moi tra ket qua ve cho code goc - vi vay ham
+  `OrderSend/OrderModify/OrderClose/OrderDelete` van tra ve ticket/
+  ket qua ngay lap tuc y het ban CTrade truoc day, khong can sua bat
+  ky dong code nao khac trong `GoldReaper_v4.1.mq5`. Filling-mode
+  (FOK/IOC/RETURN) duoc tu chon bang `SYMBOL_FILLING_MODE` (uu tien
+  FOK > IOC > RETURN, giong logic CTrade dung truoc day).
 - `MarketInfo()`, `AccountBalance()/AccountEquity()/AccountCurrency()`,
   `AccountFreeMarginCheck()` -> `SymbolInfo*`/`AccountInfo*`.
 - `Year()/Month()/Day()/Hour()/Minute()/Seconds()/DayOfWeek()` va cac
@@ -67,6 +73,11 @@ dau file). Tom tat:
 - Ma loi giao dich duoc quy doi gan dung tu `retcode` cua MQL5 ve ma
   loi MQL4 tuong ung (dung cho cac so sanh nhu `==132` trong code goc);
   khong phai anh xa 1-1 tuyet doi cho MOI ma loi hiem gap.
+- Neu sau khi goi `OrderSendAsync()` ma khong nhan duoc phan hoi tu
+  `OnTradeTransaction()` trong vong 5 giay (mat ket noi server, treo
+  terminal...), ham `OrderSend/OrderModify/OrderClose/OrderDelete` se
+  tra ve that bai (`-1`/`false`) du lenh co the van duoc xu ly o phia
+  server sau do - day la danh doi de tranh treo EA vo thoi han cho.
 
 ## Khuyen nghi truoc khi chay tien that
 
