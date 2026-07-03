@@ -55,6 +55,8 @@ input group "=== Momentum Management Gate ==="
 input double           InpMomentumStartATR  = 0.5;                   // Profit (in ATR units) before first management call
 input double           InpMomentumStepATR   = 0.5;                   // Extra ATR units required between management calls
 input int              InpManageCooldownSec = 300;                   // Minimum seconds between management calls per position
+input int              InpMomentumPeriod    = 14;                    // Momentum(N) indicator period used to confirm the ATR ratchet
+input double           InpMomentumMinDeviation = 0.05;                // Min |Momentum-100| required to confirm genuine momentum (not noise)
 input int              InpManageSnapshotBars= 60;                    // OHLC bars sent with each management call
 
 input group "=== Multi-Timeframe Filter (shared by all strategies) ==="
@@ -198,7 +200,8 @@ int OnInit()
 
    g_gemini.Init(InpApiKey, InpModel, InpApiTimeoutMs, InpTemperature);
    g_tradeMgr.Init(InpSlippagePoints);
-   g_momentumGate.Init(InpMomentumStartATR, InpMomentumStepATR, InpManageCooldownSec, InpManageSnapshotBars);
+   g_momentumGate.Init(InpMomentumStartATR, InpMomentumStepATR, InpManageCooldownSec, InpManageSnapshotBars,
+                       InpMomentumPeriod, InpMomentumMinDeviation);
 
    ArrayResize(g_strategies, 0);
 
@@ -431,7 +434,8 @@ void OnTradeTransaction(const MqlTradeTransaction &trans, const MqlTradeRequest 
    double atr = ComputeAtrNow(strat.Symbol(), strat.Timeframe());
 
    g_momentumGate.Register(posTicket, strat.Id(), magic, strat.Name(), strat.Symbol(), strat.Timeframe(),
-                           strat.HigherTimeframe(), strat.HtfBars(), type, entryPrice, atr);
+                           strat.HigherTimeframe(), strat.HtfBars(), strat.HtfEmaFastPeriod(), strat.HtfEmaSlowPeriod(),
+                           type, entryPrice, atr);
    Print("[", strat.Name(), "] position opened, ticket=", posTicket, " entry=", entryPrice, " atr=", atr, " - now under momentum management");
   }
 //+------------------------------------------------------------------+

@@ -194,11 +194,17 @@ public:
       string prompt =
          "You are the trade-management engine of an MT5 trading strategy module (id=" + IntegerToString(strategyId) +
          ", name=\"" + strategyName + "\").\n" +
-         "This module has an open position that just reached its next momentum-based management checkpoint. " +
+         "This module has an open position that just reached its next management checkpoint - see " +
+         "\"position.trigger_reason\" for why (either a profit/momentum ratchet confirmed by the Momentum indicator " +
+         "in \"position.momentum14\"/\"momentum_deviation\", or the higher-timeframe EMA trend in \"position.htf_ema_fast\"" +
+         "/\"htf_ema_slow\" flipping against the position). The \"market\" object is again MULTI-TIMEFRAME " +
+         "(working timeframe ohlc/common_indicators plus htf_ohlc/htf_indicators for the higher timeframe) - " +
+         "cross-check both before deciding.\n" +
          "Decide the best management action: HOLD, MOVE_SL, MOVE_TP, TRAIL_SL (give trail_distance_points), " +
          "CLOSE, or CLOSE_PARTIAL (give close_fraction between 0 and 1).\n" +
-         "Prefer protecting profit (e.g. moving stop loss to break-even or trailing) once the position is in profit, " +
-         "and only recommend CLOSE for a clear reversal signal.\n" +
+         "Prefer protecting profit (e.g. moving stop loss to break-even or trailing) once the position is in profit. " +
+         "If the trigger reason is a higher-timeframe trend flip against the position, weigh CLOSE or CLOSE_PARTIAL " +
+         "more heavily unless the working-timeframe data still strongly favors holding.\n" +
          "Respond using the exact JSON schema provided, no extra commentary.\n\n" +
          "POSITION_AND_MARKET_JSON:\n" + positionSnapshotJson;
 

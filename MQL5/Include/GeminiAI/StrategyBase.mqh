@@ -33,6 +33,31 @@ string JsonMergeObjects(const string a, const string b)
    return "{" + innerA + "," + innerB + "}";
   }
 
+//--- standalone (handle-on-demand) higher-timeframe EMA trend bias, usable by code that
+//--- does not keep a persistent strategy object around - e.g. the momentum management gate.
+ENUM_HTF_BIAS ComputeHtfTrendBias(const string symbol, const ENUM_TIMEFRAMES higherTf,
+                                  const int emaFastPeriod, const int emaSlowPeriod, string &htfJson)
+  {
+   int hFast = iMA(symbol, higherTf, emaFastPeriod, 0, MODE_EMA, PRICE_CLOSE);
+   int hSlow = iMA(symbol, higherTf, emaSlowPeriod, 0, MODE_EMA, PRICE_CLOSE);
+   ENUM_HTF_BIAS bias = HTF_NEUTRAL;
+   double fast[], slow[];
+   ArraySetAsSeries(fast, true);
+   ArraySetAsSeries(slow, true);
+   if(hFast != INVALID_HANDLE && hSlow != INVALID_HANDLE &&
+      CopyBuffer(hFast, 0, 1, 1, fast) > 0 && CopyBuffer(hSlow, 0, 1, 1, slow) > 0)
+     {
+      htfJson = StringFormat("{\"htf\":\"%s\",\"htf_ema_fast\":%.5f,\"htf_ema_slow\":%.5f}", EnumToString(higherTf), fast[0], slow[0]);
+      if(fast[0] > slow[0]) bias = HTF_BULLISH;
+      else if(fast[0] < slow[0]) bias = HTF_BEARISH;
+     }
+   else
+      htfJson = "{}";
+   if(hFast != INVALID_HANDLE) IndicatorRelease(hFast);
+   if(hSlow != INVALID_HANDLE) IndicatorRelease(hSlow);
+   return bias;
+  }
+
 class CStrategyBase
   {
 protected:
@@ -88,6 +113,8 @@ public:
    int               SnapshotBars() const { return m_snapshotBars; }
    ENUM_TIMEFRAMES   HigherTimeframe() const { return m_higherTf; }
    int               HtfBars() const { return m_htfBars; }
+   int               HtfEmaFastPeriod() const { return m_htfEmaFastPeriod; }
+   int               HtfEmaSlowPeriod() const { return m_htfEmaSlowPeriod; }
 
    //--- true once per newly closed bar on this strategy's own timeframe
    bool              IsNewBar()

@@ -2,16 +2,25 @@
 //|                                                MomentumGate.mqh  |
 //|  Post-entry order management gate.                                |
 //|  Once a strategy's limit/stop entry is triggered (or a market      |
-//|  order fills), the resulting position is registered here. Each     |
-//|  tick we measure how far price has moved in the position's favor   |
-//|  in ATR units. Every time that move crosses the next ratcheted     |
-//|  threshold, we ask Gemini how to manage the trade (trail SL, lock  |
-//|  in profit by moving SL/TP, close early, partial close, or hold).  |
+//|  order fills), the resulting position is registered here.          |
+//|                                                                     |
+//|  The management call itself is gated the same way entries are:    |
+//|  indicator + multi-timeframe, not just raw price distance:         |
+//|   1) profit-in-ATR ratchet (rate limiter: "has moved enough to be  |
+//|      worth checking again") PLUS a real Momentum(N) indicator      |
+//|      reading confirming genuine momentum (not noise) -> normal,    |
+//|      rate-limited management call.                                 |
+//|   2) the higher-timeframe EMA trend bias is re-evaluated every     |
+//|      tick per position; if it FLIPS against the position's         |
+//|      direction, that overrides the ratchet and fires an immediate  |
+//|      management call (early warning - the AI may want to protect   |
+//|      profit or exit before the working timeframe catches up).      |
 //+------------------------------------------------------------------+
 #property strict
 #include <GeminiAI/GeminiClient.mqh>
 #include <GeminiAI/MarketSnapshot.mqh>
 #include <GeminiAI/TradeManager.mqh>
+#include <GeminiAI/StrategyBase.mqh>
 
 struct SManagedPosition
   {
@@ -23,21 +32,26 @@ struct SManagedPosition
    ENUM_TIMEFRAMES   tf;
    ENUM_TIMEFRAMES   higherTf;
    int               htfBars;
+   int               htfEmaFastPeriod;
+   int               htfEmaSlowPeriod;
    ENUM_POSITION_TYPE type;
    double            entryPrice;
    double            atrAtEntry;
    int               ratchetLevel;
    datetime          lastManageCall;
+   ENUM_HTF_BIAS     lastHtfBias;
   };
 
 class CMomentumGate
   {
 private:
    SManagedPosition  m_positions[];
-   double            m_startAtrMult;   // profit (in ATR units) required before the first management call
-   double            m_stepAtrMult;    // additional ATR units required for every subsequent management call
+   double            m_startAtrMult;      // profit (in ATR units) required before the first management call
+   double            m_stepAtrMult;       // additional ATR units required for every subsequent management call
    int               m_manageCooldownSec;
    int               m_snapshotBars;
+   int               m_momentumPeriod;    // Momentum(N) indicator period used as confirmation
+   double            m_momentumMinDeviation; // required |Momentum-100| to count as genuine momentum
 
    int               FindIndex(const ulong ticket) const
      {
@@ -55,7 +69,25 @@ private:
       ArrayResize(m_positions, n - 1);
      }
 
-   string            BuildPositionJson(const int idx, const double currentPrice, const double moveInAtr) const
+   //--- genuine Momentum(N) indicator confirmation on the position's own working timeframe
+   bool              CheckMomentumConfirmation(const string symbol, const ENUM_TIMEFRAMES tf, double &momentumValue, double &deviation) const
+     {
+      int handle = iMomentum(symbol, tf, m_momentumPeriod, PRICE_CLOSE);
+      if(handle == INVALID_HANDLE)
+         return false;
+      double buf[];
+      ArraySetAsSeries(buf, true);
+      bool ok = (CopyBuffer(handle, 0, 1, 1, buf) > 0);
+      IndicatorRelease(handle);
+      if(!ok)
+         return false;
+      momentumValue = buf[0];
+      deviation = MathAbs(momentumValue - 100.0);
+      return (deviation >= m_momentumMinDeviation);
+     }
+
+   string            BuildPositionJson(const int idx, const double currentPrice, const double moveInAtr,
+                                       const string triggerReason, const string momentumJson, const string htfJson) const
      {
       string dir = (m_positions[idx].type == POSITION_TYPE_BUY) ? "BUY" : "SELL";
       double sl = 0, tp = 0, profit = 0;
@@ -68,14 +100,18 @@ private:
       int digits = (int)SymbolInfoInteger(m_positions[idx].symbol, SYMBOL_DIGITS);
       string posFields = StringFormat(
          "{\"ticket\":%I64u,\"direction\":\"%s\",\"entry_price\":%s,\"current_price\":%s,"
-         "\"stop_loss\":%s,\"take_profit\":%s,\"floating_profit\":%s,\"move_in_atr\":%s,\"ratchet_level\":%d}",
+         "\"stop_loss\":%s,\"take_profit\":%s,\"floating_profit\":%s,\"move_in_atr\":%s,\"ratchet_level\":%d,"
+         "\"trigger_reason\":\"%s\"}",
          m_positions[idx].ticket, dir,
          DoubleToString(m_positions[idx].entryPrice, digits), DoubleToString(currentPrice, digits),
          DoubleToString(sl, digits), DoubleToString(tp, digits),
-         DoubleToString(profit, 2), DoubleToString(moveInAtr, 2), m_positions[idx].ratchetLevel);
+         DoubleToString(profit, 2), DoubleToString(moveInAtr, 2), m_positions[idx].ratchetLevel,
+         triggerReason);
+      posFields = JsonMergeObjects(posFields, momentumJson);
+      posFields = JsonMergeObjects(posFields, htfJson);
 
       string marketJson = CMarketSnapshot::Build(m_positions[idx].symbol, m_positions[idx].tf, m_snapshotBars,
-                                                  "{}", "momentum management checkpoint reached",
+                                                  "{}", "momentum management checkpoint reached: " + triggerReason,
                                                   m_positions[idx].higherTf, m_positions[idx].htfBars);
       return "{\"position\":" + posFields + ",\"market\":" + marketJson + "}";
      }
@@ -124,12 +160,15 @@ private:
      }
 
 public:
-   void              Init(const double startAtrMult, const double stepAtrMult, const int manageCooldownSec, const int snapshotBars)
+   void              Init(const double startAtrMult, const double stepAtrMult, const int manageCooldownSec, const int snapshotBars,
+                          const int momentumPeriod = 14, const double momentumMinDeviation = 0.05)
      {
       m_startAtrMult = startAtrMult;
       m_stepAtrMult = stepAtrMult;
       m_manageCooldownSec = manageCooldownSec;
       m_snapshotBars = snapshotBars;
+      m_momentumPeriod = momentumPeriod;
+      m_momentumMinDeviation = momentumMinDeviation;
       ArrayResize(m_positions, 0);
      }
 
@@ -137,8 +176,8 @@ public:
 
    void              Register(const ulong ticket, const int strategyId, const long magic, const string strategyName,
                                const string symbol, const ENUM_TIMEFRAMES tf, const ENUM_TIMEFRAMES higherTf,
-                               const int htfBars, const ENUM_POSITION_TYPE type,
-                               const double entryPrice, const double atrAtEntry)
+                               const int htfBars, const int htfEmaFastPeriod, const int htfEmaSlowPeriod,
+                               const ENUM_POSITION_TYPE type, const double entryPrice, const double atrAtEntry)
      {
       if(IsManaged(ticket))
          return;
@@ -152,12 +191,18 @@ public:
       m_positions[n].tf = tf;
       m_positions[n].higherTf = higherTf;
       m_positions[n].htfBars = htfBars;
+      m_positions[n].htfEmaFastPeriod = htfEmaFastPeriod;
+      m_positions[n].htfEmaSlowPeriod = htfEmaSlowPeriod;
       m_positions[n].type = type;
       m_positions[n].entryPrice = entryPrice;
       m_positions[n].atrAtEntry = atrAtEntry > 0 ? atrAtEntry : SymbolInfoDouble(symbol, SYMBOL_POINT) * 100;
       m_positions[n].ratchetLevel = 0;
       m_positions[n].lastManageCall = 0;
-      Print("[MomentumGate] registered position #", ticket, " strategy=", strategyName, " atr=", m_positions[n].atrAtEntry);
+
+      string htfJson;
+      m_positions[n].lastHtfBias = ComputeHtfTrendBias(symbol, higherTf, htfEmaFastPeriod, htfEmaSlowPeriod, htfJson);
+      Print("[MomentumGate] registered position #", ticket, " strategy=", strategyName, " atr=", m_positions[n].atrAtEntry,
+            " initial_htf_bias=", EnumToString(m_positions[n].lastHtfBias));
      }
 
    //--- call once per tick (or per timer); drives the whole management gate
@@ -180,18 +225,48 @@ public:
          if(atr <= 0)
             continue;
          double moveInAtr = moveInPrice / atr;
-         double nextThreshold = m_startAtrMult + m_positions[i].ratchetLevel * m_stepAtrMult;
 
-         if(moveInAtr >= nextThreshold && (TimeCurrent() - m_positions[i].lastManageCall) >= m_manageCooldownSec)
+         bool cooldownReady = (TimeCurrent() - m_positions[i].lastManageCall) >= m_manageCooldownSec;
+
+         //--- multi-timeframe check: has the higher-timeframe trend flipped against the position?
+         string htfJson;
+         ENUM_HTF_BIAS curBias = ComputeHtfTrendBias(symbol, m_positions[i].higherTf,
+                                                      m_positions[i].htfEmaFastPeriod, m_positions[i].htfEmaSlowPeriod, htfJson);
+         bool htfFlippedAgainst = (type == POSITION_TYPE_BUY && curBias == HTF_BEARISH && m_positions[i].lastHtfBias != HTF_BEARISH) ||
+                                  (type == POSITION_TYPE_SELL && curBias == HTF_BULLISH && m_positions[i].lastHtfBias != HTF_BULLISH);
+         m_positions[i].lastHtfBias = curBias;
+
+         //--- indicator confirmation: genuine Momentum(N) reading, checked once the ATR ratchet threshold is reached
+         double nextThreshold = m_startAtrMult + m_positions[i].ratchetLevel * m_stepAtrMult;
+         bool atrRatchetReached = (moveInAtr >= nextThreshold);
+         double momentumValue = 100.0, momentumDeviation = 0.0;
+         bool momentumConfirms = atrRatchetReached && CheckMomentumConfirmation(symbol, m_positions[i].tf, momentumValue, momentumDeviation);
+         string momentumJson = StringFormat("{\"momentum%d\":%.4f,\"momentum_deviation\":%.4f}", m_momentumPeriod, momentumValue, momentumDeviation);
+
+         string triggerReason = "";
+         bool fire = false;
+         if(htfFlippedAgainst && cooldownReady)
            {
-            string posJson = BuildPositionJson(i, currentPrice, moveInAtr);
+            fire = true;
+            triggerReason = "higher-timeframe trend flipped against the position";
+           }
+         else if(atrRatchetReached && momentumConfirms && cooldownReady)
+           {
+            fire = true;
+            triggerReason = StringFormat("profit ratchet (%.2f ATR) confirmed by Momentum(%d) deviation %.4f",
+                                          moveInAtr, m_momentumPeriod, momentumDeviation);
+            m_positions[i].ratchetLevel++;
+           }
+
+         if(fire)
+           {
+            string posJson = BuildPositionJson(i, currentPrice, moveInAtr, triggerReason, momentumJson, htfJson);
             SManageDecision dec;
             if(client.RequestManageDecision(m_positions[i].strategyId, m_positions[i].strategyName, posJson, dec))
               {
-               Print("[MomentumGate] manage decision for #", ticket, ": ", dec.action, " - ", dec.reason);
+               Print("[MomentumGate] manage decision for #", ticket, " (", triggerReason, "): ", dec.action, " - ", dec.reason);
                ApplyDecision(tm, ticket, dec);
               }
-            m_positions[i].ratchetLevel++;
             m_positions[i].lastManageCall = TimeCurrent();
            }
         }

@@ -36,8 +36,12 @@ Validate against broker stop/freeze levels, size the lot, send the order
 Position opens (market fill or pending order triggered)
         |
         v
-Momentum Gate watches profit-in-ATR-units; each time it crosses the next
-ratcheted threshold it asks Gemini again (same multi-timeframe data):
+Momentum Gate re-checks every tick per open position:
+  profit-in-ATR ratchet reached AND Momentum(N) indicator confirms it
+  OR higher-timeframe EMA trend flips against the position (overrides ratchet)
+        |
+        v
+Ask Gemini again (same multi-timeframe data + trigger_reason) ->
 { action: HOLD | MOVE_SL | MOVE_TP | TRAIL_SL | CLOSE | CLOSE_PARTIAL, ... }
 ```
 
@@ -76,6 +80,33 @@ and can be enabled/disabled independently via its `InpSx_Enable` input. The
 higher-timeframe EMA filter periods (`InpHtfEmaFast`/`InpHtfEmaSlow`) and how
 many higher-TF candles are sent to the AI (`InpHtfBars`) are shared, global
 inputs under "Multi-Timeframe Filter".
+
+## Trade management trigger (Momentum Gate)
+
+Once a position is open (market fill, or a pending limit/stop order that just
+got triggered), it is registered with the Momentum Gate, which decides **when**
+to call Gemini for management — using indicators and multi-timeframe data,
+the same way entries are gated, not just a raw price distance:
+
+1. **Profit ratchet + Momentum indicator confirmation.** Once floating profit
+   reaches the next ATR-based ratchet level (`InpMomentumStartATR`, then
+   `+ InpMomentumStepATR` for every subsequent check), the gate also requires
+   a genuine `Momentum(InpMomentumPeriod)` indicator reading — `|Momentum-100|`
+   must be at least `InpMomentumMinDeviation` — confirming the move is real
+   momentum and not noise before Gemini is asked to manage the trade.
+2. **Higher-timeframe trend flip (multi-timeframe override).** Independently
+   of the ratchet, the gate re-evaluates the same higher-timeframe EMA
+   fast/slow trend filter used for entries on every tick. If that trend flips
+   against the position's direction, it immediately triggers a management call
+   regardless of the ratchet level — an early warning the working timeframe
+   hasn't caught up to yet.
+
+Either trigger sends Gemini the same multi-timeframe OHLC + indicator snapshot
+used for entries, plus a `position.trigger_reason` field explaining which of
+the two fired (and the Momentum/HTF values behind it), so the AI can weigh a
+trend-flip trigger more toward `CLOSE`/`CLOSE_PARTIAL` and a momentum-ratchet
+trigger more toward trailing/locking in profit. Both mechanisms respect
+`InpManageCooldownSec` so a position can't be re-queried faster than that.
 
 ## Project layout
 
