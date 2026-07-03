@@ -58,8 +58,9 @@ input int   ST1_MagicNumber=8000  ;    //BaseMagicnumber
 input string ST1_Comment="The Gold Reaper"  ;   //Comment for trades
 input bool RemoveCommentSuffix=false ;   
 input string NFP_FILTER="----------------------- NFP Filter -----------------------"  ;  
-input bool EnableNFP_Filter=true  ;   
-input bool AutoGMT=true  ;   
+input bool EnableNFP_Filter=true  ;
+input bool UseMQL5Calendar=true  ;    //UseMQL5Calendar (lay ngay NFP tu Lich MQL5; tat=dung mang ngay co san)
+input bool AutoGMT=true  ;
 input int   Broker_GMT_OFFSET_Winter=2  ;    //GMT_OFFSET_Winter (AutoGMT=false or backtesting)
 input int   Broker_GMT_OFFSET_Summer=3  ;    //MT_OFFSET_Summer (AutoGMT=false or backtesting)
 input bool NFP_CloseOpenTrades=true  ;   
@@ -1480,7 +1481,7 @@ g_startLots_rw=StartLots;
  // lam moi tu Lich MQL5 khi dang chay live/demo that; kiem thu nguoc luon dung mang
  // 总_391_da_5DFC_si300[] ma hoa cung ben tren (da cap nhat toi het nam 2026) de dam
  // bao ket qua backtest 100% xac dinh, lap lai duoc.
- if ( EnableNFP_Filter && MQLInfoInteger(MQL_TESTER) != 1 && TimeCurrent() - TimeCurrent() % 86400 > g_nfpCalendarBuiltDay )
+ if ( EnableNFP_Filter && UseMQL5Calendar && MQLInfoInteger(MQL_TESTER) != 1 && TimeCurrent() - TimeCurrent() % 86400 > g_nfpCalendarBuiltDay )
  {
    BuildNFPDatesFromCalendar();
  }
