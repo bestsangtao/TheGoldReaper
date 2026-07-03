@@ -6586,7 +6586,6 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  if ( WebRequest("GET","https://nfs.faireconomy.media/ff_calendar_thisweek.json",NULL,NULL,5000,临_data,0,临_result,临_headers) == -1 )
  {
    Print("Error when reading Forex Factory NFP URL. Error code  =",GetLastError());
-   MessageBox("Add the address \'https://nfs.faireconomy.media/\' in the list of allowed URLs on tab \'Expert Advisors\' (for Next NFP display)","Error",64);
    return; // loi mang: giu nguyen gia tri cu
  }
  临_json = CharArrayToString(临_result,0,0,0) ;
@@ -9457,12 +9456,21 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
 //----- -----
  string     临_st_1;
  string     临_st_2;
+ string     临_st_3;
+ char       临_data_nfp[];
+ char       临_result_nfp[];
+ string     临_headers_nfp;
 
  ResetLastError();
  if ( WebRequest("GET","https://www.worldtimeserver.com/time-zones/utc/",NULL,NULL,10000,子_7_ch_ko,0,子_8_ch_ko,临_st_1) == -1 )
  {
-   Print("Error when reading GMT URL. Error code  =",GetLastError()); 
-   MessageBox("Add the address \'https://www.worldtimeserver.com/\' in the list of allowed URLs on tab \'Expert Advisors\'","Error",64); 
+   Print("Error when reading GMT URL. Error code  =",GetLastError());
+   临_st_3 = "Add the address \'https://www.worldtimeserver.com/\' in the list of allowed URLs on tab \'Expert Advisors\'";
+   // Kem theo link Forex Factory (Next NFP) vao CHUNG 1 thong bao nay
+   // neu link do cung dang thieu, thay vi hien 1 thong bao rieng khac.
+   if ( EnableNFP_Filter && WebRequest("GET","https://nfs.faireconomy.media/ff_calendar_thisweek.json",NULL,NULL,5000,临_data_nfp,0,临_result_nfp,临_headers_nfp) == -1 )
+     临_st_3 = 临_st_3 + "\nAdd the address \'https://nfs.faireconomy.media/\' in the list of allowed URLs on tab \'Expert Advisors\' (for Next NFP display)";
+   MessageBox(临_st_3,"Error",64);
    临_st_2 = "999";
  }
  else
