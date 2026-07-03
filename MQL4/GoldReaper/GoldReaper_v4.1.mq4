@@ -6583,7 +6583,12 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
 //----- -----
  g_nfpFFBuiltDay = TimeCurrent() - TimeCurrent() % 86400 ;
  ResetLastError();
- if ( WebRequest("GET","https://nfs.faireconomy.media/ff_calendar_thisweek.json",NULL,NULL,5000,临_data,0,临_result,临_headers) == -1 )   return; // loi mang: giu nguyen gia tri cu
+ if ( WebRequest("GET","https://nfs.faireconomy.media/ff_calendar_thisweek.json",NULL,NULL,5000,临_data,0,临_result,临_headers) == -1 )
+ {
+   Print("Error when reading Forex Factory NFP URL. Error code  =",GetLastError());
+   MessageBox("Add the address \'https://nfs.faireconomy.media/\' in the list of allowed URLs on tab \'Expert Advisors\' (for Next NFP display)","Error",64);
+   return; // loi mang: giu nguyen gia tri cu
+ }
  临_json = CharArrayToString(临_result,0,0,0) ;
  临_pos = StringFind(临_json,"\"title\":\"Non-Farm Employment Change\"",0) ;
  if ( 临_pos < 0 )
