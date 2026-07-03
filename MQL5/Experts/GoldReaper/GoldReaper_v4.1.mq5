@@ -59,7 +59,7 @@ input string ST1_Comment="The Gold Reaper"  ;   //Comment for trades
 input bool RemoveCommentSuffix=false ;   
 input string NFP_FILTER="----------------------- NFP Filter -----------------------"  ;  
 input bool EnableNFP_Filter=true  ;
-input bool UseMQL5Calendar=true  ;    //UseMQL5Calendar (lay ngay NFP tu Lich MQL5; tat=dung mang ngay co san)
+input bool UseMQL5Calendar=true  ;    //UseMQL5Calendar (true=CHI dung Lich MQL5; false=dung lich co san trong EA; tester luon dung lich co san)
 input bool AutoGMT=true  ;
 input int   Broker_GMT_OFFSET_Winter=2  ;    //GMT_OFFSET_Winter (AutoGMT=false or backtesting)
 input int   Broker_GMT_OFFSET_Summer=3  ;    //MT_OFFSET_Summer (AutoGMT=false or backtesting)
@@ -857,6 +857,16 @@ g_startLots_rw=StartLots;
  总_391_da_5DFC_si300[237] = D'2007.03.09 12:30';
  总_391_da_5DFC_si300[238] = D'2007.02.02 12:30';
  总_391_da_5DFC_si300[239] = D'2007.01.05 12:30';
+ // UseMQL5Calendar=true: CHI dung Lich MQL5 lam nguon ngay NFP - xoa sach
+ // mang ngay co san vua gan o tren, de khi Lich chua tai duoc/khong co du
+ // lieu thi KHONG roi ve mang cu (panel se hien "no news coming up" va bo
+ // loc NFP khong co ngay nao cho den khi Lich tra du lieu). Rieng trong
+ // Strategy Tester van giu mang co san bat ke cong tac, vi Lich MQL5 khong
+ // hoat dong trong tester (gioi han cua nen tang) - giong hanh vi v4.3.
+ if ( UseMQL5Calendar && MQLInfoInteger(MQL_TESTER) != 1 )
+ {
+   for (子_4_in = 0 ; 子_4_in < 300 ; 子_4_in ++)   总_391_da_5DFC_si300[子_4_in] = 0 ;
+ }
  if ( Risk == 1234 )
  {
    g_startLots_rw = MarketInfo(总_336_st_3130,MODE_MINLOT) ;
