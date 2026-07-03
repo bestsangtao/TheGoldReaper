@@ -505,6 +505,49 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
   datetime  g_nfpFFBuiltDay = 0;     // ngay (00:00, GMT) lan gan nhat da thu lam moi tu Forex Factory JSON feed (xem RefreshNFPFromForexFactory)
   datetime  g_nfpFFDate = 0;         // ngay/gio NFP (GMT) da xac nhan that tu Forex Factory cho tuan hien tai; 0 = chua co xac nhan, dong Next NFP se hien "-"
 
+//====================================================================
+// Kiem tra 1 dia chi da duoc them vao danh sach "allowed URLs" (tab
+// Expert Advisors) hay chua, bang cach thu goi WebRequest that va xem
+// co bao loi 4060 (Url not allowed / URL chua duoc cho phep) hay
+// khong. CHI coi la "thieu link" khi loi CHINH XAC la 4060 - cac loi
+// mang khac (mat ket noi, timeout tam thoi...) khong tinh la thieu
+// link.
+//====================================================================
+bool URLDaChoPhep(string diaChi)
+{
+  char      临_data_url[];
+  char      临_result_url[];
+  string    临_headers_url;
+//----- -----
+ ResetLastError();
+ if ( WebRequest("GET",diaChi,NULL,NULL,5000,临_data_url,0,临_result_url,临_headers_url) == -1 && GetLastError() == 4060 )
+   return(false);
+ return(true);
+}
+//URLDaChoPhep <<==--------   --------
+
+//====================================================================
+// Kiem tra 1 lan duy nhat luc khoi dong xem cac URL can thiet (tuy
+// tinh nang dang bat: AutoGMT can worldtimeserver.com, EnableNFP_
+// Filter can nfs.faireconomy.media) da duoc them vao allowed URLs
+// chua - neu thieu, hien DUNG 1 MessageBox duy nhat cho ca 2 link,
+// liet ke CHINH XAC (cac) dia chi con thieu (khong hien 2 thong bao
+// rieng cho 2 link). CHI thong bao, KHONG chan EA chay.
+//====================================================================
+void ThongBaoThieuLink()
+{
+  string    临_thieu;
+//----- -----
+ if ( MQLInfoInteger(MQL_TESTER) == 1 )   return; // tester khong dung WebRequest, khong can kiem tra
+ 临_thieu = "";
+ if ( AutoGMT && !(URLDaChoPhep("https://www.worldtimeserver.com/time-zones/utc/")) )
+   临_thieu = 临_thieu + "- https://www.worldtimeserver.com/  (dung cho AutoGMT)\n";
+ if ( EnableNFP_Filter && !(URLDaChoPhep("https://nfs.faireconomy.media/ff_calendar_thisweek.json")) )
+   临_thieu = 临_thieu + "- https://nfs.faireconomy.media/  (dung cho Next NFP)\n";
+ if ( 临_thieu != "" )
+   MessageBox("Thieu (cac) dia chi sau trong danh sach allowed URLs (Cong cu > Tuy chon > tab Expert Advisors):\n\n" + 临_thieu + "\nHay them dia chi con thieu de EA hoat dong day du.","The Gold Reaper - Thieu URL cho phep",64);
+}
+//ThongBaoThieuLink <<==--------   --------
 
  int init()
  {
@@ -517,6 +560,10 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
   int       子_8_in;
   int       子_9_in;
 //----- -----
+ // Bao 1 lan duy nhat luc khoi dong neu thieu allowed URL can thiet
+ // (tuy tinh nang dang bat) - chi thong bao, khong chan EA chay.
+ ThongBaoThieuLink();
+
  // MQL4 tu dong khoi tao bool local ve false; nhung MetaEditor van canh bao
  // "possible use of uninitialized variable" vi bien nay khong duoc gan truoc
  // khi dung o duoi (IsDemo() ket qua bi bo qua). Gan ro rang de tat canh bao
@@ -6586,7 +6633,6 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  if ( WebRequest("GET","https://nfs.faireconomy.media/ff_calendar_thisweek.json",NULL,NULL,5000,临_data,0,临_result,临_headers) == -1 )
  {
    Print("Error when reading Forex Factory NFP URL. Error code  =",GetLastError());
-   MessageBox("Add the address \'https://nfs.faireconomy.media/\' in the list of allowed URLs on tab \'Expert Advisors\' (for Next NFP display)","Error",64);
    return; // loi mang: giu nguyen gia tri cu
  }
  临_json = CharArrayToString(临_result,0,0,0) ;
