@@ -45,8 +45,6 @@ input bool ShowInfoPanel=true  ;
 input bool UpdateInfoTesting=false ;    //update infopanel during testing
 input double InfoPanelSizeAdjust=1  ;    //Adjustment for Infopanel size
 input int   SetFontSize=0  ;    //SetFontSize (0=co chu goc; >0=tu chon co chu panel)
-input string BacktestSpeed_string="------------------------------ Backtest Speed settings ------------------------------"  ;   //- - -
-input int   BacktestSpeed=1  ;    //BacktestSpeed 0-3 (tang toc tester: 0=panel moi tick, 1=1 lan/phut, 2=1 lan/gio, 3=tat panel; chi khi UpdateInfoTesting=true)
 input string spreadfilter="------------------------------ Settings ------------------------------"  ;   //- - -
 input bool AllowBuyTrades=true  ;    //Allow Buy Trades
 input bool AllowSellTrades=true  ;    //Allow Sell Trades
@@ -508,8 +506,6 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
   double    总_402_do_6AD8 = 0.0;
   bool      g_nfpFromCalendar = false;      // true neu 总_391_da_5DFC_si300[] dang lay tu Lich MQL5 (khong con dung mang hardcode)
   datetime  g_nfpCalendarBuiltDay = 0;      // ngay (00:00, GMT) lan gan nhat da thu lam moi tu Lich MQL5
-  bool      g_panelSkipTester = false;  // BacktestSpeed: true = bo qua cap nhat panel o tick nay (chi trong tester)
-  long      g_btLastBucket = -1;        // BacktestSpeed: moc phut/gio (mo phong) cua lan cap nhat panel gan nhat
   long      g_onlyUpRunId = 0;              // ma rieng cho moi lan chay Strategy Tester, dung de tach biet dinh OnlyUp giua cac lan backtest (xem OnlyUpPeakGVName)
 
 //+------------------------------------------------------------------+
@@ -1306,28 +1302,6 @@ g_startLots_rw=StartLots;
   MqlDateTime 子_5_a_129;
   MqlDateTime 子_6_a_129;
 //----- -----
- // BacktestSpeed: han che tan suat cap nhat panel trong Strategy Tester de tang
- // toc backtest. CHI anh huong hien thi (khi UpdateInfoTesting=true), KHONG anh
- // huong logic giao dich. 0=moi tick (nhu goc), 1=toi da 1 lan/phut (gio mo
- // phong), 2=toi da 1 lan/gio, 3=tat han cap nhat panel trong tester.
- if ( MQLInfoInteger(MQL_TESTER) == 1 && BacktestSpeed == 1 )
- {
-   g_panelSkipTester = ((long)TimeCurrent() / 60 == g_btLastBucket) ;
-   g_btLastBucket = (long)TimeCurrent() / 60 ;
- }
- else if ( MQLInfoInteger(MQL_TESTER) == 1 && BacktestSpeed == 2 )
- {
-   g_panelSkipTester = ((long)TimeCurrent() / 3600 == g_btLastBucket) ;
-   g_btLastBucket = (long)TimeCurrent() / 3600 ;
- }
- else if ( MQLInfoInteger(MQL_TESTER) == 1 && BacktestSpeed >= 3 )
- {
-   g_panelSkipTester = true ;
- }
- else
- {
-   g_panelSkipTester = false ;
- }
  bool       临_bo_1;
  double     临_do_2;
  double     临_do_3;
@@ -1685,7 +1659,7 @@ g_startLots_rw=StartLots;
      lizong_7(0); 
      if ( 子_4_bo )
      {
-       if ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) )
+       if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
        {
          临_do_2 = 0.0;
        }
@@ -1718,7 +1692,7 @@ g_startLots_rw=StartLots;
      lizong_7(3); 
      if ( 子_4_bo )
      {
-       if ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) )
+       if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
        {
          临_do_5 = 0.0;
        }
@@ -1751,7 +1725,7 @@ g_startLots_rw=StartLots;
      lizong_7(1); 
      if ( 子_4_bo )
      {
-       if ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) )
+       if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
        {
          临_do_8 = 0.0;
        }
@@ -1784,7 +1758,7 @@ g_startLots_rw=StartLots;
      lizong_7(2); 
      if ( 子_4_bo )
      {
-       if ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) )
+       if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
        {
          临_do_11 = 0.0;
        }
@@ -1817,7 +1791,7 @@ g_startLots_rw=StartLots;
      lizong_7(5); 
      if ( 子_4_bo )
      {
-       if ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) )
+       if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
        {
          临_do_14 = 0.0;
        }
@@ -1850,7 +1824,7 @@ g_startLots_rw=StartLots;
      lizong_7(4); 
      if ( 子_4_bo )
      {
-       if ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) )
+       if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
        {
          临_do_17 = 0.0;
        }
@@ -1883,7 +1857,7 @@ g_startLots_rw=StartLots;
      lizong_7(8); 
      if ( 子_4_bo )
      {
-       if ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) )
+       if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
        {
          临_do_20 = 0.0;
        }
@@ -1916,7 +1890,7 @@ g_startLots_rw=StartLots;
      lizong_7(6); 
      if ( 子_4_bo )
      {
-       if ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) )
+       if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
        {
          临_do_23 = 0.0;
        }
@@ -1949,7 +1923,7 @@ g_startLots_rw=StartLots;
      lizong_7(7); 
      if ( 子_4_bo )
      {
-       if ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) )
+       if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
        {
          临_do_26 = 0.0;
        }
@@ -6679,9 +6653,9 @@ g_startLots_rw=StartLots;
 
  if ( !(ShowInfoPanel) )   return;
  
- if ( ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) ) )   return;
+ if ( ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) ) )   return;
  
- if ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) )
+ if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
  {
    临_do_1 = 0.0;
  }
@@ -6838,7 +6812,7 @@ g_startLots_rw=StartLots;
 
  if ( !(ShowInfoPanel) )   return;
  
- if ( ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) ) )   return;
+ if ( ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) ) )   return;
  子_1_in = 总_340_in_3310 ;
  for (子_3_in = 0 ; 子_3_in < 9 ; 子_3_in ++)
  {
@@ -6882,9 +6856,9 @@ g_startLots_rw=StartLots;
 
  if ( !(ShowInfoPanel) )   return;
  
- if ( ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) ) )   return;
+ if ( ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) ) )   return;
  ObjectSetString(0,"lineto" + IntegerToString(0,0,32),OBJPROP_TEXT,"Total profits/losses so far: " + IntegerToString(lizong_30(0,9999999),0,32) + "/" + IntegerToString(lizong_31(0,9999999),0,32)); 
- if ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) )
+ if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
  {
    临_do_1 = 0.0;
  }
@@ -7009,7 +6983,7 @@ g_startLots_rw=StartLots;
  int        临_in_15;
  int        临_in_16;
 
- if ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) )
+ if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
  {
    return(0); 
  }
@@ -7144,7 +7118,7 @@ g_startLots_rw=StartLots;
  int        临_in_15;
  int        临_in_16;
 
- if ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) )
+ if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
  {
    return(0); 
  }
@@ -7271,7 +7245,7 @@ g_startLots_rw=StartLots;
  long       临_lo_4;
  long       临_lo_5;
 
- if ( ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) ) )   return;
+ if ( ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) ) )   return;
  for (子_4_in = 0 ; 子_4_in < 总_378_in_5D80 ; 子_4_in ++)
  {
    子_2_do_si99[子_4_in] = 0.0;
