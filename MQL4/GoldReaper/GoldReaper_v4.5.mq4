@@ -6207,95 +6207,6 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  }
  }
 
-//+------------------------------------------------------------------+
-//| Cac nut bam tren panel: Reset dinh OnlyUp + dong lenh nhanh.      |
-//| Nut duoc tao cung panel (lizong_24), xoa cung panel (lizong_26), |
-//| xu ly click qua su kien chuan OnChartEvent/CHARTEVENT_OBJECT_CLICK|
-//+------------------------------------------------------------------+
- void TaoNutPanel( string 木_ten,string 木_chu,int 木_x,int 木_y,int 木_w,int 木_h,color 木_mau)
- {
- ObjectCreate(0,木_ten,OBJ_BUTTON,0,0,0.0);
- ObjectSetInteger(0,木_ten,OBJPROP_CORNER,0);
- ObjectSetInteger(0,木_ten,OBJPROP_XDISTANCE,木_x);
- ObjectSetInteger(0,木_ten,OBJPROP_YDISTANCE,木_y);
- ObjectSetInteger(0,木_ten,OBJPROP_XSIZE,木_w);
- ObjectSetInteger(0,木_ten,OBJPROP_YSIZE,木_h);
- ObjectSetString(0,木_ten,OBJPROP_TEXT,木_chu);
- ObjectSetInteger(0,木_ten,OBJPROP_FONTSIZE,总_372_in_5CFC);
- ObjectSetInteger(0,木_ten,OBJPROP_COLOR,clrWhite);
- ObjectSetInteger(0,木_ten,OBJPROP_BGCOLOR,木_mau);
- ObjectSetInteger(0,木_ten,OBJPROP_BORDER_COLOR,clrGray);
- ObjectSetInteger(0,木_ten,OBJPROP_SELECTABLE,false);
- ObjectSetInteger(0,木_ten,OBJPROP_HIDDEN,true);
- ObjectSetInteger(0,木_ten,OBJPROP_STATE,false);
- }
-//TaoNutPanel <<==--------   --------
-//+------------------------------------------------------------------+
-//| Dong/xoa lenh cua CHINH EA nay (magic ST1+1..ST1+15, cung symbol) |
-//| theo tung loai - dung chung cho cac nut Close tren panel.         |
-//+------------------------------------------------------------------+
- void DongLenhTheoLoai( bool 木_buy,bool 木_sell,bool 木_pbuy,bool 木_psell)
- {
-  int       子_1_in;
-  int       子_2_in;
-//----- -----
- for (子_1_in = OrdersTotal() ; 子_1_in >= 0 ; 子_1_in=子_1_in - 1)
- {
-   if ( OrderSelect(子_1_in,0,0) != true || OrderSymbol() != 总_336_st_3130 )   continue;
-   子_2_in = OrderMagicNumber();
-   if ( 子_2_in <= ST1_MagicNumber || 子_2_in > ST1_MagicNumber + 15 )   continue;
-   if ( 木_buy && OrderType() == 0 )
-   {
-     g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red);
-     continue;
-   }
-   if ( 木_sell && OrderType() == 1 )
-   {
-     g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red);
-     continue;
-   }
-   if ( 木_pbuy && ( OrderType() == 2 || OrderType() == 4 ) )
-   {
-     g_discardResult = OrderDelete(OrderTicket(),Red);
-     continue;
-   }
-   if ( 木_psell && ( OrderType() == 3 || OrderType() == 5 ) )
-   {
-     g_discardResult = OrderDelete(OrderTicket(),Red);
-     continue;
-   }
- }
- }
-//DongLenhTheoLoai <<==--------   --------
-//+------------------------------------------------------------------+
-//| Nut Reset Peak: xoa dinh OnlyUp da luu, tinh lai tu balance hien  |
-//| tai (nhu ResetHighestBalance nhung bam 1 lan, khong can nap lai). |
-//+------------------------------------------------------------------+
- void NutResetDinhOnlyUp()
- {
- GlobalVariableDel(OnlyUpPeakGVName());
- 总_401_do_6AD0 = AccountInfoDouble(ACCOUNT_BALANCE) ;
- if ( UseEquity )   总_401_do_6AD0 = AccountInfoDouble(ACCOUNT_EQUITY) ;
- if ( ManualBalance>0.0 )   总_401_do_6AD0 = ManualBalance ;
- 总_402_do_6AD8 = 总_401_do_6AD0 ;
- if ( OnlyUp )   GlobalVariableSet(OnlyUpPeakGVName(),总_402_do_6AD8) ;
- Print("OnlyUp highest balance reset -> ",DoubleToString(总_402_do_6AD8,2));
- }
-//NutResetDinhOnlyUp <<==--------   --------
- void OnChartEvent( const int id,const long &lparam,const double &dparam,const string &sparam)
- {
- if ( id != CHARTEVENT_OBJECT_CLICK )   return;
- if ( StringFind(sparam,"grbtn_",0) != 0 )   return;
- if ( sparam == "grbtn_resetpeak" )   NutResetDinhOnlyUp();
- if ( sparam == "grbtn_closeall" )   DongLenhTheoLoai(true,true,true,true);
- if ( sparam == "grbtn_closebuy" )   DongLenhTheoLoai(true,false,false,false);
- if ( sparam == "grbtn_closesell" )   DongLenhTheoLoai(false,true,false,false);
- if ( sparam == "grbtn_closependbuy" )   DongLenhTheoLoai(false,false,true,false);
- if ( sparam == "grbtn_closependsell" )   DongLenhTheoLoai(false,false,false,true);
- ObjectSetInteger(0,sparam,OBJPROP_STATE,false);
- ChartRedraw(0);
- }
-//OnChartEvent <<==--------   --------
  void lizong_24()
  {
   int       子_1_in = 0;
@@ -6548,13 +6459,6 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
    子_19_in = 0 ;
    子_20_in ++;
  }
- // ----- 6 nut dieu khien ngay duoi panel -----
- TaoNutPanel("grbtn_closeall","Close All",子_12_in,子_13_in + (int)(子_10_in * InfoPanelSizeAdjust) + 子_16_in + 6,(int)(112.0 * InfoPanelSizeAdjust),(int)(22.0 * InfoPanelSizeAdjust),clrMaroon);
- TaoNutPanel("grbtn_resetpeak","Reset Peak",子_12_in + (int)(112.0 * InfoPanelSizeAdjust) + 4,子_13_in + (int)(子_10_in * InfoPanelSizeAdjust) + 子_16_in + 6,(int)(112.0 * InfoPanelSizeAdjust),(int)(22.0 * InfoPanelSizeAdjust),clrDarkSlateBlue);
- TaoNutPanel("grbtn_closebuy","Close Buy",子_12_in,子_13_in + (int)(子_10_in * InfoPanelSizeAdjust) + 子_16_in + 6 + (int)(26.0 * InfoPanelSizeAdjust),(int)(112.0 * InfoPanelSizeAdjust),(int)(22.0 * InfoPanelSizeAdjust),clrSeaGreen);
- TaoNutPanel("grbtn_closesell","Close Sell",子_12_in + (int)(112.0 * InfoPanelSizeAdjust) + 4,子_13_in + (int)(子_10_in * InfoPanelSizeAdjust) + 子_16_in + 6 + (int)(26.0 * InfoPanelSizeAdjust),(int)(112.0 * InfoPanelSizeAdjust),(int)(22.0 * InfoPanelSizeAdjust),clrFireBrick);
- TaoNutPanel("grbtn_closependbuy","Close P.Buy",子_12_in,子_13_in + (int)(子_10_in * InfoPanelSizeAdjust) + 子_16_in + 6 + (int)(52.0 * InfoPanelSizeAdjust),(int)(112.0 * InfoPanelSizeAdjust),(int)(22.0 * InfoPanelSizeAdjust),clrDarkOliveGreen);
- TaoNutPanel("grbtn_closependsell","Close P.Sell",子_12_in + (int)(112.0 * InfoPanelSizeAdjust) + 4,子_13_in + (int)(子_10_in * InfoPanelSizeAdjust) + 子_16_in + 6 + (int)(52.0 * InfoPanelSizeAdjust),(int)(112.0 * InfoPanelSizeAdjust),(int)(22.0 * InfoPanelSizeAdjust),clrIndianRed);
  }
 //lizong_24 <<==--------   --------
  void lizong_25( int 木_0_in,int 木_1_in,int 木_2_in,string 木_3_st,int 木_4_in,int 木_5_in,int 木_6_in,uint 木_7_ui,double 木_8_do)
@@ -6612,12 +6516,6 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
    }
  }
  ObjectDelete(0,"infopanel_rectangle"); 
- ObjectDelete(0,"grbtn_closeall");
- ObjectDelete(0,"grbtn_resetpeak");
- ObjectDelete(0,"grbtn_closebuy");
- ObjectDelete(0,"grbtn_closesell");
- ObjectDelete(0,"grbtn_closependbuy");
- ObjectDelete(0,"grbtn_closependsell");
  for (子_3_in = 0 ; 子_3_in < 10 ; 子_3_in ++)
  {
    ObjectDelete(0,"tabel_heading" + IntegerToString(子_3_in,0,32)); 
