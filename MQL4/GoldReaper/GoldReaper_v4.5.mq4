@@ -37,11 +37,15 @@
 
 
 //------------------
+extern string lijntje="=============================================================="  ;   //- - -
 extern bool UseVariableValues=true  ;   
 extern bool AdjustLotsizeToVariableValues=true  ;   
 extern bool ShowInfoPanel=true  ;   
-extern double InfoPanelSizeAdjust=1  ;    //Adjustment for Infopanel size
 extern bool UpdateInfoTesting=false ;    //update infopanel during testing
+extern double InfoPanelSizeAdjust=1  ;    //Adjustment for Infopanel size
+extern int   SetFontSize=0  ;    //SetFontSize (0=co chu goc; >0=tu chon co chu panel)
+extern string BacktestSpeed_string="------------------------------ Backtest Speed settings ------------------------------"  ;   //- - -
+extern int   BacktestSpeed=1  ;    //BacktestSpeed 0-3 (tang toc tester: 0=panel moi tick, 1=1 lan/phut, 2=1 lan/gio, 3=tat panel; chi khi UpdateInfoTesting=true)
 extern string spreadfilter="------------------------------ Settings ------------------------------"  ;   //- - -
 extern bool AllowBuyTrades=true  ;    //Allow Buy Trades
 extern bool AllowSellTrades=true  ;    //Allow Sell Trades
@@ -49,6 +53,8 @@ extern  enum_TradeFrequency  TradeFrequency=5  ;
 extern double MaxSpread=500  ;    //Maximum allowed spread
 extern bool UseHL_TrailingSL=true  ;   
 extern int   FridayStopHour=25  ;    //Friday stop hour (brokertime; close all trades)
+extern bool FridayClosePending=true  ;    //FridayClosePending (xoa lenh cho khi den FridayStopHour)
+extern bool FridayCloseOpen=true  ;    //FridayCloseOpen (dong vi the mo khi den FridayStopHour)
 extern bool setSL_TP_After_Entry=false ;   
 extern bool Virtual_expiration=true  ;    //Use Virtual Expiration
 extern double Randomization=0  ;    //Randomization (entries and exit) in pips
@@ -73,16 +79,17 @@ extern double AdjustTrailSL=0  ;
 extern double AdjustTrailTP=0  ;   
 extern double AdjustBreakEven=0  ;   
 extern string LotSizeSettings="----------------------- LotSize Settings -----------------------"  ;   //- - -
-extern double ForceBalanceToUse=0  ;    //manually set balance to use (if > 0)
+extern double ManualBalance=0  ;    //manually set balance to use (if > 0)
 extern  e_Risk  Risk=1234  ;    //Lotsize Calculation method
 extern double StartLots=0.01  ;   
 extern double MaxAllowedDD=30  ;    //Max Allowed TOTAL Drawdown
 extern bool UseWeightedLots=true  ;    //Weighted Lotsize
 extern double MaxRiskPerStrategy_=1  ;    //Max Risk Per Strat
 extern double PropFirmMaxDailyDD=0  ;    //Set Max DAILY Drawdown (Prop Firms)
-extern bool UseEquity=false ;    //Use Equity Instead of Balance
 extern bool OnlyUp=true  ;   
+extern bool ResetHighestBalance=false ;    //ResetHighestBalance (true=xoa dinh balance OnlyUp da luu, tinh lai tu balance hien tai)
 extern bool CheckMargin=true  ;    //check for free margin before setting trades
+extern bool UseEquity=false ;    //Use Equity Instead of Balance
 extern string ManualStratSelect="------------------------- Manual Strategy Selection -------------------------"  ;   //- - -
 extern string ManStratWarn="!! DO NOT RUN MANUAL STRATEGIES WHILE USING \'MAX ALLOWED TOTAL DD\' OPTION !! "  ;   //- - -
 extern bool RunStrat1=true  ;    //Run Strategy 1 (low risk)
@@ -504,6 +511,8 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
   long      g_onlyUpRunId = 0;       // ma rieng cho moi lan chay Strategy Tester, dung de tach biet dinh OnlyUp giua cac lan backtest (xem OnlyUpPeakGVName)
   datetime  g_nfpFFBuiltDay = 0;     // ngay (00:00, GMT) lan gan nhat da thu lam moi tu Forex Factory JSON feed (xem RefreshNFPFromForexFactory)
   datetime  g_nfpFFDate = 0;         // ngay/gio NFP (GMT) da xac nhan that tu Forex Factory cho tuan hien tai; 0 = chua co xac nhan, dong Next NFP se hien "-"
+  bool      g_panelSkipTester = false;  // BacktestSpeed: true = bo qua cap nhat panel o tick nay (chi trong tester)
+  long      g_btLastBucket = -1;        // BacktestSpeed: moc phut/gio (mo phong) cua lan cap nhat panel gan nhat
 
 
  int init()
@@ -530,6 +539,8 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  // phai MathSrand() truoc thi moi cho ra chuoi so khac nhau giua cac lan
  // chay (theo tai lieu MQL5) - neu khong se luon ra cung 1 gia tri co dinh
  // moi lan khoi dong, lam mat tac dung chong trung.
+ // SetFontSize >0: ghi de co chu panel (0 = co mac dinh theo thiet ke goc)
+ if ( SetFontSize > 0 )   总_372_in_5CFC = SetFontSize ;
  MathSrand((int)GetTickCount()) ;
  g_onlyUpRunId = (long)GetTickCount() * 1000 + MathRand() ;
 
@@ -538,14 +549,16 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  {
    总_401_do_6AD0 = AccountInfoDouble(ACCOUNT_EQUITY) ;
  }
- if ( ForceBalanceToUse>0.0 )
+ if ( ManualBalance>0.0 )
  {
-   总_401_do_6AD0 = ForceBalanceToUse ;
+   总_401_do_6AD0 = ManualBalance ;
  }
  // OnlyUp cai tien: doc lai muc so du cao nhat da luu trong GlobalVariable
  // cua terminal (ton tai xuyen suot restart EA/MT4), thay vi luon reset ve
  // so du hien tai moi lan khoi dong nhu truoc - tranh mat muc dinh cao da
  // dat duoc truoc do.
+ // ResetHighestBalance: xoa dinh OnlyUp da luu, bat dau lai tu balance hien tai
+ if ( ResetHighestBalance )   GlobalVariableDel(OnlyUpPeakGVName()) ;
  if ( OnlyUp && GlobalVariableCheck(OnlyUpPeakGVName()) )
  {
    总_402_do_6AD8 = GlobalVariableGet(OnlyUpPeakGVName()) ;
@@ -1227,6 +1240,28 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
   MqlDateTime 子_5_a_129;
   MqlDateTime 子_6_a_129;
 //----- -----
+ // BacktestSpeed: han che tan suat cap nhat panel trong Strategy Tester de tang
+ // toc backtest. CHI anh huong hien thi (khi UpdateInfoTesting=true), KHONG anh
+ // huong logic giao dich. 0=moi tick (nhu goc), 1=toi da 1 lan/phut (gio mo
+ // phong), 2=toi da 1 lan/gio, 3=tat han cap nhat panel trong tester.
+ if ( MQLInfoInteger(MQL_TESTER) == 1 && BacktestSpeed == 1 )
+ {
+   g_panelSkipTester = ((long)TimeCurrent() / 60 == g_btLastBucket) ;
+   g_btLastBucket = (long)TimeCurrent() / 60 ;
+ }
+ else if ( MQLInfoInteger(MQL_TESTER) == 1 && BacktestSpeed == 2 )
+ {
+   g_panelSkipTester = ((long)TimeCurrent() / 3600 == g_btLastBucket) ;
+   g_btLastBucket = (long)TimeCurrent() / 3600 ;
+ }
+ else if ( MQLInfoInteger(MQL_TESTER) == 1 && BacktestSpeed >= 3 )
+ {
+   g_panelSkipTester = true ;
+ }
+ else
+ {
+   g_panelSkipTester = false ;
+ }
  bool       临_bo_1;
  double     临_do_2;
  double     临_do_3;
@@ -1261,9 +1296,9 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  {
    总_401_do_6AD0 = AccountInfoDouble(ACCOUNT_EQUITY) ;
  }
- if ( ForceBalanceToUse>0.0 )
+ if ( ManualBalance>0.0 )
  {
-   总_401_do_6AD0 = ForceBalanceToUse ;
+   总_401_do_6AD0 = ManualBalance ;
  }
  if ( OnlyUp && 总_402_do_6AD8>总_401_do_6AD0 )
  {
@@ -1582,7 +1617,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
      lizong_7(0); 
      if ( 子_4_bo )
      {
-       if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
+       if ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) )
        {
          临_do_2 = 0.0;
        }
@@ -1615,7 +1650,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
      lizong_7(3); 
      if ( 子_4_bo )
      {
-       if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
+       if ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) )
        {
          临_do_5 = 0.0;
        }
@@ -1648,7 +1683,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
      lizong_7(1); 
      if ( 子_4_bo )
      {
-       if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
+       if ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) )
        {
          临_do_8 = 0.0;
        }
@@ -1681,7 +1716,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
      lizong_7(2); 
      if ( 子_4_bo )
      {
-       if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
+       if ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) )
        {
          临_do_11 = 0.0;
        }
@@ -1714,7 +1749,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
      lizong_7(5); 
      if ( 子_4_bo )
      {
-       if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
+       if ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) )
        {
          临_do_14 = 0.0;
        }
@@ -1747,7 +1782,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
      lizong_7(4); 
      if ( 子_4_bo )
      {
-       if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
+       if ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) )
        {
          临_do_17 = 0.0;
        }
@@ -1780,7 +1815,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
      lizong_7(8); 
      if ( 子_4_bo )
      {
-       if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
+       if ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) )
        {
          临_do_20 = 0.0;
        }
@@ -1813,7 +1848,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
      lizong_7(6); 
      if ( 子_4_bo )
      {
-       if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
+       if ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) )
        {
          临_do_23 = 0.0;
        }
@@ -1846,7 +1881,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
      lizong_7(7); 
      if ( 子_4_bo )
      {
-       if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
+       if ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) )
        {
          临_do_26 = 0.0;
        }
@@ -2731,15 +2766,15 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
            }
          }
        }
-       if ( OrderType() == 0 )
+       if ( FridayCloseOpen && OrderType() == 0 )
        {
          g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
        }
-       if ( OrderType() == 1 )
+       if ( FridayCloseOpen && OrderType() == 1 )
        {
          g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
        }
-       if ( ( OrderType() != 4 && OrderType() != 5 ) )   continue;
+       if ( ( OrderType() != 4 && OrderType() != 5 ) || !(FridayClosePending) )   continue;
        g_discardResult = OrderDelete(OrderTicket(),Red); 
        
      }
@@ -3200,9 +3235,9 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  {
    总_401_do_6AD0 = AccountInfoDouble(ACCOUNT_EQUITY) ;
  }
- if ( ForceBalanceToUse>0.0 )
+ if ( ManualBalance>0.0 )
  {
-   总_401_do_6AD0 = ForceBalanceToUse ;
+   总_401_do_6AD0 = ManualBalance ;
  }
  if ( OnlyUp && 总_402_do_6AD8>总_401_do_6AD0 )
  {
@@ -6638,9 +6673,9 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
 
  if ( !(ShowInfoPanel) )   return;
  
- if ( ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) ) )   return;
+ if ( ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) ) )   return;
  
- if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
+ if ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) )
  {
    临_do_1 = 0.0;
  }
@@ -6797,7 +6832,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
 
  if ( !(ShowInfoPanel) )   return;
  
- if ( ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) ) )   return;
+ if ( ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) ) )   return;
  子_1_in = 总_340_in_3310 ;
  for (子_3_in = 0 ; 子_3_in < 9 ; 子_3_in ++)
  {
@@ -6841,9 +6876,9 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
 
  if ( !(ShowInfoPanel) )   return;
  
- if ( ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) ) )   return;
+ if ( ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) ) )   return;
  ObjectSetString(0,"lineto" + IntegerToString(0,0,32),OBJPROP_TEXT,"Total profits/losses so far: " + IntegerToString(lizong_30(0,9999999),0,32) + "/" + IntegerToString(lizong_31(0,9999999),0,32)); 
- if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
+ if ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) )
  {
    临_do_1 = 0.0;
  }
@@ -6968,7 +7003,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  int        临_in_15;
  int        临_in_16;
 
- if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
+ if ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) )
  {
    return(0); 
  }
@@ -7103,7 +7138,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  int        临_in_15;
  int        临_in_16;
 
- if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
+ if ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) )
  {
    return(0); 
  }
@@ -7230,7 +7265,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  long       临_lo_4;
  long       临_lo_5;
 
- if ( ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) ) )   return;
+ if ( ( MQLInfoInteger(MQL_TESTER) == 1 && ( !(UpdateInfoTesting) || g_panelSkipTester ) ) )   return;
  for (子_4_in = 0 ; 子_4_in < 总_378_in_5D80 ; 子_4_in ++)
  {
    子_2_do_si99[子_4_in] = 0.0;
