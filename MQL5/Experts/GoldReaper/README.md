@@ -1,15 +1,15 @@
 # The Gold Reaper - ban chuyen doi MQL5
 
 Thu muc nay chua ban MQL5 duoc chuyen doi tu ban goc MQL4
-(`MQL4/GoldReaper/GoldReaper_v4.1.mq4`), giu nguyen 100% logic giao dich.
+(`MQL4/GoldReaper/GoldReaper_v4.5.mq4`), giu nguyen 100% logic giao dich.
 
 ## Cai dat
 
 1. Copy `MQL5/Include/GoldReaper/MQL4Compat.mqh` vao
    `<Thu muc du lieu MT5>/MQL5/Include/GoldReaper/MQL4Compat.mqh`
-2. Copy `MQL5/Experts/GoldReaper/GoldReaper_v4.1.mq5` vao
-   `<Thu muc du lieu MT5>/MQL5/Experts/GoldReaper/GoldReaper_v4.1.mq5`
-3. Mo MetaEditor, bien dich lai `GoldReaper_v4.1.mq5` (F7).
+2. Copy `MQL5/Experts/GoldReaper/GoldReaper_v4.5.mq5` vao
+   `<Thu muc du lieu MT5>/MQL5/Experts/GoldReaper/GoldReaper_v4.5.mq5`
+3. Mo MetaEditor, bien dich lai `GoldReaper_v4.5.mq5` (F7).
 
 ## YEU CAU BAT BUOC: tai khoan Hedging
 

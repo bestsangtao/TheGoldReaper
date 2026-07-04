@@ -1,5 +1,5 @@
 #property copyright  ""
-#property version    "4.1"
+#property version    "4.5"
 #property strict
 
   enum enum_TradeFrequency      {Extreme_cons_Frequency = 0,//extreme conservative
@@ -6265,11 +6265,11 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  ObjectSetInteger(0,"line1",OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
  if ( !(总_17_bo_8C) )
  {
-   ObjectSetString(0,"line1",OBJPROP_TEXT,"The Gold Reaper V4.1"); 
+   ObjectSetString(0,"line1",OBJPROP_TEXT,"The Gold Reaper V4.5"); 
  }
  else
  {
-   ObjectSetString(0,"line1",OBJPROP_TEXT,"The Gold Reaper V4.1 - OneChartSetup"); 
+   ObjectSetString(0,"line1",OBJPROP_TEXT,"The Gold Reaper V4.5 - OneChartSetup"); 
  }
  ObjectSetInteger(0,"line1",OBJPROP_COLOR,总_329_ui_3104);
  // Ban decompile goc thieu set co chu rieng cho cac dong tieu de/tom tat panel
