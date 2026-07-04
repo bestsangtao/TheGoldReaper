@@ -44,7 +44,7 @@ input bool AdjustLotsizeToVariableValues=true  ;
 input bool ShowInfoPanel=true  ;   
 input bool UpdateInfoTesting=false ;    //update infopanel during testing
 input double InfoPanelSizeAdjust=1  ;    //Adjustment for Infopanel size
-input int   SetFontSize=0  ;    //SetFontSize (0=co chu goc; >0=tu chon co chu panel)
+input int   SetFontSize=0  ;    //SetFontSize (0 = default font size)
 input string spreadfilter="------------------------------ Settings ------------------------------"  ;   //- - -
 input bool AllowBuyTrades=true  ;    //Allow Buy Trades
 input bool AllowSellTrades=true  ;    //Allow Sell Trades
@@ -52,8 +52,8 @@ input  enum_TradeFrequency  TradeFrequency=5  ;
 input double MaxSpread=500  ;    //Maximum allowed spread
 input bool UseHL_TrailingSL=true  ;   
 input int   FridayStopHour=25  ;    //Friday stop hour (brokertime; close all trades)
-input bool FridayClosePending=true  ;    //FridayClosePending (xoa lenh cho khi den FridayStopHour)
-input bool FridayCloseOpen=true  ;    //FridayCloseOpen (dong vi the mo khi den FridayStopHour)
+input bool FridayClosePending=true  ;    //Friday close pending orders
+input bool FridayCloseOpen=true  ;    //Friday close open trades
 input bool setSL_TP_After_Entry=false ;   
 input bool Virtual_expiration=true  ;    //Use Virtual Expiration
 input double Randomization=0  ;    //Randomization (entries and exit) in pips
@@ -63,7 +63,7 @@ input string ST1_Comment="The Gold Reaper"  ;   //Comment for trades
 input bool RemoveCommentSuffix=false ;   
 input string NFP_FILTER="----------------------- NFP Filter -----------------------"  ;  
 input bool EnableNFP_Filter=true  ;
-input bool UseMQL5Calendar=true  ;    //UseMQL5Calendar (true=CHI dung Lich MQL5; false=dung lich co san trong EA; tester luon dung lich co san)
+input bool UseMQL5Calendar=true  ;    //Use MQL5 Economic Calendar for NFP dates (false = built-in list)
 input bool AutoGMT=true  ;
 input int   Broker_GMT_OFFSET_Winter=2  ;    //GMT_OFFSET_Winter (AutoGMT=false or backtesting)
 input int   Broker_GMT_OFFSET_Summer=3  ;    //MT_OFFSET_Summer (AutoGMT=false or backtesting)
@@ -88,7 +88,7 @@ input bool UseWeightedLots=true  ;    //Weighted Lotsize
 input double MaxRiskPerStrategy_=1  ;    //Max Risk Per Strat
 input double PropFirmMaxDailyDD=0  ;    //Set Max DAILY Drawdown (Prop Firms)
 input bool OnlyUp=true  ;   
-input bool ResetHighestBalance=false ;    //ResetHighestBalance (true=xoa dinh balance OnlyUp da luu, tinh lai tu balance hien tai)
+input bool ResetHighestBalance=false ;    //Reset stored highest balance (OnlyUp)
 input bool CheckMargin=true  ;    //check for free margin before setting trades
 input bool UseEquity=false ;    //Use Equity Instead of Balance
 input string ManualStratSelect="------------------------- Manual Strategy Selection -------------------------"  ;   //- - -
