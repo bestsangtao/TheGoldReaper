@@ -63,7 +63,7 @@ input string ST1_Comment="The Gold Reaper"  ;   //Comment for trades
 input bool RemoveCommentSuffix=false ;   
 input string NFP_FILTER="----------------------- NFP Filter -----------------------"  ;  
 input bool EnableNFP_Filter=true  ;
-input bool UseMQL5Calendar=true  ;    //Use MQL5 Economic Calendar for NFP dates (false = built-in list)
+input bool UseMQL5Calendar=true  ;
 input bool AutoGMT=true  ;
 input int   Broker_GMT_OFFSET_Winter=2  ;    //GMT_OFFSET_Winter (AutoGMT=false or backtesting)
 input int   Broker_GMT_OFFSET_Summer=3  ;    //MT_OFFSET_Summer (AutoGMT=false or backtesting)
