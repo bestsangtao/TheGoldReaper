@@ -6471,7 +6471,7 @@ g_startLots_rw=StartLots;
    ObjectSetInteger(0,"linenfp" + IntegerToString(0,0,32),OBJPROP_CORNER,子_11_in);
    ObjectSetInteger(0,"linenfp" + IntegerToString(0,0,32),OBJPROP_YDISTANCE,(long)(子_13_in + InfoPanelSizeAdjust * 140.0 + 子_8_in));
    ObjectSetInteger(0,"linenfp" + IntegerToString(0,0,32),OBJPROP_XDISTANCE,子_12_in + 子_7_in);
-   ObjectSetString(0,"linenfp" + IntegerToString(0,0,32),OBJPROP_TEXT,"no news coming up");
+   ObjectSetString(0,"linenfp" + IntegerToString(0,0,32),OBJPROP_TEXT,"No News Coming Up");
    ObjectSetInteger(0,"linenfp" + IntegerToString(0,0,32),OBJPROP_COLOR,总_329_ui_3104);
    ObjectSetInteger(0,"linenfp" + IntegerToString(0,0,32),OBJPROP_FONTSIZE,总_372_in_5CFC);
  }
@@ -6634,7 +6634,7 @@ g_startLots_rw=StartLots;
      if ( 临_da_best == 0 || 总_391_da_5DFC_si300[临_in_i] < 临_da_best )   临_da_best = 总_391_da_5DFC_si300[临_in_i];
    }
  }
- if ( 临_da_best == 0 )   return("no news coming up"); // chua co/chua lay duoc lich -> giong panel v4.3
+ if ( 临_da_best == 0 )   return("No News Coming Up"); // chua co/chua lay duoc lich -> giong panel v4.3
  return("Next NFP: " + TimeToString(临_da_best + 总_395_in_6760 * 3600,TIME_DATE|TIME_SECONDS));
  }
 //GetNextNFPText <<==--------   --------
