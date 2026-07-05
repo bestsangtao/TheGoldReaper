@@ -57,6 +57,10 @@ input double           InpMomentumStepATR   = 0.5;                   // Extra AT
 input int              InpManageCooldownSec = 300;                   // Minimum seconds between management calls per position
 input int              InpMomentumPeriod    = 14;                    // Momentum(N) indicator period used to confirm the ATR ratchet
 input double           InpMomentumMinDeviation = 0.05;                // Min |Momentum-100| required to confirm genuine momentum (not noise)
+
+input group "=== AI Conversation Memory ==="
+input int              InpEntryMemoryTurns  = 3;                      // Entry: recent decisions each strategy remembers (0 = stateless)
+input int              InpManageMemoryTurns = 6;                      // Manage: checkpoints each open position remembers (0 = stateless)
 input int              InpManageSnapshotBars= 60;                    // OHLC bars sent with each management call
 
 input group "=== Multi-Timeframe Filter (shared by all strategies) ==="
@@ -174,6 +178,7 @@ void AddStrategy(CStrategyBase *s)
   {
    if(s.Init())
      {
+      s.SetEntryMemoryTurns(InpEntryMemoryTurns);
       int n = ArraySize(g_strategies);
       ArrayResize(g_strategies, n + 1);
       g_strategies[n] = s;
@@ -201,7 +206,7 @@ int OnInit()
    g_gemini.Init(InpApiKey, InpModel, InpApiTimeoutMs, InpTemperature);
    g_tradeMgr.Init(InpSlippagePoints);
    g_momentumGate.Init(InpMomentumStartATR, InpMomentumStepATR, InpManageCooldownSec, InpManageSnapshotBars,
-                       InpMomentumPeriod, InpMomentumMinDeviation);
+                       InpMomentumPeriod, InpMomentumMinDeviation, InpManageMemoryTurns);
 
    ArrayResize(g_strategies, 0);
 
@@ -290,6 +295,7 @@ int OnInit()
 void OnDeinit(const int reason)
   {
    EventKillTimer();
+   g_momentumGate.Deinit();
    for(int i = 0; i < ArraySize(g_strategies); i++)
      {
       g_strategies[i].Deinit();
@@ -350,7 +356,7 @@ void HandleStrategySignal(CStrategyBase *strat, const string &indicatorsJson, co
                                               strat.HigherTimeframe(), strat.HtfBars());
 
    SEntryDecision dec;
-   if(!g_gemini.RequestEntryDecision(strat.Id(), strat.Name(), conditionNote, marketJson, dec))
+   if(!g_gemini.RequestEntryDecision(strat.Id(), strat.Name(), conditionNote, marketJson, dec, strat.EntryConvo()))
       return;
 
    Print("[", strat.Name(), "] Gemini => action=", dec.action, " type=", dec.orderType,

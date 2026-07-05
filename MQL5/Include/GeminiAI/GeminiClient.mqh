@@ -7,6 +7,7 @@
 //+------------------------------------------------------------------+
 #property strict
 #include <GeminiAI/Json.mqh>
+#include <GeminiAI/Conversation.mqh>
 
 //--- decision returned for a NEW entry (strategy signal -> trade idea)
 struct SEntryDecision
@@ -68,13 +69,18 @@ private:
              "\"required\":[\"action\",\"reason\"]}";
      }
 
-   //--- low level HTTP call, returns the raw "text" field produced by the model
-   bool     Call(const string prompt, const string schemaJson, string &outText, string &outError)
+   //--- low level HTTP call, returns the raw "text" field produced by the model.
+   //--- if convo is non-NULL, its stored history is prepended so the model has
+   //--- continuity across calls (the current prompt becomes the latest user turn).
+   bool     Call(const string prompt, const string schemaJson, CConversation *convo, string &outText, string &outError)
      {
       string url = "https://generativelanguage.googleapis.com/v1beta/models/" + m_model + ":generateContent";
       string headers = "Content-Type: application/json\r\nx-goog-api-key: " + m_apiKey + "\r\n";
-      string body = "{\"contents\":[{\"parts\":[{\"text\":\"" + JsonEscape(prompt) + "\"}]}],"
-                    "\"generationConfig\":{\"temperature\":" + DoubleToString(m_temperature, 2) +
+      string contents = (convo != NULL)
+                        ? convo.BuildContents(prompt)
+                        : "[{\"role\":\"user\",\"parts\":[{\"text\":\"" + JsonEscape(prompt) + "\"}]}]";
+      string body = "{\"contents\":" + contents +
+                    ",\"generationConfig\":{\"temperature\":" + DoubleToString(m_temperature, 2) +
                     ",\"responseMimeType\":\"application/json\",\"responseSchema\":" + schemaJson + "}}";
 
       char post[];
@@ -139,14 +145,19 @@ public:
       m_temperature = temperature;
      }
 
-   //--- ask Gemini for a NEW trade decision based on a strategy's market snapshot
+   //--- ask Gemini for a NEW trade decision based on a strategy's market snapshot.
+   //--- convo (optional) gives the strategy memory of its recent decisions.
    bool     RequestEntryDecision(const int strategyId, const string strategyName, const string conditionDesc,
-                                 const string marketSnapshotJson, SEntryDecision &out)
+                                 const string marketSnapshotJson, SEntryDecision &out, CConversation *convo = NULL)
      {
       out.valid = false;
+      string memoryNote = (convo != NULL && convo.Size() > 0)
+                          ? "The earlier turns in this conversation are your OWN recent decisions for this same strategy module; "
+                            "stay consistent with them unless the new data clearly warrants a different call.\n"
+                          : "";
       string prompt =
          "You are the decision engine of an MT5 trading strategy module (id=" + IntegerToString(strategyId) +
-         ", name=\"" + strategyName + "\").\n" +
+         ", name=\"" + strategyName + "\").\n" + memoryNote +
          "The module's gating condition just fired: " + conditionDesc + "\n" +
          "The market data JSON below is MULTI-TIMEFRAME: \"ohlc\"/\"common_indicators\" describe the strategy's " +
          "working timeframe (\"timeframe\"), and \"htf_ohlc\"/\"htf_indicators\" describe a higher timeframe " +
@@ -159,10 +170,17 @@ public:
          "MARKET_DATA_JSON:\n" + marketSnapshotJson;
 
       string text, err;
-      if(!Call(prompt, EntrySchema(), text, err))
+      if(!Call(prompt, EntrySchema(), convo, text, err))
         {
          Print("[GeminiClient] entry decision call failed: ", err);
          return false;
+        }
+
+      //--- record the exchange in this strategy's memory (compact user summary + full reply)
+      if(convo != NULL)
+        {
+         string summary = StringFormat("[entry check] %s => (see decision)", conditionDesc);
+         convo.AddExchange(summary, text);
         }
 
       CJsonValue *root = CJsonValue::Parse(text);
@@ -186,14 +204,21 @@ public:
       return true;
      }
 
-   //--- ask Gemini how to manage an already open position once momentum gate fires
+   //--- ask Gemini how to manage an already open position once momentum gate fires.
+   //--- convo (optional) is this position's own management thread, so the model
+   //--- remembers what it already did at earlier checkpoints for THIS position.
    bool     RequestManageDecision(const int strategyId, const string strategyName,
-                                  const string positionSnapshotJson, SManageDecision &out)
+                                  const string positionSnapshotJson, SManageDecision &out, CConversation *convo = NULL)
      {
       out.valid = false;
+      string memoryNote = (convo != NULL && convo.Size() > 0)
+                          ? "The earlier turns in this conversation are the management decisions you ALREADY made for "
+                            "THIS SAME open position at previous checkpoints; build on them (e.g. do not undo a "
+                            "break-even stop you already set) instead of treating this as a fresh position.\n"
+                          : "";
       string prompt =
          "You are the trade-management engine of an MT5 trading strategy module (id=" + IntegerToString(strategyId) +
-         ", name=\"" + strategyName + "\").\n" +
+         ", name=\"" + strategyName + "\").\n" + memoryNote +
          "This module has an open position that just reached its next management checkpoint - see " +
          "\"position.trigger_reason\" for why (either a profit/momentum ratchet confirmed by the Momentum indicator " +
          "in \"position.momentum14\"/\"momentum_deviation\", or the higher-timeframe EMA trend in \"position.htf_ema_fast\"" +
@@ -209,10 +234,17 @@ public:
          "POSITION_AND_MARKET_JSON:\n" + positionSnapshotJson;
 
       string text, err;
-      if(!Call(prompt, ManageSchema(), text, err))
+      if(!Call(prompt, ManageSchema(), convo, text, err))
         {
          Print("[GeminiClient] manage decision call failed: ", err);
          return false;
+        }
+
+      //--- record this checkpoint in the position's management thread
+      if(convo != NULL)
+        {
+         string summary = "[manage checkpoint] (see decision)";
+         convo.AddExchange(summary, text);
         }
 
       CJsonValue *root = CJsonValue::Parse(text);

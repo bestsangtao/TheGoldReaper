@@ -15,6 +15,7 @@
 //|  timeframes too.                                                  |
 //+------------------------------------------------------------------+
 #property strict
+#include <GeminiAI/Conversation.mqh>
 
 enum ENUM_HTF_BIAS
   {
@@ -79,6 +80,9 @@ protected:
    int               m_htfEmaFastHandle;
    int               m_htfEmaSlowHandle;
 
+   //--- rolling memory of this strategy's own recent entry decisions
+   CConversation     m_entryConvo;
+
 public:
    virtual void      BaseInit(const string symbol, const ENUM_TIMEFRAMES tf, const long magic,
                               const ENUM_TIMEFRAMES higherTf, const int htfBars = 60,
@@ -115,6 +119,10 @@ public:
    int               HtfBars() const { return m_htfBars; }
    int               HtfEmaFastPeriod() const { return m_htfEmaFastPeriod; }
    int               HtfEmaSlowPeriod() const { return m_htfEmaSlowPeriod; }
+
+   //--- entry-decision memory: set how many recent exchanges to remember (0 = off)
+   void              SetEntryMemoryTurns(const int turns) { m_entryConvo.Init(turns); }
+   CConversation    *EntryConvo() { return GetPointer(m_entryConvo); }
 
    //--- true once per newly closed bar on this strategy's own timeframe
    bool              IsNewBar()

@@ -52,6 +52,32 @@ decisions come back from Gemini, constrained by a strict JSON response schema
 (`responseSchema` / `responseMimeType: application/json`) so replies are
 always machine-parseable.
 
+## Conversation memory (so the AI "remembers")
+
+The Gemini `generateContent` endpoint is **stateless** — each call is a fresh
+model instance that only "knows" what the request resends. (The web chat feels
+like it remembers only because the browser resends the whole thread each time.)
+Rather than scrape the web UI — which breaks the JSON schema, violates Google's
+terms, and is fragile — the EA reproduces that behavior the correct way: it
+keeps a rolling conversation history and replays it in the API's multi-turn
+`contents` array, so the model has genuine continuity across calls.
+
+Two independent memory scopes:
+
+- **Per-strategy entry memory** (`InpEntryMemoryTurns`, default 3): each
+  strategy remembers its own recent entry decisions, so the AI stays
+  consistent instead of flip-flopping between calls.
+- **Per-position management memory** (`InpManageMemoryTurns`, default 6): every
+  open position gets its own conversation thread from open to close, so at each
+  management checkpoint the AI recalls what it already did earlier for *that
+  same position* (e.g. it won't undo a break-even stop it just set). The thread
+  is freed automatically when the position closes.
+
+To keep token cost bounded, history stores the model's past replies in full but
+only a **compact summary** of each past request (not the full OHLC snapshot);
+the current turn always carries the complete multi-timeframe data. Set either
+input to `0` to return to fully stateless calls (useful for A/B comparison).
+
 ## The 10 independent strategies
 
 Every strategy checks its own-timeframe indicator condition **and** requires
@@ -115,6 +141,7 @@ MQL5/
   Experts/GeminiAI_EA/GeminiAI_EA.mq5     Main EA (inputs, event handlers, wiring)
   Include/GeminiAI/
     Json.mqh                              Minimal dependency-free JSON parser/writer
+    Conversation.mqh                      Rolling multi-turn history (AI memory across calls)
     GeminiClient.mqh                      Gemini REST client (WebRequest + schema + parsing)
     MarketSnapshot.mqh                    Builds the OHLC + indicator JSON sent to the AI
     TradeManager.mqh                      Order validation, sizing, sending, modify/close

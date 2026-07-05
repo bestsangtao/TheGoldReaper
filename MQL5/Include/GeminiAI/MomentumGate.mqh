@@ -40,6 +40,7 @@ struct SManagedPosition
    int               ratchetLevel;
    datetime          lastManageCall;
    ENUM_HTF_BIAS     lastHtfBias;
+   CConversation    *convo;          // this position's own management thread (memory)
   };
 
 class CMomentumGate
@@ -52,6 +53,7 @@ private:
    int               m_snapshotBars;
    int               m_momentumPeriod;    // Momentum(N) indicator period used as confirmation
    double            m_momentumMinDeviation; // required |Momentum-100| to count as genuine momentum
+   int               m_manageMemoryTurns;  // how many management checkpoints each position remembers (0 = off)
 
    int               FindIndex(const ulong ticket) const
      {
@@ -63,6 +65,8 @@ private:
 
    void              RemoveAt(const int idx)
      {
+      if(CheckPointer(m_positions[idx].convo) == POINTER_DYNAMIC)
+         delete m_positions[idx].convo;     // free this position's management thread
       int n = ArraySize(m_positions);
       for(int i = idx; i < n - 1; i++)
          m_positions[i] = m_positions[i + 1];
@@ -161,7 +165,7 @@ private:
 
 public:
    void              Init(const double startAtrMult, const double stepAtrMult, const int manageCooldownSec, const int snapshotBars,
-                          const int momentumPeriod = 14, const double momentumMinDeviation = 0.05)
+                          const int momentumPeriod = 14, const double momentumMinDeviation = 0.05, const int manageMemoryTurns = 6)
      {
       m_startAtrMult = startAtrMult;
       m_stepAtrMult = stepAtrMult;
@@ -169,6 +173,16 @@ public:
       m_snapshotBars = snapshotBars;
       m_momentumPeriod = momentumPeriod;
       m_momentumMinDeviation = momentumMinDeviation;
+      m_manageMemoryTurns = manageMemoryTurns;
+      ArrayResize(m_positions, 0);
+     }
+
+   //--- free any still-tracked positions' conversation threads (call from OnDeinit)
+   void              Deinit()
+     {
+      for(int i = ArraySize(m_positions) - 1; i >= 0; i--)
+         if(CheckPointer(m_positions[i].convo) == POINTER_DYNAMIC)
+            delete m_positions[i].convo;
       ArrayResize(m_positions, 0);
      }
 
@@ -198,6 +212,8 @@ public:
       m_positions[n].atrAtEntry = atrAtEntry > 0 ? atrAtEntry : SymbolInfoDouble(symbol, SYMBOL_POINT) * 100;
       m_positions[n].ratchetLevel = 0;
       m_positions[n].lastManageCall = 0;
+      m_positions[n].convo = new CConversation();
+      m_positions[n].convo.Init(m_manageMemoryTurns);
 
       string htfJson;
       m_positions[n].lastHtfBias = ComputeHtfTrendBias(symbol, higherTf, htfEmaFastPeriod, htfEmaSlowPeriod, htfJson);
@@ -262,7 +278,7 @@ public:
            {
             string posJson = BuildPositionJson(i, currentPrice, moveInAtr, triggerReason, momentumJson, htfJson);
             SManageDecision dec;
-            if(client.RequestManageDecision(m_positions[i].strategyId, m_positions[i].strategyName, posJson, dec))
+            if(client.RequestManageDecision(m_positions[i].strategyId, m_positions[i].strategyName, posJson, dec, m_positions[i].convo))
               {
                Print("[MomentumGate] manage decision for #", ticket, " (", triggerReason, "): ", dec.action, " - ", dec.reason);
                ApplyDecision(tm, ticket, dec);
