@@ -6475,6 +6475,16 @@ g_startLots_rw=StartLots;
    ObjectSetInteger(0,"linenfp" + IntegerToString(0,0,32),OBJPROP_COLOR,总_329_ui_3104);
    ObjectSetInteger(0,"linenfp" + IntegerToString(0,0,32),OBJPROP_FONTSIZE,总_372_in_5CFC);
  }
+ if ( OnlyUp )
+ {
+   ObjectCreate(0,"lineup" + IntegerToString(0,0,32),OBJ_LABEL,0,0,0.0);
+   ObjectSetInteger(0,"lineup" + IntegerToString(0,0,32),OBJPROP_CORNER,子_11_in);
+   ObjectSetInteger(0,"lineup" + IntegerToString(0,0,32),OBJPROP_YDISTANCE,(long)(子_13_in + InfoPanelSizeAdjust * 140.0 + 子_8_in));
+   ObjectSetInteger(0,"lineup" + IntegerToString(0,0,32),OBJPROP_XDISTANCE,子_12_in + 子_7_in);
+   ObjectSetString(0,"lineup" + IntegerToString(0,0,32),OBJPROP_TEXT,"Highest Balance: -");
+   ObjectSetInteger(0,"lineup" + IntegerToString(0,0,32),OBJPROP_COLOR,总_329_ui_3104);
+   ObjectSetInteger(0,"lineup" + IntegerToString(0,0,32),OBJPROP_FONTSIZE,总_372_in_5CFC);
+ }
  子_18_in = 0 ;
  子_19_in = 0 ;
  子_20_in = 0 ;
@@ -6577,6 +6587,7 @@ g_startLots_rw=StartLots;
    ObjectDelete(0,"linetp" + IntegerToString(子_1_in,0,32));
    ObjectDelete(0,"linetq" + IntegerToString(子_1_in,0,32));
    ObjectDelete(0,"linenfp" + IntegerToString(子_1_in,0,32));
+   ObjectDelete(0,"lineup" + IntegerToString(子_1_in,0,32));
    for (子_2_in = 0 ; 子_2_in < 10 ; 子_2_in ++)
    {
      ObjectDelete(0,"tabel_info" + IntegerToString(子_1_in * 100 + 子_2_in,0,32)); 
@@ -6956,6 +6967,10 @@ g_startLots_rw=StartLots;
  if ( EnableNFP_Filter )
  {
    ObjectSetString(0,"linenfp" + IntegerToString(0,0,32),OBJPROP_TEXT,GetNextNFPText());
+ }
+ if ( OnlyUp )
+ {
+   ObjectSetString(0,"lineup" + IntegerToString(0,0,32),OBJPROP_TEXT,"Highest Balance: " + DoubleToString(NormalizeDouble(总_402_do_6AD8,2),2));
  }
  }
 //lizong_29 <<==--------   --------
