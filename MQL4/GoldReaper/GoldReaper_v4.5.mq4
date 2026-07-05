@@ -6242,7 +6242,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  子_7_in = 6 ;
  子_8_in = 4 ;
  子_9_in = 350 ;
- 子_10_in = 350 ;
+ 子_10_in = 366 ;
  子_11_in = 0 ;
  子_12_in = 5 ;
  子_13_in = 20 ;
@@ -6422,7 +6422,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  子_19_in = 0 ;
  子_20_in = 0 ;
  子_22_in = 子_12_in + 子_7_in ;
- 子_23_in = (int)(子_13_in + InfoPanelSizeAdjust * 160.0 + 子_8_in) ;
+ 子_23_in = (int)(子_13_in + InfoPanelSizeAdjust * 176.0 + 子_8_in) ;
  子_21_st = "Strategy" ;
  lizong_25(子_22_in,子_23_in,0,"Strategy",0,0,1,0,1.0); 
  子_18_in = 1 ;
