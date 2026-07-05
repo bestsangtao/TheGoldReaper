@@ -509,10 +509,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
   long      g_onlyUpRunId = 0;       // ma rieng cho moi lan chay Strategy Tester, dung de tach biet dinh OnlyUp giua cac lan backtest (xem OnlyUpPeakGVName)
   datetime  g_nfpFFBuiltDay = 0;     // ngay (00:00, GMT) lan gan nhat da thu lam moi tu Forex Factory JSON feed (xem RefreshNFPFromForexFactory)
   datetime  g_nfpFFDate = 0;         // ngay/gio NFP (GMT) da xac nhan that tu Forex Factory cho tuan hien tai; 0 = chua co xac nhan, dong Next NFP se hien "-"
-  bool      g_gmtLinkThieu = false;  // link GMT (worldtimeserver) chua co trong allowed URLs (bat tu loi 4060 cua request that)
-  bool      g_nfpLinkThieu = false;  // link NFP (nfs.faireconomy) chua co trong allowed URLs
-  bool      g_daBaoGmt = false;      // da canh bao thieu link GMT chua (moi link bao toi da 1 lan)
-  bool      g_daBaoNfp = false;      // da canh bao thieu link NFP chua
+  bool      g_daCanhBaoLink = false; // da hien canh bao thieu allowed URL chua (chi hien 1 lan/phien)
 
 
  int init()
@@ -6604,19 +6601,15 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
   int       临_tzM;
   datetime  临_local;
   int       临_offsetSec;
-  int       临_err_n;
 //----- -----
  g_nfpFFBuiltDay = TimeCurrent() - TimeCurrent() % 86400 ;
  ResetLastError();
  if ( WebRequest("GET","https://nfs.faireconomy.media/ff_calendar_thisweek.json",NULL,NULL,5000,临_data,0,临_result,临_headers) == -1 )
  {
-   临_err_n = GetLastError();
-   g_nfpLinkThieu = ( 临_err_n == 4060 ) ;
-   Print("Error when reading Forex Factory NFP URL. Error code  =",临_err_n);
+   Print("Error when reading Forex Factory NFP URL. Error code  =",GetLastError());
    CanhBaoThieuLink();
    return; // loi mang: giu nguyen gia tri cu
  }
- g_nfpLinkThieu = false ; // request thanh cong -> link co san trong allowed URLs
  临_json = CharArrayToString(临_result,0,0,0) ;
  临_pos = StringFind(临_json,"\"title\":\"Non-Farm Employment Change\"",0) ;
  if ( 临_pos < 0 )
@@ -9478,30 +9471,44 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  }
 //lizong_46 <<==--------   --------
 //+------------------------------------------------------------------+
-//| Canh bao thieu allowed URL - TUC THI: chi doc co trang thai       |
-//| g_gmtLinkThieu / g_nfpLinkThieu (da duoc bat tu MA LOI 4060 cua   |
-//| chinh request ma EA von da goi, KHONG goi them WebRequest nao).   |
-//| Gom (cac) link con thieu vao 1 thong bao; moi link bao toi da 1   |
-//| lan (g_daBaoGmt/g_daBaoNfp) - neu 2 link duoc phat hien lech thoi |
-//| diem thi co the hien thanh 2 popup nhanh thay vi gop 1.           |
+//| Kiem tra 1 dia chi da nam trong danh sach allowed URLs chua:      |
+//| thu WebRequest, chi coi la "thieu" khi loi CHINH XAC la 4060      |
+//| (URL not allowed) - cac loi mang khac (timeout, mat ket noi...)   |
+//| khong tinh la thieu link.                                         |
+//+------------------------------------------------------------------+
+ bool URLThieu( string 木_url )
+ {
+  char      临_d_url[];
+  char      临_r_url[];
+  string    临_h_url;
+//----- -----
+ ResetLastError();
+ if ( WebRequest("GET",木_url,NULL,NULL,500,临_d_url,0,临_r_url,临_h_url) == -1 && GetLastError() == 4060 )   return(true);
+ return(false);
+ }
+//URLThieu <<==--------   --------
+//+------------------------------------------------------------------+
+//| Canh bao thieu allowed URL: kiem tra CA link GMT (worldtimeserver,|
+//| chi khi AutoGMT) va link NFP (nfs.faireconomy, chi khi            |
+//| EnableNFP_Filter). Chi liet ke dung (cac) link con thieu - thieu  |
+//| 1 hien 1, thieu ca 2 hien ca 2 trong CUNG 1 thong bao. Chi hien   |
+//| 1 lan moi phien de khong lam phien.                               |
 //+------------------------------------------------------------------+
  void CanhBaoThieuLink()
  {
   string    临_msg;
 //----- -----
+ if ( g_daCanhBaoLink )   return;
  临_msg = "";
- if ( AutoGMT && g_gmtLinkThieu && !(g_daBaoGmt) )
- {
+ if ( AutoGMT && URLThieu("https://www.worldtimeserver.com/time-zones/utc/") )
    临_msg = 临_msg + "- https://www.worldtimeserver.com/\n";
-   g_daBaoGmt = true ;
- }
- if ( EnableNFP_Filter && g_nfpLinkThieu && !(g_daBaoNfp) )
- {
+ if ( EnableNFP_Filter && URLThieu("https://nfs.faireconomy.media/ff_calendar_thisweek.json") )
    临_msg = 临_msg + "- https://nfs.faireconomy.media/\n";
-   g_daBaoNfp = true ;
- }
  if ( 临_msg != "" )
+ {
    MessageBox("Add the following address(es) in the list of allowed URLs on tab \'Expert Advisors\':\n\n" + 临_msg,"Error",64);
+   g_daCanhBaoLink = true ;
+ }
  }
 //CanhBaoThieuLink <<==--------   --------
  int lizong_47()
@@ -9516,20 +9523,16 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
 //----- -----
  string     临_st_1;
  string     临_st_2;
- int        临_err_g;
 
  ResetLastError();
  if ( WebRequest("GET","https://www.worldtimeserver.com/time-zones/utc/",NULL,NULL,10000,子_7_ch_ko,0,子_8_ch_ko,临_st_1) == -1 )
  {
-   临_err_g = GetLastError();
-   g_gmtLinkThieu = ( 临_err_g == 4060 ) ;
-   Print("Error when reading GMT URL. Error code  =",临_err_g);
+   Print("Error when reading GMT URL. Error code  =",GetLastError());
    CanhBaoThieuLink();
    临_st_2 = "999";
  }
  else
  {
-   g_gmtLinkThieu = false ;
    临_st_2 = CharArrayToString(子_8_ch_ko,0,0,0);
  }
  子_2_st = 临_st_2 ;
