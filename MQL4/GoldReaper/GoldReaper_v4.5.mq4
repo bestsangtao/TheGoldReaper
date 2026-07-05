@@ -9483,7 +9483,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
   string    临_h_url;
 //----- -----
  ResetLastError();
- if ( WebRequest("GET",木_url,NULL,NULL,5000,临_d_url,0,临_r_url,临_h_url) == -1 && GetLastError() == 4060 )   return(true);
+ if ( WebRequest("GET",木_url,NULL,NULL,500,临_d_url,0,临_r_url,临_h_url) == -1 && GetLastError() == 4060 )   return(true);
  return(false);
  }
 //URLThieu <<==--------   --------
