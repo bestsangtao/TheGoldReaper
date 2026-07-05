@@ -432,22 +432,29 @@ bool OrderDelete(long ticket,color arrow_color=clrNONE)
 // OrderTicket/OrderType/OrderLots/...). Ho tro ca vi the dang mo,
 // lenh cho dang mo (pool=MODE_TRADES) va lich su (pool=MODE_HISTORY).
 //====================================================================
-long   g_selOrder_ticket=0;
-string g_selOrder_symbol="";
-int    g_selOrder_type=0;
-double g_selOrder_lots=0.0;
-double g_selOrder_openPrice=0.0;
-double g_selOrder_closePrice=0.0;
-double g_selOrder_sl=0.0;
-double g_selOrder_tp=0.0;
-datetime g_selOrder_openTime=0;
-datetime g_selOrder_closeTime=0;
-datetime g_selOrder_expiration=0;
-double g_selOrder_profit=0.0;
-double g_selOrder_swap=0.0;
-double g_selOrder_commission=0.0;
-string g_selOrder_comment="";
-int    g_selOrder_magic=0;
+// Trang thai "lenh dang chon" kieu MQL4 - gom vao 1 struct cho gon
+// (truoc day la 16 bien toan cu roi g_selOrder.*). OrderSelect() dien
+// vao day; OrderTicket()/OrderLots()/OrderType()/... doc ra tu day.
+struct MT4SelectedOrder
+{
+   long     ticket;
+   string   symbol;
+   int      type;
+   double   lots;
+   double   openPrice;
+   double   closePrice;
+   double   sl;
+   double   tp;
+   datetime openTime;
+   datetime closeTime;
+   datetime expiration;
+   double   profit;
+   double   swap;
+   double   commission;
+   string   comment;
+   int      magic;
+};
+MT4SelectedOrder g_selOrder;
 
 //--- danh sach cache cho pool=MODE_HISTORY (xay tu HistoryDealsTotal) ---
 long     g_hist_ticket[];
@@ -623,42 +630,42 @@ bool OrderSelect(int index_or_ticket,int select,int pool=MODE_TRADES)
       long ticket=(long)index_or_ticket;
       if(PositionSelectByTicket((ulong)ticket))
       {
-         g_selOrder_ticket=ticket;
-         g_selOrder_symbol=PositionGetString(POSITION_SYMBOL);
-         g_selOrder_type=(int)PositionGetInteger(POSITION_TYPE);
-         g_selOrder_lots=PositionGetDouble(POSITION_VOLUME);
-         g_selOrder_openPrice=PositionGetDouble(POSITION_PRICE_OPEN);
-         g_selOrder_closePrice=PositionGetDouble(POSITION_PRICE_CURRENT);
-         g_selOrder_sl=PositionGetDouble(POSITION_SL);
-         g_selOrder_tp=PositionGetDouble(POSITION_TP);
-         g_selOrder_openTime=(datetime)PositionGetInteger(POSITION_TIME);
-         g_selOrder_closeTime=0;
-         g_selOrder_expiration=0;
-         g_selOrder_profit=PositionGetDouble(POSITION_PROFIT);
-         g_selOrder_swap=PositionGetDouble(POSITION_SWAP);
-         g_selOrder_commission=0.0;
-         g_selOrder_comment=PositionGetString(POSITION_COMMENT);
-         g_selOrder_magic=(int)PositionGetInteger(POSITION_MAGIC);
+         g_selOrder.ticket=ticket;
+         g_selOrder.symbol=PositionGetString(POSITION_SYMBOL);
+         g_selOrder.type=(int)PositionGetInteger(POSITION_TYPE);
+         g_selOrder.lots=PositionGetDouble(POSITION_VOLUME);
+         g_selOrder.openPrice=PositionGetDouble(POSITION_PRICE_OPEN);
+         g_selOrder.closePrice=PositionGetDouble(POSITION_PRICE_CURRENT);
+         g_selOrder.sl=PositionGetDouble(POSITION_SL);
+         g_selOrder.tp=PositionGetDouble(POSITION_TP);
+         g_selOrder.openTime=(datetime)PositionGetInteger(POSITION_TIME);
+         g_selOrder.closeTime=0;
+         g_selOrder.expiration=0;
+         g_selOrder.profit=PositionGetDouble(POSITION_PROFIT);
+         g_selOrder.swap=PositionGetDouble(POSITION_SWAP);
+         g_selOrder.commission=0.0;
+         g_selOrder.comment=PositionGetString(POSITION_COMMENT);
+         g_selOrder.magic=(int)PositionGetInteger(POSITION_MAGIC);
          return true;
       }
       if(::OrderSelect((ulong)ticket))
       {
-         g_selOrder_ticket=ticket;
-         g_selOrder_symbol=::OrderGetString(ORDER_SYMBOL);
-         g_selOrder_type=(int)::OrderGetInteger(ORDER_TYPE);
-         g_selOrder_lots=::OrderGetDouble(ORDER_VOLUME_CURRENT);
-         g_selOrder_openPrice=::OrderGetDouble(ORDER_PRICE_OPEN);
-         g_selOrder_closePrice=0.0;
-         g_selOrder_sl=::OrderGetDouble(ORDER_SL);
-         g_selOrder_tp=::OrderGetDouble(ORDER_TP);
-         g_selOrder_openTime=(datetime)::OrderGetInteger(ORDER_TIME_SETUP);
-         g_selOrder_closeTime=0;
-         g_selOrder_expiration=(datetime)::OrderGetInteger(ORDER_TIME_EXPIRATION);
-         g_selOrder_profit=0.0;
-         g_selOrder_swap=0.0;
-         g_selOrder_commission=0.0;
-         g_selOrder_comment=::OrderGetString(ORDER_COMMENT);
-         g_selOrder_magic=(int)::OrderGetInteger(ORDER_MAGIC);
+         g_selOrder.ticket=ticket;
+         g_selOrder.symbol=::OrderGetString(ORDER_SYMBOL);
+         g_selOrder.type=(int)::OrderGetInteger(ORDER_TYPE);
+         g_selOrder.lots=::OrderGetDouble(ORDER_VOLUME_CURRENT);
+         g_selOrder.openPrice=::OrderGetDouble(ORDER_PRICE_OPEN);
+         g_selOrder.closePrice=0.0;
+         g_selOrder.sl=::OrderGetDouble(ORDER_SL);
+         g_selOrder.tp=::OrderGetDouble(ORDER_TP);
+         g_selOrder.openTime=(datetime)::OrderGetInteger(ORDER_TIME_SETUP);
+         g_selOrder.closeTime=0;
+         g_selOrder.expiration=(datetime)::OrderGetInteger(ORDER_TIME_EXPIRATION);
+         g_selOrder.profit=0.0;
+         g_selOrder.swap=0.0;
+         g_selOrder.commission=0.0;
+         g_selOrder.comment=::OrderGetString(ORDER_COMMENT);
+         g_selOrder.magic=(int)::OrderGetInteger(ORDER_MAGIC);
          return true;
       }
       MT4BuildHistoryCache();
@@ -666,22 +673,22 @@ bool OrderSelect(int index_or_ticket,int select,int pool=MODE_TRADES)
       {
          if(g_hist_ticket[i]==ticket)
          {
-            g_selOrder_ticket=g_hist_ticket[i];
-            g_selOrder_symbol=g_hist_symbol[i];
-            g_selOrder_type=g_hist_type[i];
-            g_selOrder_lots=g_hist_lots[i];
-            g_selOrder_openPrice=g_hist_openPrice[i];
-            g_selOrder_closePrice=g_hist_closePrice[i];
-            g_selOrder_sl=0.0;
-            g_selOrder_tp=0.0;
-            g_selOrder_openTime=g_hist_openTime[i];
-            g_selOrder_closeTime=g_hist_closeTime[i];
-            g_selOrder_expiration=0;
-            g_selOrder_profit=g_hist_profit[i];
-            g_selOrder_swap=g_hist_swap[i];
-            g_selOrder_commission=g_hist_commission[i];
-            g_selOrder_comment=g_hist_comment[i];
-            g_selOrder_magic=g_hist_magic[i];
+            g_selOrder.ticket=g_hist_ticket[i];
+            g_selOrder.symbol=g_hist_symbol[i];
+            g_selOrder.type=g_hist_type[i];
+            g_selOrder.lots=g_hist_lots[i];
+            g_selOrder.openPrice=g_hist_openPrice[i];
+            g_selOrder.closePrice=g_hist_closePrice[i];
+            g_selOrder.sl=0.0;
+            g_selOrder.tp=0.0;
+            g_selOrder.openTime=g_hist_openTime[i];
+            g_selOrder.closeTime=g_hist_closeTime[i];
+            g_selOrder.expiration=0;
+            g_selOrder.profit=g_hist_profit[i];
+            g_selOrder.swap=g_hist_swap[i];
+            g_selOrder.commission=g_hist_commission[i];
+            g_selOrder.comment=g_hist_comment[i];
+            g_selOrder.magic=g_hist_magic[i];
             return true;
          }
       }
@@ -694,22 +701,22 @@ bool OrderSelect(int index_or_ticket,int select,int pool=MODE_TRADES)
       MT4BuildHistoryCache();
       if(index_or_ticket<0 || index_or_ticket>=g_hist_count) return false;
       int i=index_or_ticket;
-      g_selOrder_ticket=g_hist_ticket[i];
-      g_selOrder_symbol=g_hist_symbol[i];
-      g_selOrder_type=g_hist_type[i];
-      g_selOrder_lots=g_hist_lots[i];
-      g_selOrder_openPrice=g_hist_openPrice[i];
-      g_selOrder_closePrice=g_hist_closePrice[i];
-      g_selOrder_sl=0.0;
-      g_selOrder_tp=0.0;
-      g_selOrder_openTime=g_hist_openTime[i];
-      g_selOrder_closeTime=g_hist_closeTime[i];
-      g_selOrder_expiration=0;
-      g_selOrder_profit=g_hist_profit[i];
-      g_selOrder_swap=g_hist_swap[i];
-      g_selOrder_commission=g_hist_commission[i];
-      g_selOrder_comment=g_hist_comment[i];
-      g_selOrder_magic=g_hist_magic[i];
+      g_selOrder.ticket=g_hist_ticket[i];
+      g_selOrder.symbol=g_hist_symbol[i];
+      g_selOrder.type=g_hist_type[i];
+      g_selOrder.lots=g_hist_lots[i];
+      g_selOrder.openPrice=g_hist_openPrice[i];
+      g_selOrder.closePrice=g_hist_closePrice[i];
+      g_selOrder.sl=0.0;
+      g_selOrder.tp=0.0;
+      g_selOrder.openTime=g_hist_openTime[i];
+      g_selOrder.closeTime=g_hist_closeTime[i];
+      g_selOrder.expiration=0;
+      g_selOrder.profit=g_hist_profit[i];
+      g_selOrder.swap=g_hist_swap[i];
+      g_selOrder.commission=g_hist_commission[i];
+      g_selOrder.comment=g_hist_comment[i];
+      g_selOrder.magic=g_hist_magic[i];
       return true;
    }
 
@@ -720,22 +727,22 @@ bool OrderSelect(int index_or_ticket,int select,int pool=MODE_TRADES)
    {
       ulong ticket=PositionGetTicket(index_or_ticket);
       if(ticket==0) return false;
-      g_selOrder_ticket=(long)ticket;
-      g_selOrder_symbol=PositionGetString(POSITION_SYMBOL);
-      g_selOrder_type=(int)PositionGetInteger(POSITION_TYPE);
-      g_selOrder_lots=PositionGetDouble(POSITION_VOLUME);
-      g_selOrder_openPrice=PositionGetDouble(POSITION_PRICE_OPEN);
-      g_selOrder_closePrice=PositionGetDouble(POSITION_PRICE_CURRENT);
-      g_selOrder_sl=PositionGetDouble(POSITION_SL);
-      g_selOrder_tp=PositionGetDouble(POSITION_TP);
-      g_selOrder_openTime=(datetime)PositionGetInteger(POSITION_TIME);
-      g_selOrder_closeTime=0;
-      g_selOrder_expiration=0;
-      g_selOrder_profit=PositionGetDouble(POSITION_PROFIT);
-      g_selOrder_swap=PositionGetDouble(POSITION_SWAP);
-      g_selOrder_commission=0.0;
-      g_selOrder_comment=PositionGetString(POSITION_COMMENT);
-      g_selOrder_magic=(int)PositionGetInteger(POSITION_MAGIC);
+      g_selOrder.ticket=(long)ticket;
+      g_selOrder.symbol=PositionGetString(POSITION_SYMBOL);
+      g_selOrder.type=(int)PositionGetInteger(POSITION_TYPE);
+      g_selOrder.lots=PositionGetDouble(POSITION_VOLUME);
+      g_selOrder.openPrice=PositionGetDouble(POSITION_PRICE_OPEN);
+      g_selOrder.closePrice=PositionGetDouble(POSITION_PRICE_CURRENT);
+      g_selOrder.sl=PositionGetDouble(POSITION_SL);
+      g_selOrder.tp=PositionGetDouble(POSITION_TP);
+      g_selOrder.openTime=(datetime)PositionGetInteger(POSITION_TIME);
+      g_selOrder.closeTime=0;
+      g_selOrder.expiration=0;
+      g_selOrder.profit=PositionGetDouble(POSITION_PROFIT);
+      g_selOrder.swap=PositionGetDouble(POSITION_SWAP);
+      g_selOrder.commission=0.0;
+      g_selOrder.comment=PositionGetString(POSITION_COMMENT);
+      g_selOrder.magic=(int)PositionGetInteger(POSITION_MAGIC);
       return true;
    }
    int ordIdx=index_or_ticket-posTotal;
@@ -744,22 +751,22 @@ bool OrderSelect(int index_or_ticket,int select,int pool=MODE_TRADES)
    {
       ulong ticket=::OrderGetTicket(ordIdx);
       if(ticket==0) return false;
-      g_selOrder_ticket=(long)ticket;
-      g_selOrder_symbol=::OrderGetString(ORDER_SYMBOL);
-      g_selOrder_type=(int)::OrderGetInteger(ORDER_TYPE);
-      g_selOrder_lots=::OrderGetDouble(ORDER_VOLUME_CURRENT);
-      g_selOrder_openPrice=::OrderGetDouble(ORDER_PRICE_OPEN);
-      g_selOrder_closePrice=0.0;
-      g_selOrder_sl=::OrderGetDouble(ORDER_SL);
-      g_selOrder_tp=::OrderGetDouble(ORDER_TP);
-      g_selOrder_openTime=(datetime)::OrderGetInteger(ORDER_TIME_SETUP);
-      g_selOrder_closeTime=0;
-      g_selOrder_expiration=(datetime)::OrderGetInteger(ORDER_TIME_EXPIRATION);
-      g_selOrder_profit=0.0;
-      g_selOrder_swap=0.0;
-      g_selOrder_commission=0.0;
-      g_selOrder_comment=::OrderGetString(ORDER_COMMENT);
-      g_selOrder_magic=(int)::OrderGetInteger(ORDER_MAGIC);
+      g_selOrder.ticket=(long)ticket;
+      g_selOrder.symbol=::OrderGetString(ORDER_SYMBOL);
+      g_selOrder.type=(int)::OrderGetInteger(ORDER_TYPE);
+      g_selOrder.lots=::OrderGetDouble(ORDER_VOLUME_CURRENT);
+      g_selOrder.openPrice=::OrderGetDouble(ORDER_PRICE_OPEN);
+      g_selOrder.closePrice=0.0;
+      g_selOrder.sl=::OrderGetDouble(ORDER_SL);
+      g_selOrder.tp=::OrderGetDouble(ORDER_TP);
+      g_selOrder.openTime=(datetime)::OrderGetInteger(ORDER_TIME_SETUP);
+      g_selOrder.closeTime=0;
+      g_selOrder.expiration=(datetime)::OrderGetInteger(ORDER_TIME_EXPIRATION);
+      g_selOrder.profit=0.0;
+      g_selOrder.swap=0.0;
+      g_selOrder.commission=0.0;
+      g_selOrder.comment=::OrderGetString(ORDER_COMMENT);
+      g_selOrder.magic=(int)::OrderGetInteger(ORDER_MAGIC);
       return true;
    }
    return false;
@@ -768,22 +775,22 @@ bool OrderSelect(int index_or_ticket,int select,int pool=MODE_TRADES)
 //====================================================================
 // Cac ham lay thuoc tinh cua "lenh dang chon" kieu MQL4
 //====================================================================
-long   OrderTicket()      { return g_selOrder_ticket;      }
-string OrderSymbol()      { return g_selOrder_symbol;      }
-int    OrderType()        { return g_selOrder_type;        }
-double OrderLots()        { return g_selOrder_lots;        }
-double OrderOpenPrice()   { return g_selOrder_openPrice;   }
-double OrderClosePrice()  { return g_selOrder_closePrice;  }
-double OrderStopLoss()    { return g_selOrder_sl;          }
-double OrderTakeProfit()  { return g_selOrder_tp;          }
-datetime OrderOpenTime()  { return g_selOrder_openTime;    }
-datetime OrderCloseTime() { return g_selOrder_closeTime;   }
-datetime OrderExpiration(){ return g_selOrder_expiration;  }
-double OrderProfit()      { return g_selOrder_profit;      }
-double OrderSwap()        { return g_selOrder_swap;        }
-double OrderCommission()  { return g_selOrder_commission;  }
-string OrderComment()     { return g_selOrder_comment;     }
-int    OrderMagicNumber() { return g_selOrder_magic;       }
+long   OrderTicket()      { return g_selOrder.ticket;      }
+string OrderSymbol()      { return g_selOrder.symbol;      }
+int    OrderType()        { return g_selOrder.type;        }
+double OrderLots()        { return g_selOrder.lots;        }
+double OrderOpenPrice()   { return g_selOrder.openPrice;   }
+double OrderClosePrice()  { return g_selOrder.closePrice;  }
+double OrderStopLoss()    { return g_selOrder.sl;          }
+double OrderTakeProfit()  { return g_selOrder.tp;          }
+datetime OrderOpenTime()  { return g_selOrder.openTime;    }
+datetime OrderCloseTime() { return g_selOrder.closeTime;   }
+datetime OrderExpiration(){ return g_selOrder.expiration;  }
+double OrderProfit()      { return g_selOrder.profit;      }
+double OrderSwap()        { return g_selOrder.swap;        }
+double OrderCommission()  { return g_selOrder.commission;  }
+string OrderComment()     { return g_selOrder.comment;     }
+int    OrderMagicNumber() { return g_selOrder.magic;       }
 
 #endif // __MQL4COMPAT_MQH__
 
