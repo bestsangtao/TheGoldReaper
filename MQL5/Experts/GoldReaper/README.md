@@ -5,11 +5,13 @@ Thu muc nay chua ban MQL5 duoc chuyen doi tu ban goc MQL4
 
 ## Cai dat
 
-1. Copy `MQL5/Include/GoldReaper/MQL4Compat.mqh` vao
-   `<Thu muc du lieu MT5>/MQL5/Include/GoldReaper/MQL4Compat.mqh`
-2. Copy `MQL5/Experts/GoldReaper/GoldReaper_v4.5.mq5` vao
+1. Copy `MQL5/Experts/GoldReaper/GoldReaper_v4.5.mq5` vao
    `<Thu muc du lieu MT5>/MQL5/Experts/GoldReaper/GoldReaper_v4.5.mq5`
-3. Mo MetaEditor, bien dich lai `GoldReaper_v4.5.mq5` (F7).
+2. Mo MetaEditor, bien dich lai `GoldReaper_v4.5.mq5` (F7).
+
+Lop tuong thich MQL4->MQL5 (truoc day la file rieng `MQL4Compat.mqh`)
+da duoc GOP thang vao `GoldReaper_v4.5.mq5` - chi con 1 file .mq5 duy
+nhat, khong can copy file include rieng nua.
 
 ## YEU CAU BAT BUOC: tai khoan Hedging
 
@@ -26,7 +28,7 @@ Tuy chon, hoac hoi broker khi mo tai khoan demo/live).
 
 ## Nhung gi da duoc chuyen doi
 
-Xem chi tiet trong `MQL5/Include/GoldReaper/MQL4Compat.mqh` (comment
+Xem chi tiet trong phan dau file `GoldReaper_v4.5.mq5` (khoi MQL4Compat, comment
 dau file). Tom tat:
 
 - `OrderSend/OrderModify/OrderClose/OrderDelete/OrderSelect`,
