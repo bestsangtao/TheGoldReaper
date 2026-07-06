@@ -509,6 +509,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
   long      g_onlyUpRunId = 0;       // ma rieng cho moi lan chay Strategy Tester, dung de tach biet dinh OnlyUp giua cac lan backtest (xem OnlyUpPeakGVName)
   datetime  g_nfpFFBuiltDay = 0;     // ngay (00:00, GMT) lan gan nhat da thu lam moi tu Forex Factory JSON feed (xem RefreshNFPFromForexFactory)
   datetime  g_nfpFFDate = 0;         // ngay/gio NFP (GMT) da xac nhan that tu Forex Factory cho tuan hien tai; 0 = chua co xac nhan, dong Next NFP se hien "-"
+  int       g_nfpStatus = 0;         // trang thai lay tin NFP cho panel: 0 = binh thuong (dung g_nfpFFDate), 1 = thieu allowed URL (4060), 2 = loi lay tin (mang/parse)
 
 
  int init()
@@ -6557,10 +6558,13 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  string GetNextNFPText()
  {
 //----- -----
- // Chi hien thi khi da co xac nhan THAT tu Forex Factory cho tuan hien tai
- // (xem RefreshNFPFromForexFactory) - khong doan/uoc luong tu mang ma hoa
- // cung nua. Neu tuan nay chua kiem tra, hoac da kiem tra nhung khong co
- // NFP, hoac ngay da qua -> hien "no news coming up" (giong panel v4.3).
+ // Theo trang thai lay tin (g_nfpStatus):
+ //  1 = thieu allowed URL (loi 4060) -> yeu cau them link (tieng Anh)
+ //  2 = loi lay tin (mang/parse)     -> bao loi lay tin
+ // Neu binh thuong (0) thi giu nguyen nhu cu: co NFP -> "Next NFP: ...";
+ // khong co / chua co -> "No News Coming Up".
+ if ( g_nfpStatus == 1 )   return("NFP: add URL to allowed list");
+ if ( g_nfpStatus == 2 )   return("NFP: news fetch error");
  if ( g_nfpFFDate > 0 && g_nfpFFDate >= 总_390_da_5DC0 )
  {
    return("Next NFP: " + TimeToString(g_nfpFFDate + 总_395_in_6760 * 3600,TIME_DATE|TIME_SECONDS));
@@ -6612,21 +6616,27 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
    // 1 lan). Chi khi loi 4060 (URL chua add allowlist), khong bao nham khi loi mang.
    if ( 临_nfpErr == 4060 )
    {
+     g_nfpStatus = 1 ; // thieu allowed URL -> panel yeu cau them link
      MessageBox("Add the address \'https://nfs.faireconomy.media/\' in the list of allowed URLs on tab \'Expert Advisors\'","Error",64);
    }
-   return; // loi mang: giu nguyen gia tri cu
+   else
+   {
+     g_nfpStatus = 2 ; // loi mang khac -> panel bao loi lay tin
+   }
+   return; // loi: giu nguyen gia tri cu
  }
  临_json = CharArrayToString(临_result,0,0,0) ;
  临_pos = StringFind(临_json,"\"title\":\"Non-Farm Employment Change\"",0) ;
  if ( 临_pos < 0 )
  {
+   g_nfpStatus = 0 ; // lay tin thanh cong, xac nhan tuan nay khong co NFP
    g_nfpFFDate = 0 ; // da kiem tra thanh cong, xac nhan tuan nay khong co NFP -> xoa hien thi
    return;
  }
  临_datePos = StringFind(临_json,"\"date\":\"",临_pos) ;
- if ( 临_datePos < 0 )   return; // du lieu bat thuong, giu nguyen gia tri cu de an toan
+ if ( 临_datePos < 0 )   { g_nfpStatus = 2 ; return; } // du lieu bat thuong -> loi lay tin
  临_iso = StringSubstr(临_json,临_datePos + 8,25) ;
- if ( StringLen(临_iso) < 25 )   return;
+ if ( StringLen(临_iso) < 25 )   { g_nfpStatus = 2 ; return; } // du lieu bat thuong -> loi lay tin
  临_year = (int)StringSubstr(临_iso,0,4) ;
  临_month = (int)StringSubstr(临_iso,5,2) ;
  临_day = (int)StringSubstr(临_iso,8,2) ;
@@ -6638,6 +6648,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  临_local = StringToTime(IntegerToString(临_year,0,32) + "." + IntegerToString(临_month,0,32) + "." + IntegerToString(临_day,0,32) + " " + IntegerToString(临_hour,0,32) + ":" + IntegerToString(临_minute,0,32)) ;
  临_offsetSec = (临_tzSign == "-" ? -1 : 1) * (临_tzH * 3600 + 临_tzM * 60) ;
  g_nfpFFDate = 临_local - 临_offsetSec ;
+ g_nfpStatus = 0 ; // lay tin thanh cong, co NFP tuan nay -> panel hien "Next NFP"
  }
 //RefreshNFPFromForexFactory <<==--------   --------
  void lizong_27()

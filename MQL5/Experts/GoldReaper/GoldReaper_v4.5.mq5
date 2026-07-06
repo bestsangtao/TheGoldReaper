@@ -1298,6 +1298,7 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
   double    总_402_do_6AD8 = 0.0;
   bool      g_nfpFromCalendar = false;      // true neu 总_391_da_5DFC_si300[] dang lay tu Lich MQL5 (khong con dung mang hardcode)
   datetime  g_nfpCalendarBuiltDay = 0;      // ngay (00:00, GMT) lan gan nhat da thu lam moi tu Lich MQL5
+  int       g_nfpStatus = 0;                // trang thai lay tin NFP cho panel: 0 = binh thuong (dung 总_391_da_5DFC_si300[]), 2 = loi lay tin (Lich MQL5 khong doc duoc). mq5 dung Lich (khong co link) nen khong co trang thai thieu link (=1)
   long      g_onlyUpRunId = 0;              // ma rieng cho moi lan chay Strategy Tester, dung de tach biet dinh OnlyUp giua cac lan backtest (xem OnlyUpPeakGVName)
 
 //+------------------------------------------------------------------+
@@ -1316,7 +1317,7 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
   int       临_i;
   string    临_code;
 //----- -----
- if ( 临_evTotal <= 0 )   return;
+ if ( 临_evTotal <= 0 )   { g_nfpStatus = 2 ; return; } // Lich MQL5 khong doc duoc -> panel bao loi lay tin
  for (临_i = 0 ; 临_i < 临_evTotal ; 临_i ++)
  {
    // MqlCalendarEvent.name tra ve theo NGON NGU CUA TERMINAL (tai lieu MQL5)
@@ -1332,12 +1333,12 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
      break;
    }
  }
- if ( 临_nfpId < 0 )   return;
+ if ( 临_nfpId < 0 )   { g_nfpStatus = 2 ; return; } // khong tim thay su kien NFP trong Lich -> loi lay tin
  MqlCalendarValue 临_values[];
  datetime  临_from = D'2007.01.01 00:00';
  datetime  临_to = TimeCurrent() + 400 * 24 * 60 * 60 ;
  int       临_n = CalendarValueHistoryByEvent((ulong)临_nfpId,临_values,临_from,临_to) ;
- if ( 临_n <= 0 )   return;
+ if ( 临_n <= 0 )   { g_nfpStatus = 2 ; return; } // khong lay duoc gia tri lich NFP -> loi lay tin
  // 总_390_da_5DC0 (GMT hien tai) da duoc tinh xong truoc khi ham nay duoc goi (xem
  // OnTick). MqlCalendarValue.time tra ve theo GIO SERVER, trong khi
  // 总_391_da_5DFC_si300[] va toan bo bo loc NFP con lai dang quy uoc luu GIO GMT roi
@@ -1353,9 +1354,10 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
    总_391_da_5DFC_si300[临_count] = (datetime)(临_values[临_i].time - 临_offsetSeconds) ;
    临_count ++;
  }
- if ( 临_count <= 0 )   return;
+ if ( 临_count <= 0 )   { g_nfpStatus = 0 ; return; } // lay tin OK nhung khong co ngay hop le -> "No News Coming Up"
  for (临_i = 临_count ; 临_i < 300 ; 临_i ++)   总_391_da_5DFC_si300[临_i] = 0 ;
  g_nfpFromCalendar = true ;
+ g_nfpStatus = 0 ; // lay Lich thanh cong -> panel hien binh thuong (Next NFP / No News)
  }
 //BuildNFPDatesFromCalendar <<==--------   --------
 
@@ -7418,6 +7420,10 @@ g_startLots_rw=StartLots;
   datetime  临_da_best = 0;
   int       临_in_i;
 //----- -----
+ // Theo trang thai lay tin (g_nfpStatus): 2 = Lich MQL5 khong doc duoc -> bao
+ // loi lay tin. mq5 dung Lich (khong co link) nen khong co trang thai thieu
+ // link. Binh thuong (0): co NFP -> "Next NFP: ..."; khong co -> "No News".
+ if ( g_nfpStatus == 2 )   return("NFP: news fetch error");
  for (临_in_i = 0 ; 临_in_i < 300 ; 临_in_i ++)
  {
    if ( 总_391_da_5DFC_si300[临_in_i] <= 0 )   continue;
