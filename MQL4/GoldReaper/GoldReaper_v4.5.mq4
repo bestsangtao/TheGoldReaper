@@ -9498,7 +9498,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
    // "URL khong nam trong danh sach cho phep", tra ve tuc thi khong ton mang).
    // Thieu 1 -> hien 1 link; thieu ca 2 -> gop ca 2 trong CUNG 1 thong bao.
    // Chi nhac faireconomy khi EnableNFP_Filter dang bat (link do moi duoc dung).
-   // Giu nguyen cau MessageBox goc. Dung chung co g_urlDaCanhBao voi diem NFP.
+   // Giu nguyen cau MessageBox goc.
    // Bung moi lan WebRequest that bai (spam giong ban goc, KHONG cap 1 lan).
    // Van chi liet ke link con thieu (loi 4060); thieu 1 -> 1 link, thieu ca 2
    // -> gop 2 trong 1 thong bao. Chi nhac faireconomy khi EnableNFP_Filter bat.
