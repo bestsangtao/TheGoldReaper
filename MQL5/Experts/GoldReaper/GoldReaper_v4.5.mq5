@@ -1299,7 +1299,6 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
   bool      g_nfpFromCalendar = false;      // true neu 总_391_da_5DFC_si300[] dang lay tu Lich MQL5 (khong con dung mang hardcode)
   datetime  g_nfpCalendarBuiltDay = 0;      // ngay (00:00, GMT) lan gan nhat da thu lam moi tu Lich MQL5
   int       g_nfpStatus = 0;                // trang thai lay tin NFP cho panel: 0 = binh thuong (dung 总_391_da_5DFC_si300[]), 2 = loi lay tin (Lich MQL5 khong doc duoc). mq5 dung Lich (khong co link) nen khong co trang thai thieu link (=1)
-  datetime  g_nfpRetryAfter = 0;            // thoi diem som nhat duoc thu doc Lich NFP lai sau khi loi: cu 5 phut thu lai 1 lan cho toi khi thanh cong
   long      g_onlyUpRunId = 0;              // ma rieng cho moi lan chay Strategy Tester, dung de tach biet dinh OnlyUp giua cac lan backtest (xem OnlyUpPeakGVName)
 
 //+------------------------------------------------------------------+
@@ -1311,15 +1310,14 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
 //+------------------------------------------------------------------+
  void BuildNFPDatesFromCalendar()
  {
-  // KHONG danh dau "da lay hom nay" o dau ham: chi danh dau khi doc Lich THANH
-  // CONG de khoa toi mai; con loi thi de gate mo, hen thu lai sau 5 phut.
+  g_nfpCalendarBuiltDay = (datetime)(TimeCurrent() - TimeCurrent() % 86400) ;
   MqlCalendarEvent 临_events[];
   int       临_evTotal = CalendarEventByCountry("US",临_events) ;
   long      临_nfpId = -1;
   int       临_i;
   string    临_code;
 //----- -----
- if ( 临_evTotal <= 0 )   { g_nfpStatus = 2 ; g_nfpRetryAfter = TimeCurrent() + 300 ; return; } // Lich khong doc duoc -> loi lay tin, thu lai sau 5 phut
+ if ( 临_evTotal <= 0 )   { g_nfpStatus = 2 ; return; } // Lich MQL5 khong doc duoc -> panel bao loi lay tin
  for (临_i = 0 ; 临_i < 临_evTotal ; 临_i ++)
  {
    // MqlCalendarEvent.name tra ve theo NGON NGU CUA TERMINAL (tai lieu MQL5)
@@ -1335,12 +1333,12 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
      break;
    }
  }
- if ( 临_nfpId < 0 )   { g_nfpStatus = 2 ; g_nfpRetryAfter = TimeCurrent() + 300 ; return; } // khong thay su kien NFP -> loi lay tin, thu lai sau 5 phut
+ if ( 临_nfpId < 0 )   { g_nfpStatus = 2 ; return; } // khong tim thay su kien NFP trong Lich -> loi lay tin
  MqlCalendarValue 临_values[];
  datetime  临_from = D'2007.01.01 00:00';
  datetime  临_to = TimeCurrent() + 400 * 24 * 60 * 60 ;
  int       临_n = CalendarValueHistoryByEvent((ulong)临_nfpId,临_values,临_from,临_to) ;
- if ( 临_n <= 0 )   { g_nfpStatus = 2 ; g_nfpRetryAfter = TimeCurrent() + 300 ; return; } // khong lay duoc gia tri lich NFP -> loi lay tin, thu lai sau 5 phut
+ if ( 临_n <= 0 )   { g_nfpStatus = 2 ; return; } // khong lay duoc gia tri lich NFP -> loi lay tin
  // 总_390_da_5DC0 (GMT hien tai) da duoc tinh xong truoc khi ham nay duoc goi (xem
  // OnTick). MqlCalendarValue.time tra ve theo GIO SERVER, trong khi
  // 总_391_da_5DFC_si300[] va toan bo bo loc NFP con lai dang quy uoc luu GIO GMT roi
@@ -1356,11 +1354,10 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
    总_391_da_5DFC_si300[临_count] = (datetime)(临_values[临_i].time - 临_offsetSeconds) ;
    临_count ++;
  }
- if ( 临_count <= 0 )   { g_nfpStatus = 0 ; g_nfpCalendarBuiltDay = (datetime)(TimeCurrent() - TimeCurrent() % 86400) ; return; } // OK nhung khong co ngay hop le -> "No News", khoa toi mai
+ if ( 临_count <= 0 )   { g_nfpStatus = 0 ; return; } // lay tin OK nhung khong co ngay hop le -> "No News Coming Up"
  for (临_i = 临_count ; 临_i < 300 ; 临_i ++)   总_391_da_5DFC_si300[临_i] = 0 ;
  g_nfpFromCalendar = true ;
  g_nfpStatus = 0 ; // lay Lich thanh cong -> panel hien binh thuong (Next NFP / No News)
- g_nfpCalendarBuiltDay = (datetime)(TimeCurrent() - TimeCurrent() % 86400) ; // thanh cong -> khoa toi mai
  }
 //BuildNFPDatesFromCalendar <<==--------   --------
 
@@ -2297,10 +2294,7 @@ g_startLots_rw=StartLots;
  // lam moi tu Lich MQL5 khi dang chay live/demo that; kiem thu nguoc luon dung mang
  // 总_391_da_5DFC_si300[] ma hoa cung ben tren (da cap nhat toi het nam 2026) de dam
  // bao ket qua backtest 100% xac dinh, lap lai duoc.
- // Doc 1 lan/ngay khi thanh cong (g_nfpCalendarBuiltDay = hom nay dong gate toi
- // mai). Neu loi thi g_nfpCalendarBuiltDay KHONG duoc dat -> gate van mo, nhung
- // g_nfpRetryAfter chan lai 5 phut de thu doc Lich lai (khong spam moi tick).
- if ( EnableNFP_Filter && UseMQL5Calendar && MQLInfoInteger(MQL_TESTER) != 1 && TimeCurrent() - TimeCurrent() % 86400 > g_nfpCalendarBuiltDay && TimeCurrent() >= g_nfpRetryAfter )
+ if ( EnableNFP_Filter && UseMQL5Calendar && MQLInfoInteger(MQL_TESTER) != 1 && TimeCurrent() - TimeCurrent() % 86400 > g_nfpCalendarBuiltDay )
  {
    BuildNFPDatesFromCalendar();
  }
