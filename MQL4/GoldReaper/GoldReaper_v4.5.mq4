@@ -510,6 +510,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
   datetime  g_nfpFFBuiltDay = 0;     // ngay (00:00, GMT) lan gan nhat da thu lam moi tu Forex Factory JSON feed (xem RefreshNFPFromForexFactory)
   datetime  g_nfpFFDate = 0;         // ngay/gio NFP (GMT) da xac nhan that tu Forex Factory cho tuan hien tai; 0 = chua co xac nhan, dong Next NFP se hien "-"
   int       g_nfpStatus = 0;         // trang thai lay tin NFP cho panel: 0 = binh thuong (dung g_nfpFFDate), 1 = thieu allowed URL (4060), 2 = loi lay tin (mang/parse)
+  datetime  g_nfpRetryAfter = 0;     // thoi diem som nhat duoc thu lay tin NFP lai sau khi loi server (mang/parse): cu 5 phut thu lai 1 lan cho toi khi thanh cong (KHONG ap dung cho loi 4060 thieu URL)
 
 
  int init()
@@ -1433,7 +1434,10 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  }
  // Lam moi 1 lan/ngay tu Forex Factory (xem RefreshNFPFromForexFactory), chi khi
  // dang chay live/demo that de ket qua backtest luon dung mang cung, on dinh.
- if ( EnableNFP_Filter && MQLInfoInteger(MQL_TESTER) != 1 && TimeCurrent() - TimeCurrent() % 86400 > g_nfpFFBuiltDay )
+ // Lay 1 lan/ngay khi thanh cong (g_nfpFFBuiltDay = hom nay se dong gate toi mai).
+ // Neu loi server thi g_nfpFFBuiltDay KHONG duoc dat -> gate van mo, nhung
+ // g_nfpRetryAfter chan lai 5 phut de thu lai (khong spam moi tick).
+ if ( EnableNFP_Filter && MQLInfoInteger(MQL_TESTER) != 1 && TimeCurrent() - TimeCurrent() % 86400 > g_nfpFFBuiltDay && TimeCurrent() >= g_nfpRetryAfter )
  {
    RefreshNFPFromForexFactory();
  }
@@ -6605,23 +6609,27 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
   datetime  临_local;
   int       临_offsetSec;
 //----- -----
- g_nfpFFBuiltDay = TimeCurrent() - TimeCurrent() % 86400 ;
+ // KHONG danh dau "da lay hom nay" o dau ham nua: chi danh dau khi lay THANH
+ // CONG (hoac loi 4060) de khoa toi mai; con loi server thi de gate mo cho
+ // lan thu lai. ResetLastError truoc khi goi de doc dung ma loi.
  ResetLastError();
  if ( WebRequest("GET","https://nfs.faireconomy.media/ff_calendar_thisweek.json",NULL,NULL,5000,临_data,0,临_result,临_headers) == -1 )
  {
    int 临_nfpErr = GetLastError();
    Print("Error when reading Forex Factory NFP URL. Error code  =",临_nfpErr);
-   // Thieu link NFP (faireconomy) -> canh bao dung link do (cung cau MessageBox
-   // goc). Bung moi lan WebRequest NFP that bai (spam giong ban goc, khong cap
-   // 1 lan). Chi khi loi 4060 (URL chua add allowlist), khong bao nham khi loi mang.
+   // Chi khi loi 4060 (URL chua add allowlist) -> canh bao them link, va GIU
+   // NGUYEN: khoa toi mai, KHONG thu lai. Con loi server (mang/tra ve loi) ->
+   // KHONG khoa ca ngay, hen thu lai sau 5 phut (300s) cho toi khi thanh cong.
    if ( 临_nfpErr == 4060 )
    {
      g_nfpStatus = 1 ; // thieu allowed URL -> panel yeu cau them link
+     g_nfpFFBuiltDay = TimeCurrent() - TimeCurrent() % 86400 ; // giu nguyen: khoa toi mai
      MessageBox("Add the address \'https://nfs.faireconomy.media/\' in the list of allowed URLs on tab \'Expert Advisors\'","Error",64);
    }
    else
    {
-     g_nfpStatus = 2 ; // loi mang khac -> panel bao loi lay tin
+     g_nfpStatus = 2 ; // loi server -> panel bao loi lay tin
+     g_nfpRetryAfter = TimeCurrent() + 300 ; // thu lai sau 5 phut
    }
    return; // loi: giu nguyen gia tri cu
  }
@@ -6631,12 +6639,13 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  {
    g_nfpStatus = 0 ; // lay tin thanh cong, xac nhan tuan nay khong co NFP
    g_nfpFFDate = 0 ; // da kiem tra thanh cong, xac nhan tuan nay khong co NFP -> xoa hien thi
+   g_nfpFFBuiltDay = TimeCurrent() - TimeCurrent() % 86400 ; // thanh cong -> khoa toi mai
    return;
  }
  临_datePos = StringFind(临_json,"\"date\":\"",临_pos) ;
- if ( 临_datePos < 0 )   { g_nfpStatus = 2 ; return; } // du lieu bat thuong -> loi lay tin
+ if ( 临_datePos < 0 )   { g_nfpStatus = 2 ; g_nfpRetryAfter = TimeCurrent() + 300 ; return; } // du lieu bat thuong -> loi lay tin, thu lai sau 5 phut
  临_iso = StringSubstr(临_json,临_datePos + 8,25) ;
- if ( StringLen(临_iso) < 25 )   { g_nfpStatus = 2 ; return; } // du lieu bat thuong -> loi lay tin
+ if ( StringLen(临_iso) < 25 )   { g_nfpStatus = 2 ; g_nfpRetryAfter = TimeCurrent() + 300 ; return; } // du lieu bat thuong -> loi lay tin, thu lai sau 5 phut
  临_year = (int)StringSubstr(临_iso,0,4) ;
  临_month = (int)StringSubstr(临_iso,5,2) ;
  临_day = (int)StringSubstr(临_iso,8,2) ;
@@ -6649,6 +6658,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  临_offsetSec = (临_tzSign == "-" ? -1 : 1) * (临_tzH * 3600 + 临_tzM * 60) ;
  g_nfpFFDate = 临_local - 临_offsetSec ;
  g_nfpStatus = 0 ; // lay tin thanh cong, co NFP tuan nay -> panel hien "Next NFP"
+ g_nfpFFBuiltDay = TimeCurrent() - TimeCurrent() % 86400 ; // thanh cong -> khoa toi mai
  }
 //RefreshNFPFromForexFactory <<==--------   --------
  void lizong_27()
