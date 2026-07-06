@@ -509,7 +509,6 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
   long      g_onlyUpRunId = 0;       // ma rieng cho moi lan chay Strategy Tester, dung de tach biet dinh OnlyUp giua cac lan backtest (xem OnlyUpPeakGVName)
   datetime  g_nfpFFBuiltDay = 0;     // ngay (00:00, GMT) lan gan nhat da thu lam moi tu Forex Factory JSON feed (xem RefreshNFPFromForexFactory)
   datetime  g_nfpFFDate = 0;         // ngay/gio NFP (GMT) da xac nhan that tu Forex Factory cho tuan hien tai; 0 = chua co xac nhan, dong Next NFP se hien "-"
-  bool      g_urlDaCanhBao = false;  // da hien canh bao thieu allowed URL chua (1 lan/phien; dung chung cho ca diem GMT va diem NFP de thieu ca 2 chi gop 1 thong bao)
 
 
  int init()
@@ -6609,13 +6608,11 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
    int 临_nfpErr = GetLastError();
    Print("Error when reading Forex Factory NFP URL. Error code  =",临_nfpErr);
    // Thieu link NFP (faireconomy) -> canh bao dung link do (cung cau MessageBox
-   // goc). Chi khi loi 4060 (URL chua add allowlist), khong bao nham khi loi
-   // mang. Dung chung co g_urlDaCanhBao: neu diem GMT da gop ca 2 link roi thi
-   // bo qua o day de khong hien 2 lan.
-   if ( !g_urlDaCanhBao && 临_nfpErr == 4060 )
+   // goc). Bung moi lan WebRequest NFP that bai (spam giong ban goc, khong cap
+   // 1 lan). Chi khi loi 4060 (URL chua add allowlist), khong bao nham khi loi mang.
+   if ( 临_nfpErr == 4060 )
    {
      MessageBox("Add the address \'https://nfs.faireconomy.media/\' in the list of allowed URLs on tab \'Expert Advisors\'","Error",64);
-     g_urlDaCanhBao = true ;
    }
    return; // loi mang: giu nguyen gia tri cu
  }
@@ -9502,29 +9499,25 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
    // Thieu 1 -> hien 1 link; thieu ca 2 -> gop ca 2 trong CUNG 1 thong bao.
    // Chi nhac faireconomy khi EnableNFP_Filter dang bat (link do moi duoc dung).
    // Giu nguyen cau MessageBox goc. Dung chung co g_urlDaCanhBao voi diem NFP.
-   if ( !g_urlDaCanhBao )
+   // Bung moi lan WebRequest that bai (spam giong ban goc, KHONG cap 1 lan).
+   // Van chi liet ke link con thieu (loi 4060); thieu 1 -> 1 link, thieu ca 2
+   // -> gop 2 trong 1 thong bao. Chi nhac faireconomy khi EnableNFP_Filter bat.
+   string   临_urlMiss = "";
+   if ( 临_urlErr == 4060 )   临_urlMiss = "\'https://www.worldtimeserver.com/\'";
+   if ( EnableNFP_Filter )
    {
-     string   临_urlMiss = "";
-     if ( 临_urlErr == 4060 )   临_urlMiss = "\'https://www.worldtimeserver.com/\'";
-     if ( EnableNFP_Filter )
+     char     临_ffData[];
+     char     临_ffResult[];
+     string   临_ffHdr;
+     ResetLastError();
+     WebRequest("GET","https://nfs.faireconomy.media/ff_calendar_thisweek.json",NULL,NULL,10000,临_ffData,0,临_ffResult,临_ffHdr);
+     if ( GetLastError() == 4060 )
      {
-       char     临_ffData[];
-       char     临_ffResult[];
-       string   临_ffHdr;
-       ResetLastError();
-       WebRequest("GET","https://nfs.faireconomy.media/ff_calendar_thisweek.json",NULL,NULL,10000,临_ffData,0,临_ffResult,临_ffHdr);
-       if ( GetLastError() == 4060 )
-       {
-         if ( 临_urlMiss != "" )   临_urlMiss = 临_urlMiss + " and ";
-         临_urlMiss = 临_urlMiss + "\'https://nfs.faireconomy.media/\'";
-       }
-     }
-     if ( 临_urlMiss != "" )
-     {
-       MessageBox("Add the address " + 临_urlMiss + " in the list of allowed URLs on tab \'Expert Advisors\'","Error",64);
-       g_urlDaCanhBao = true ;
+       if ( 临_urlMiss != "" )   临_urlMiss = 临_urlMiss + " and ";
+       临_urlMiss = 临_urlMiss + "\'https://nfs.faireconomy.media/\'";
      }
    }
+   if ( 临_urlMiss != "" )   MessageBox("Add the address " + 临_urlMiss + " in the list of allowed URLs on tab \'Expert Advisors\'","Error",64);
    临_st_2 = "999";
  }
  else
