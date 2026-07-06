@@ -9484,8 +9484,28 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  ResetLastError();
  if ( WebRequest("GET","https://www.worldtimeserver.com/time-zones/utc/",NULL,NULL,10000,子_7_ch_ko,0,子_8_ch_ko,临_st_1) == -1 )
  {
-   Print("Error when reading GMT URL. Error code  =",GetLastError());
-   MessageBox("Add the address \'https://www.worldtimeserver.com/\' and \'https://nfs.faireconomy.media/\' in the list of allowed URLs on tab \'Expert Advisors\'","Error",64);
+   int      临_urlErr = GetLastError();
+   Print("Error when reading GMT URL. Error code  =",临_urlErr);
+   // Chi liet ke link nao that su CHUA duoc add vao allowlist (loi 4060 =
+   // "URL khong nam trong danh sach cho phep", tra ve tuc thi khong ton mang).
+   // Thieu 1 link -> hien 1 link; thieu ca 2 -> hien ca 2 trong cung 1 thong
+   // bao. Cach thong bao giu nguyen (van MessageBox, van hien khi GMT fail).
+   string   临_urlMiss = "";
+   if ( 临_urlErr == 4060 )   临_urlMiss = "\'https://www.worldtimeserver.com/\'";
+   char     临_ffData[];
+   char     临_ffResult[];
+   string   临_ffHdr;
+   ResetLastError();
+   WebRequest("GET","https://nfs.faireconomy.media/ff_calendar_thisweek.json",NULL,NULL,10000,临_ffData,0,临_ffResult,临_ffHdr);
+   if ( GetLastError() == 4060 )
+   {
+     if ( 临_urlMiss != "" )   临_urlMiss = 临_urlMiss + " and ";
+     临_urlMiss = 临_urlMiss + "\'https://nfs.faireconomy.media/\'";
+   }
+   // Neu khong link nao bao 4060 (vd loi mang thuan tuy) -> giu nguyen thong
+   // bao goc liet ke ca 2 link de khong doi hanh vi mac dinh.
+   if ( 临_urlMiss == "" )   临_urlMiss = "\'https://www.worldtimeserver.com/\' and \'https://nfs.faireconomy.media/\'";
+   MessageBox("Add the address " + 临_urlMiss + " in the list of allowed URLs on tab \'Expert Advisors\'","Error",64);
    临_st_2 = "999";
  }
  else
