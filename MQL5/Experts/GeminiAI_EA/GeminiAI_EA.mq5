@@ -24,6 +24,7 @@
 #include <GeminiAI/MarketSnapshot.mqh>
 #include <GeminiAI/TradeManager.mqh>
 #include <GeminiAI/MomentumGate.mqh>
+#include <GeminiAI/WatchPlan.mqh>
 #include <GeminiAI/StrategyBase.mqh>
 #include <GeminiAI/Strategies/Strategy01_TrendEMA.mqh>
 #include <GeminiAI/Strategies/Strategy02_BollingerRSI.mqh>
@@ -61,6 +62,10 @@ input double           InpMomentumMinDeviation = 0.05;                // Min |Mo
 input group "=== AI Conversation Memory ==="
 input int              InpEntryMemoryTurns  = 3;                      // Entry: recent decisions each strategy remembers (0 = stateless)
 input int              InpManageMemoryTurns = 6;                      // Manage: checkpoints each open position remembers (0 = stateless)
+
+input group "=== Real-Time Watch Plans ==="
+input bool             InpEnableWatchPlans  = true;                   // Let the AI arm a WATCH plan and enter in real time when price reaches the zone
+input int              InpWatchDefaultExpiryMin = 240;                // Watch-plan lifetime if the AI does not set expiry_minutes
 input int              InpManageSnapshotBars= 60;                    // OHLC bars sent with each management call
 
 input group "=== Multi-Timeframe Filter (shared by all strategies) ==="
@@ -171,6 +176,7 @@ input int               InpS10_Bars      = 120;
 CGeminiClient     g_gemini;
 CTradeManager     g_tradeMgr;
 CMomentumGate     g_momentumGate;
+CWatchPlanManager g_watchPlans;
 CStrategyBase    *g_strategies[];
 
 //+------------------------------------------------------------------+
@@ -207,6 +213,7 @@ int OnInit()
    g_tradeMgr.Init(InpSlippagePoints);
    g_momentumGate.Init(InpMomentumStartATR, InpMomentumStepATR, InpManageCooldownSec, InpManageSnapshotBars,
                        InpMomentumPeriod, InpMomentumMinDeviation, InpManageMemoryTurns);
+   g_watchPlans.Init(InpWatchDefaultExpiryMin);
 
    ArrayResize(g_strategies, 0);
 
@@ -356,20 +363,54 @@ void HandleStrategySignal(CStrategyBase *strat, const string &indicatorsJson, co
                                               strat.HigherTimeframe(), strat.HtfBars());
 
    SEntryDecision dec;
-   if(!g_gemini.RequestEntryDecision(strat.Id(), strat.Name(), conditionNote, marketJson, dec, strat.EntryConvo()))
+   if(!g_gemini.RequestEntryDecision(strat.Id(), strat.Name(), conditionNote, marketJson, dec, strat.EntryConvo(), InpEnableWatchPlans))
       return;
 
-   Print("[", strat.Name(), "] Gemini => action=", dec.action, " type=", dec.orderType,
+   Print("[", strat.Name(), "] Gemini => mode=", dec.decisionMode, " action=", dec.action, " type=", dec.orderType,
          " entry=", dec.entryPrice, " sl=", dec.stopLoss, " tp=", dec.takeProfit,
          " conf=", dec.confidence, " reason=", dec.reason);
 
-   if(dec.action == "NONE")
+   if(dec.decisionMode == "NONE" || dec.action == "NONE")
       return;
    if(dec.confidence < InpMinConfidence)
      {
       Print("[", strat.Name(), "] confidence ", dec.confidence, " below threshold ", InpMinConfidence, " - skipping");
       return;
      }
+
+   //--- WATCH: arm a real-time plan instead of entering now; ProcessAll() watches it every tick
+   if(dec.decisionMode == "WATCH")
+     {
+      if(dec.watchEntryLow <= 0 || dec.watchEntryHigh <= 0 || dec.watchEntryHigh < dec.watchEntryLow)
+        {
+         Print("[", strat.Name(), "] WATCH plan has an invalid entry zone - ignoring");
+         return;
+        }
+      SWatchPlan plan;
+      plan.strategyId        = strat.Id();
+      plan.magic             = strat.Magic();
+      plan.strategyName      = strat.Name();
+      plan.symbol            = strat.Symbol();
+      plan.tf                = strat.Timeframe();
+      plan.higherTf          = strat.HigherTimeframe();
+      plan.htfEmaFastPeriod  = strat.HtfEmaFastPeriod();
+      plan.htfEmaSlowPeriod  = strat.HtfEmaSlowPeriod();
+      plan.isBuy             = (dec.action == "BUY");
+      plan.entryLow          = dec.watchEntryLow;
+      plan.entryHigh         = dec.watchEntryHigh;
+      plan.invalidatePrice   = dec.invalidatePrice;
+      plan.stopLoss          = dec.stopLoss;
+      plan.takeProfit        = dec.takeProfit;
+      int expiryMin          = dec.expiryMinutes > 0 ? dec.expiryMinutes : InpWatchDefaultExpiryMin;
+      plan.expiry            = (expiryMin > 0) ? (TimeCurrent() + expiryMin * 60) : 0;
+      plan.confidence        = dec.confidence;
+      plan.reason            = dec.reason;
+      plan.createdAt         = TimeCurrent();
+      g_watchPlans.AddOrReplace(plan);
+      return;
+     }
+
+   //--- ENTER_NOW
    if(CountOurOpenPositions() >= InpMaxTotalPositions)
      {
       Print("[GeminiAI_EA] max total positions (", InpMaxTotalPositions, ") reached - skipping new entry");
@@ -385,6 +426,9 @@ void HandleStrategySignal(CStrategyBase *strat, const string &indicatorsJson, co
 void ProcessAll()
   {
    g_momentumGate.Update(g_gemini, g_tradeMgr);
+
+   //--- watch armed plans in real time (cheap, local; enters/cancels without an API call)
+   g_watchPlans.Update(g_tradeMgr, InpFixedLot, InpRiskPercent, CountOurOpenPositions(), InpMaxTotalPositions);
 
    for(int i = 0; i < ArraySize(g_strategies); i++)
      {

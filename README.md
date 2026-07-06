@@ -27,13 +27,18 @@ Build JSON: OHLC + full indicator basket for the WORKING timeframe
         |
         v
 Ask Gemini (instructed to cross-check both timeframes) ->
-  { action, order_type, entry_price, stop_loss, take_profit, confidence, reason }
+  { decision_mode, action, entry/zone, stop_loss, take_profit, confidence, reason }
+        |
+        +--> decision_mode = ENTER_NOW: validate vs broker stops, size lot, send order
+        |
+        +--> decision_mode = WATCH: arm a real-time plan (entry zone + invalidation
+        |      + expiry). The EA then watches price EVERY TICK, like a human with an
+        |      alert set, and enters with a market order the moment price reaches the
+        |      zone - or cancels if price hits invalidation / the higher-TF trend flips
+        |      / the plan expires. No extra API call happens at the trigger moment.
         |
         v
-Validate against broker stop/freeze levels, size the lot, send the order
-        |
-        v
-Position opens (market fill or pending order triggered)
+Position opens (market fill, pending order triggered, or watch-plan trigger)
         |
         v
 Momentum Gate re-checks every tick per open position:
@@ -77,6 +82,38 @@ To keep token cost bounded, history stores the model's past replies in full but
 only a **compact summary** of each past request (not the full OHLC snapshot);
 the current turn always carries the complete multi-timeframe data. Set either
 input to `0` to return to fully stateless calls (useful for A/B comparison).
+
+## Real-time Watch Plans (waiting for entry like a human)
+
+A human trader rarely enters the instant a signal appears — they analyse the
+chart, decide "I'll buy on a pullback to this level", set an alert, and **watch
+price in real time**, entering when it arrives (or walking away if the setup
+breaks first). The EA can do the same without hammering the API.
+
+The AI cannot be called every tick — `WebRequest` is blocking and would exhaust
+quota — and evaluating indicators mid-candle "repaints" (signals flicker and
+vanish by bar close). So the split is: **the AI thinks once, the EA watches
+continuously.** When a strategy fires on a closed bar, Gemini returns a
+`decision_mode`:
+
+- **`ENTER_NOW`** — the setup is ready; enter immediately (market, or a
+  limit/stop pending order).
+- **`WATCH`** — the idea is good but the ideal entry is at a price not reached
+  yet. The AI returns an **entry zone** `[watch_entry_low, watch_entry_high]`, an
+  **`invalidate_price`**, and an optional `expiry_minutes`. The EA arms the plan
+  and, on **every tick**, checks it locally (no API call): it enters with a
+  market order the moment price reaches the zone, or cancels the plan if price
+  passes `invalidate_price` first, if the higher-timeframe EMA trend flips
+  against the trade, or when the plan expires.
+- **`NONE`** — no trade.
+
+Because the decision was already made when the plan was armed, the tick-by-tick
+watching is cheap and instant — the AI is the analyst, the EA is the alert that
+never blinks. There is at most one armed plan per strategy (a newer plan
+replaces the old one), and a triggered plan flows into the same momentum-gate
+management as any other position. Toggle the whole feature with
+`InpEnableWatchPlans`; `InpWatchDefaultExpiryMin` bounds how long a plan waits
+if the AI doesn't set its own expiry.
 
 ## The 10 independent strategies
 
@@ -147,6 +184,7 @@ MQL5/
     TradeManager.mqh                      Order validation, sizing, sending, modify/close
     StrategyBase.mqh                      Abstract base every strategy derives from
     MomentumGate.mqh                      Post-entry management gate (ATR ratchet -> AI call)
+    WatchPlan.mqh                         Real-time watch-and-wait entry engine (tick-level)
     Strategies/Strategy01..10_*.mqh       The 10 independent gating strategies
 ```
 

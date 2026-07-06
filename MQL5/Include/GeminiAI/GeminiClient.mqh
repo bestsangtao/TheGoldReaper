@@ -13,14 +13,20 @@
 struct SEntryDecision
   {
    bool     valid;            // false if the call failed / response unusable
+   string   decisionMode;     // ENTER_NOW | WATCH | NONE
    string   action;           // BUY | SELL | NONE
-   string   orderType;        // MARKET | LIMIT | STOP
+   string   orderType;        // MARKET | LIMIT | STOP (used when decisionMode==ENTER_NOW)
    double   entryPrice;       // required for LIMIT / STOP
    double   stopLoss;
    double   takeProfit;
-   int      expiryMinutes;    // pending order expiry, 0 = no expiry
+   int      expiryMinutes;    // pending order / watch-plan expiry, 0 = use EA default
    double   confidence;       // 0..1
    string   reason;
+   //--- WATCH-plan fields (used when decisionMode==WATCH): the EA watches price
+   //--- in real time and enters when it reaches the zone, cancels on invalidation.
+   double   watchEntryLow;    // entry zone lower bound
+   double   watchEntryHigh;   // entry zone upper bound
+   double   invalidatePrice;  // cancel plan if price passes this before entering
   };
 
 //--- decision returned for MANAGING an already-open position
@@ -46,15 +52,19 @@ private:
    string   EntrySchema() const
      {
       return "{\"type\":\"OBJECT\",\"properties\":{"
+             "\"decision_mode\":{\"type\":\"STRING\",\"enum\":[\"ENTER_NOW\",\"WATCH\",\"NONE\"]},"
              "\"action\":{\"type\":\"STRING\",\"enum\":[\"BUY\",\"SELL\",\"NONE\"]},"
              "\"order_type\":{\"type\":\"STRING\",\"enum\":[\"MARKET\",\"LIMIT\",\"STOP\"]},"
              "\"entry_price\":{\"type\":\"NUMBER\"},"
+             "\"watch_entry_low\":{\"type\":\"NUMBER\"},"
+             "\"watch_entry_high\":{\"type\":\"NUMBER\"},"
+             "\"invalidate_price\":{\"type\":\"NUMBER\"},"
              "\"stop_loss\":{\"type\":\"NUMBER\"},"
              "\"take_profit\":{\"type\":\"NUMBER\"},"
              "\"expiry_minutes\":{\"type\":\"INTEGER\"},"
              "\"confidence\":{\"type\":\"NUMBER\"},"
              "\"reason\":{\"type\":\"STRING\"}},"
-             "\"required\":[\"action\",\"order_type\",\"stop_loss\",\"take_profit\",\"confidence\",\"reason\"]}";
+             "\"required\":[\"decision_mode\",\"action\",\"stop_loss\",\"take_profit\",\"confidence\",\"reason\"]}";
      }
 
    string   ManageSchema() const
@@ -147,14 +157,27 @@ public:
 
    //--- ask Gemini for a NEW trade decision based on a strategy's market snapshot.
    //--- convo (optional) gives the strategy memory of its recent decisions.
+   //--- allowWatch enables the human-like "WATCH" mode (define an entry zone and
+   //--- let the EA wait in real time) in addition to immediate ENTER_NOW.
    bool     RequestEntryDecision(const int strategyId, const string strategyName, const string conditionDesc,
-                                 const string marketSnapshotJson, SEntryDecision &out, CConversation *convo = NULL)
+                                 const string marketSnapshotJson, SEntryDecision &out, CConversation *convo = NULL,
+                                 const bool allowWatch = true)
      {
       out.valid = false;
       string memoryNote = (convo != NULL && convo.Size() > 0)
                           ? "The earlier turns in this conversation are your OWN recent decisions for this same strategy module; "
                             "stay consistent with them unless the new data clearly warrants a different call.\n"
                           : "";
+      string modeNote = allowWatch
+         ? "Choose decision_mode like a human trader:\n"
+           "- ENTER_NOW: the setup is ready right now -> also set order_type (MARKET, or LIMIT/STOP with entry_price).\n"
+           "- WATCH: the idea is good but the ideal entry is at a price the market has NOT reached yet -> instead of "
+           "entering, define an entry zone [watch_entry_low, watch_entry_high] and an invalidate_price. The EA will then "
+           "watch price in REAL TIME (every tick) and enter with a market order the moment price reaches the zone, or "
+           "cancel the plan if price passes invalidate_price first, if the higher timeframe trend flips against the "
+           "trade, or after expiry_minutes. For a BUY, invalidate_price must be BELOW the zone; for a SELL, ABOVE it.\n"
+           "- NONE: no trade.\n"
+         : "Set decision_mode to ENTER_NOW (with order_type) to trade now, or NONE to skip. Do not use WATCH.\n";
       string prompt =
          "You are the decision engine of an MT5 trading strategy module (id=" + IntegerToString(strategyId) +
          ", name=\"" + strategyName + "\").\n" + memoryNote +
@@ -163,9 +186,9 @@ public:
          "working timeframe (\"timeframe\"), and \"htf_ohlc\"/\"htf_indicators\" describe a higher timeframe " +
          "(\"higher_timeframe\") for trend/context confirmation. You MUST cross-check both timeframes before " +
          "deciding: only take the trade if the higher timeframe context does not contradict the working-timeframe " +
-         "setup. Be conservative: if the setup is not clearly favorable on both timeframes, return action=NONE.\n" +
-         "If action is BUY or SELL, you MUST provide stop_loss and take_profit as absolute prices consistent with the symbol's price scale. " +
-         "If order_type is LIMIT or STOP, entry_price must be provided; for MARKET it may be 0.\n" +
+         "setup. Be conservative: if the setup is not clearly favorable on both timeframes, return decision_mode=NONE.\n" +
+         modeNote +
+         "For any BUY or SELL you MUST provide stop_loss and take_profit as absolute prices consistent with the symbol's price scale.\n" +
          "Respond using the exact JSON schema provided, no extra commentary.\n\n" +
          "MARKET_DATA_JSON:\n" + marketSnapshotJson;
 
@@ -191,15 +214,21 @@ public:
          return false;
         }
 
-      out.action        = root.GetString("action", "NONE");
-      out.orderType      = root.GetString("order_type", "MARKET");
-      out.entryPrice     = root.GetDouble("entry_price", 0.0);
-      out.stopLoss       = root.GetDouble("stop_loss", 0.0);
-      out.takeProfit     = root.GetDouble("take_profit", 0.0);
-      out.expiryMinutes  = (int)root.GetInt("expiry_minutes", 0);
-      out.confidence     = root.GetDouble("confidence", 0.0);
-      out.reason         = root.GetString("reason", "");
-      out.valid          = true;
+      out.decisionMode    = root.GetString("decision_mode", "ENTER_NOW");
+      out.action          = root.GetString("action", "NONE");
+      out.orderType       = root.GetString("order_type", "MARKET");
+      out.entryPrice      = root.GetDouble("entry_price", 0.0);
+      out.watchEntryLow   = root.GetDouble("watch_entry_low", 0.0);
+      out.watchEntryHigh  = root.GetDouble("watch_entry_high", 0.0);
+      out.invalidatePrice = root.GetDouble("invalidate_price", 0.0);
+      out.stopLoss        = root.GetDouble("stop_loss", 0.0);
+      out.takeProfit      = root.GetDouble("take_profit", 0.0);
+      out.expiryMinutes   = (int)root.GetInt("expiry_minutes", 0);
+      out.confidence      = root.GetDouble("confidence", 0.0);
+      out.reason          = root.GetString("reason", "");
+      if(!allowWatch && out.decisionMode == "WATCH")
+         out.decisionMode = "NONE";   // watch mode disabled by config -> ignore
+      out.valid           = true;
       delete root;
       return true;
      }
