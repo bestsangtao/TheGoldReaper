@@ -1,857 +1,14 @@
-#property copyright  ""
+#property copyright  "Copyright 2026 - Pham Duy Linh"
+#property link       "https://t.me/Khonglammadoicoan96"
 #property version    "4.5"
-
-//==================================================================
-// MQL4Compat: lop tuong thich MQL4->MQL5 (truoc day la file include
-// rieng MQL4Compat.mqh) - da GOP truc tiep vao day de EA chi con 1
-// file .mq5 duy nhat, khong can copy file include rieng.
-//==================================================================
-//+------------------------------------------------------------------+
-//| MQL4Compat.mqh                                                    |
-//|                                                                    |
-//| Lop tuong thich MQL4 -> MQL5 danh rieng cho The Gold Reaper.       |
-//| Muc dich: cho phep GIU NGUYEN 100% logic goc viet theo phong cach  |
-//| MQL4 (OrderSend/OrderModify/OrderClose/OrderDelete/OrderSelect,    |
-//| OrdersTotal/HistoryTotal, MarketInfo, AccountBalance/Equity,       |
-//| Time*()/Year()/Month()/Day()/Hour()/Minute()/Seconds()/DayOfWeek(),|
-//| iMA()/iFractals() kieu tra ve gia tri truc tiep...) trong khi thuc |
-//| thi ben duoi hoan toan bang API MQL5 (Position/Order/Deal,         |
-//| OrderSend(MqlTradeRequest&,MqlTradeResult&) dong bo truc tiep -    |
-//| khong qua CTrade - de gui/sua/dong/huy lenh, SymbolInfo*,          |
-//| AccountInfo*, TimeToStruct...).                                    |
-//|                                                                    |
-//| QUAN TRONG:                                                        |
-//|  - EA nay mo dong thoi nhieu lenh/vi the tren cung 1 symbol voi    |
-//|    nhieu magic number khac nhau (multi-strategy). Vi vay tai khoan |
-//|    MT5 chay EA nay BAT BUOC phai o che do HEDGING. O che do        |
-//|    Netting, moi lenh cung symbol se bi gop thanh 1 vi the duy nhat |
-//|    va lam sai toan bo logic quan ly lenh cua EA.                   |
-//|  - Cac ham lay lich su lenh (pool=MODE_HISTORY) duoc dung lai tu   |
-//|    HistoryDealsTotal(): moi cap deal (DEAL_ENTRY_IN + DEAL_ENTRY_  |
-//|    OUT/OUT_BY cung POSITION_ID) duoc ghep thanh 1 "lenh lich su"   |
-//|    kieu MQL4. Neu 1 vi the bi dong nhieu lan (dong 1 phan), cac    |
-//|    deal dong se duoc GOM lai thanh 1 ban ghi duy nhat (tong loi/lo)|
-//|    -> khac biet nho so voi MQL4 (MQL4 tao 1 ticket rieng cho moi   |
-//|    lan dong 1 phan). EA nay khong dung dong 1 phan lenh nen anh    |
-//|    huong la khong dang ke.                                        |
-//+------------------------------------------------------------------+
-#ifndef __MQL4COMPAT_MQH__
-#define __MQL4COMPAT_MQH__
-
-//====================================================================
-// Hang so kieu MQL4
-//====================================================================
-#define OP_BUY        0
-#define OP_SELL       1
-#define OP_BUYLIMIT   2
-#define OP_SELLLIMIT  3
-#define OP_BUYSTOP    4
-#define OP_SELLSTOP   5
-
-#define SELECT_BY_POS    0
-#define SELECT_BY_TICKET 1
-#define MODE_TRADES      0
-#define MODE_HISTORY     1
-
-// Ma so MarketInfo() kieu MQL4 (chi gom cac ma EA nay su dung)
-#define MODE_BID              9
-#define MODE_ASK              10
-#define MODE_POINT            11
-#define MODE_DIGITS           12
-#define MODE_STOPLEVEL        14
-#define MODE_TICKVALUE        16
-#define MODE_TRADEALLOWED     22
-#define MODE_MINLOT           23
-#define MODE_LOTSTEP          24
-#define MODE_MAXLOT           25
-#define MODE_FREEZELEVEL      33
-
-//====================================================================
-// Bien trang thai noi bo
-//====================================================================
-long g_mt4_lastTicket = -1;
-int  g_mt4_lastError  = 0;
-
-//====================================================================
-// Quy doi timeframe kieu "so phut" (MQL4 cu) -> ENUM_TIMEFRAMES MQL5.
-// Neu tham so da la hang PERIOD_xxx cua MQL5 (gia tri >= 16385) thi
-// tra ve nguyen (pass-through) vi da dung.
-//====================================================================
-ENUM_TIMEFRAMES MT4Period(int minutes)
-{
-   switch(minutes)
-   {
-      case 0:     return PERIOD_CURRENT;
-      case 1:     return PERIOD_M1;
-      case 2:     return PERIOD_M2;
-      case 3:     return PERIOD_M3;
-      case 4:     return PERIOD_M4;
-      case 5:     return PERIOD_M5;
-      case 6:     return PERIOD_M6;
-      case 10:    return PERIOD_M10;
-      case 12:    return PERIOD_M12;
-      case 15:    return PERIOD_M15;
-      case 20:    return PERIOD_M20;
-      case 30:    return PERIOD_M30;
-      case 60:    return PERIOD_H1;
-      case 120:   return PERIOD_H2;
-      case 180:   return PERIOD_H3;
-      case 240:   return PERIOD_H4;
-      case 360:   return PERIOD_H6;
-      case 480:   return PERIOD_H8;
-      case 720:   return PERIOD_H12;
-      case 1440:  return PERIOD_D1;
-      case 10080: return PERIOD_W1;
-      case 43200: return PERIOD_MN1;
-      default:    return (ENUM_TIMEFRAMES)minutes; // da la PERIOD_xxx cua MQL5
-   }
-}
-
-//====================================================================
-// MarketInfo() kieu MQL4
-//====================================================================
-double MarketInfo(string symbol,int mode)
-{
-   switch(mode)
-   {
-      case MODE_BID:          return SymbolInfoDouble(symbol,SYMBOL_BID);
-      case MODE_ASK:           return SymbolInfoDouble(symbol,SYMBOL_ASK);
-      case MODE_POINT:         return SymbolInfoDouble(symbol,SYMBOL_POINT);
-      case MODE_DIGITS:        return (double)SymbolInfoInteger(symbol,SYMBOL_DIGITS);
-      case MODE_STOPLEVEL:     return (double)SymbolInfoInteger(symbol,SYMBOL_TRADE_STOPS_LEVEL);
-      case MODE_TICKVALUE:     return SymbolInfoDouble(symbol,SYMBOL_TRADE_TICK_VALUE);
-      case MODE_TRADEALLOWED:  return (SymbolInfoInteger(symbol,SYMBOL_TRADE_MODE)==SYMBOL_TRADE_MODE_FULL)?1.0:0.0;
-      case MODE_MINLOT:        return SymbolInfoDouble(symbol,SYMBOL_VOLUME_MIN);
-      case MODE_LOTSTEP:       return SymbolInfoDouble(symbol,SYMBOL_VOLUME_STEP);
-      case MODE_MAXLOT:        return SymbolInfoDouble(symbol,SYMBOL_VOLUME_MAX);
-      case MODE_FREEZELEVEL:   return (double)SymbolInfoInteger(symbol,SYMBOL_TRADE_FREEZE_LEVEL);
-   }
-   return 0.0;
-}
-
-//====================================================================
-// Account*() kieu MQL4
-//====================================================================
-double AccountBalance()  { return AccountInfoDouble(ACCOUNT_BALANCE); }
-double AccountEquity()   { return AccountInfoDouble(ACCOUNT_EQUITY);  }
-string AccountCurrency() { return AccountInfoString(ACCOUNT_CURRENCY);}
-
-double AccountFreeMarginCheck(string symbol,int cmd,double volume)
-{
-   double margin=0.0;
-   ENUM_ORDER_TYPE type=(cmd==OP_BUY)?ORDER_TYPE_BUY:ORDER_TYPE_SELL;
-   double price=(cmd==OP_BUY)?SymbolInfoDouble(symbol,SYMBOL_ASK):SymbolInfoDouble(symbol,SYMBOL_BID);
-   if(!OrderCalcMargin(type,symbol,volume,price,margin))
-      return AccountInfoDouble(ACCOUNT_MARGIN_FREE);
-   return AccountInfoDouble(ACCOUNT_MARGIN_FREE)-margin;
-}
-
-//====================================================================
-// RefreshRates() - khong con can thiet trong MQL5 (gia luon la moi),
-// giu lai de code cu bien dich duoc, luon tra ve true.
-//====================================================================
-bool RefreshRates() { return true; }
-
-//====================================================================
-// IsDemo()/IsTesting() kieu MQL4 (khong con la ham co san trong MQL5)
-//====================================================================
-bool IsDemo()    { return AccountInfoInteger(ACCOUNT_TRADE_MODE)==ACCOUNT_TRADE_MODE_DEMO; }
-bool IsTesting() { return (bool)MQLInfoInteger(MQL_TESTER); }
-
-//====================================================================
-// Cac ham thoi gian kieu MQL4 (khong con trong MQL5)
-//====================================================================
-int TimeYear(datetime t)      { MqlDateTime s; TimeToStruct(t,s); return s.year; }
-int TimeMonth(datetime t)     { MqlDateTime s; TimeToStruct(t,s); return s.mon;  }
-int TimeDay(datetime t)       { MqlDateTime s; TimeToStruct(t,s); return s.day;  }
-int TimeHour(datetime t)      { MqlDateTime s; TimeToStruct(t,s); return s.hour; }
-int TimeMinute(datetime t)    { MqlDateTime s; TimeToStruct(t,s); return s.min;  }
-int TimeSeconds(datetime t)   { MqlDateTime s; TimeToStruct(t,s); return s.sec;  }
-int TimeDayOfWeek(datetime t) { MqlDateTime s; TimeToStruct(t,s); return s.day_of_week; }
-int TimeDayOfYear(datetime t) { MqlDateTime s; TimeToStruct(t,s); return s.day_of_year;  }
-
-// Ban khong doi so (ngam dinh TimeCurrent()) - kieu MQL4 rat cu
-int Year()      { return TimeYear(TimeCurrent());      }
-int Month()     { return TimeMonth(TimeCurrent());     }
-int Day()       { return TimeDay(TimeCurrent());       }
-int Hour()      { return TimeHour(TimeCurrent());      }
-int Minute()    { return TimeMinute(TimeCurrent());    }
-int Seconds()   { return TimeSeconds(TimeCurrent());   }
-int DayOfWeek() { return TimeDayOfWeek(TimeCurrent());  }
-
-//====================================================================
-// iMA()/iFractals() ban tra ve gia tri truc tiep (kieu MQL4), du lieu
-// lay qua CopyBuffer tu handle indicator (MQL5 tu dong cache handle
-// theo bo tham so nen goi lai moi tick khong gay ro ri tai nguyen).
-//====================================================================
-ENUM_APPLIED_PRICE MT4AppliedPrice(int p) { return (ENUM_APPLIED_PRICE)(p+1); }
-
-double iMA(string symbol,int timeframe,int period,int ma_shift,int ma_method,int applied_price,int shift)
-{
-   int handle=iMA(symbol,MT4Period(timeframe),period,ma_shift,(ENUM_MA_METHOD)ma_method,MT4AppliedPrice(applied_price));
-   if(handle==INVALID_HANDLE) return 0.0;
-   double buf[];
-   ArraySetAsSeries(buf,true);
-   if(CopyBuffer(handle,0,shift,1,buf)<=0) return 0.0;
-   return buf[0];
-}
-
-double iFractals(string symbol,int timeframe,int mode,int shift)
-{
-   int handle=iFractals(symbol,MT4Period(timeframe));
-   if(handle==INVALID_HANDLE) return 0.0;
-   int bufIndex=(mode==1)?0:1; // 1=MODE_UPPER->buffer0, 2=MODE_LOWER->buffer1
-   double buf[];
-   ArraySetAsSeries(buf,true);
-   if(CopyBuffer(handle,bufIndex,shift,1,buf)<=0) return 0.0;
-   return buf[0];
-}
-
-//====================================================================
-// Chuyen doi retcode cua MQL5 -> ma loi kieu MQL4 (de cac doan retry
-// "if(MT4_LastError()==132) ..." trong code goc hoat dong dung y nghia)
-//====================================================================
-int MT4_LastError() { return g_mt4_lastError; }
-
-int TradeRetcodeToMT4Error(uint retcode)
-{
-   switch(retcode)
-   {
-      case TRADE_RETCODE_REQUOTE:        return 138; // ERR_REQUOTE
-      case TRADE_RETCODE_REJECT:         return 134; // ERR_NOT_ENOUGH_MONEY (xap xi)
-      case TRADE_RETCODE_CONNECTION:     return 137; // ERR_BROKER_BUSY (xap xi)
-      case TRADE_RETCODE_MARKET_CLOSED:  return 132; // ERR_MARKET_CLOSED
-      case TRADE_RETCODE_TRADE_DISABLED: return 133; // ERR_TRADE_DISABLED
-      case TRADE_RETCODE_NO_MONEY:       return 134; // ERR_NOT_ENOUGH_MONEY
-      case TRADE_RETCODE_PRICE_CHANGED:  return 135; // ERR_PRICE_CHANGED
-      case TRADE_RETCODE_PRICE_OFF:      return 136; // ERR_OFF_QUOTES
-      case TRADE_RETCODE_INVALID_STOPS:  return 130; // ERR_INVALID_STOPS
-      case TRADE_RETCODE_INVALID_PRICE:  return 129; // ERR_INVALID_PRICE
-      case TRADE_RETCODE_TIMEOUT:        return 128; // ERR_TRADE_TIMEOUT
-      case TRADE_RETCODE_INVALID_VOLUME: return 131; // ERR_INVALID_TRADE_VOLUME
-      case TRADE_RETCODE_DONE:           return 0;
-      case TRADE_RETCODE_DONE_PARTIAL:   return 0;
-      case TRADE_RETCODE_PLACED:         return 0;
-   }
-   return (int)retcode;
-}
-
-//====================================================================
-// Gui lenh truc tiep bang OrderSend(MqlTradeRequest&,MqlTradeResult&)
-// dong bo nguyen sinh cua MQL5 - KHONG qua lop CTrade. CTrade them 1
-// lop trung gian (kiem tra trang thai, log, tach rieng ham cho tung
-// loai lenh...) phia tren cung 1 loi goi OrderSend() nay, nen ban than
-// no khong lam lenh "vao nhanh hon" ma chi lam cham hon so voi tu xay
-// MqlTradeRequest va goi thang OrderSend() nhu 1 EA MQL5 viet tay (goi
-// la "lenh tho"). Ham nay van dong bo 100% (cho server tra loi that
-// truoc khi return, giong CTrade truoc day) nen an toan/logic khong
-// doi - chi bo bot lop trung gian de dat toc do bang lenh tho.
-//====================================================================
-ENUM_ORDER_TYPE_FILLING MT4SelectFilling(string symbol)
-{
-   long mask=SymbolInfoInteger(symbol,SYMBOL_FILLING_MODE);
-   if((mask&SYMBOL_FILLING_FOK)!=0)  return ORDER_FILLING_FOK;
-   if((mask&SYMBOL_FILLING_IOC)!=0)  return ORDER_FILLING_IOC;
-   return ORDER_FILLING_RETURN;
-}
-
-//====================================================================
-// Log thao tac lenh GIONG TERMINAL MT4: MT4 tu dong in moi thao tac
-// cua EA vao tab Experts ("open #123 buy stop 0.11 XAUUSD at ... ok"),
-// ca thanh cong lan that bai. MT5 khong tu in nhu vay cho ::OrderSend
-// tho, nen tu in lai o day de log giong het MT4. Chi log, khong doi logic.
-//====================================================================
-string MT4OrderTypeName(int t)
-{
-   switch(t)
-   {
-      case ORDER_TYPE_BUY:        return "buy";
-      case ORDER_TYPE_SELL:       return "sell";
-      case ORDER_TYPE_BUY_LIMIT:  return "buy limit";
-      case ORDER_TYPE_SELL_LIMIT: return "sell limit";
-      case ORDER_TYPE_BUY_STOP:   return "buy stop";
-      case ORDER_TYPE_SELL_STOP:  return "sell stop";
-   }
-   return "order";
-}
-
-void MT4PrintTradeOk(string op,long ticket,const MqlTradeRequest &request)
-{
-   PrintFormat("%s #%I64d %s %.2f %s at %.5f sl: %.5f tp: %.5f ok",
-               op,ticket,MT4OrderTypeName((int)request.type),request.volume,
-               request.symbol,request.price,request.sl,request.tp);
-}
-
-void MT4PrintTradeReject(string op,const MqlTradeRequest &request,const MqlTradeResult &result)
-{
-   PrintFormat("failed %s %s %.2f %s at %.5f sl: %.5f tp: %.5f [%s] (retcode=%u, ticket=%I64u)",
-               op,MT4OrderTypeName((int)request.type),request.volume,request.symbol,
-               request.price,request.sl,request.tp,result.comment,result.retcode,
-               (request.position>0)?request.position:request.order);
-}
-
-//====================================================================
-// OrderSend() kieu MQL4 (11 tham so) -> tra ve ticket (>=0) hoac -1
-//====================================================================
-long OrderSend(string symbol,int cmd,double volume,double price,int slippage,
-               double stoploss,double takeprofit,string comment="",int magic=0,
-               datetime expiration=0,color arrow_color=clrNONE)
-{
-   MqlTradeRequest request;
-   MqlTradeResult  result;
-   ZeroMemory(request);
-   ZeroMemory(result);
-   request.symbol=symbol;
-   request.volume=volume;
-   request.sl=stoploss;
-   request.tp=takeprofit;
-   request.comment=comment;
-   request.magic=(ulong)magic;
-   request.deviation=(ulong)MathMax(slippage,0);
-   request.type_filling=MT4SelectFilling(symbol);
-
-   if(cmd==OP_BUY || cmd==OP_SELL)
-   {
-      request.action=TRADE_ACTION_DEAL;
-      request.type=(cmd==OP_BUY)?ORDER_TYPE_BUY:ORDER_TYPE_SELL;
-      request.price=(cmd==OP_BUY)?SymbolInfoDouble(symbol,SYMBOL_ASK):SymbolInfoDouble(symbol,SYMBOL_BID);
-   }
-   else
-   {
-      request.action=TRADE_ACTION_PENDING;
-      switch(cmd)
-      {
-         case OP_BUYLIMIT:  request.type=ORDER_TYPE_BUY_LIMIT;  break;
-         case OP_SELLLIMIT: request.type=ORDER_TYPE_SELL_LIMIT; break;
-         case OP_BUYSTOP:   request.type=ORDER_TYPE_BUY_STOP;   break;
-         case OP_SELLSTOP:  request.type=ORDER_TYPE_SELL_STOP;  break;
-      }
-      request.price=price;
-      request.type_time=(expiration>0)?ORDER_TIME_SPECIFIED:ORDER_TIME_GTC;
-      request.expiration=expiration;
-      request.type_filling=ORDER_FILLING_RETURN;
-   }
-
-   bool ok=::OrderSend(request,result);
-   if(!ok && result.retcode==0) result.retcode=TRADE_RETCODE_ERROR;
-   g_mt4_lastError=TradeRetcodeToMT4Error(result.retcode);
-   if(ok && (result.retcode==TRADE_RETCODE_DONE || result.retcode==TRADE_RETCODE_DONE_PARTIAL || result.retcode==TRADE_RETCODE_PLACED))
-   {
-      g_mt4_lastError=0;
-      ulong ticket=result.order;
-      if(ticket==0) ticket=result.deal;
-      g_mt4_lastTicket=(long)ticket;
-      MT4PrintTradeOk("open",g_mt4_lastTicket,request);
-      return g_mt4_lastTicket;
-   }
-   MT4PrintTradeReject("open",request,result);
-   g_mt4_lastTicket=-1;
-   return -1;
-}
-
-//====================================================================
-// OrderModify() kieu MQL4
-//====================================================================
-bool OrderModify(long ticket,double price,double stoploss,double takeprofit,datetime expiration,color arrow_color=clrNONE)
-{
-   MqlTradeRequest request;
-   MqlTradeResult  result;
-   ZeroMemory(request);
-   ZeroMemory(result);
-
-   if(PositionSelectByTicket((ulong)ticket))
-   {
-      request.action=TRADE_ACTION_SLTP;
-      request.position=(ulong)ticket;
-      request.symbol=PositionGetString(POSITION_SYMBOL);
-      request.sl=stoploss;
-      request.tp=takeprofit;
-   }
-   else if(::OrderSelect((ulong)ticket))
-   {
-      request.action=TRADE_ACTION_MODIFY;
-      request.order=(ulong)ticket;
-      request.price=price;
-      request.sl=stoploss;
-      request.tp=takeprofit;
-      request.type_time=(expiration>0)?ORDER_TIME_SPECIFIED:ORDER_TIME_GTC;
-      request.expiration=expiration;
-   }
-   else
-   {
-      g_mt4_lastError = 4108; // ERR_INVALID_TICKET
-      return false;
-   }
-
-   bool ok=::OrderSend(request,result);
-   if(!ok && result.retcode==0) result.retcode=TRADE_RETCODE_ERROR;
-   g_mt4_lastError=TradeRetcodeToMT4Error(result.retcode);
-   if(ok && (result.retcode==TRADE_RETCODE_DONE || result.retcode==TRADE_RETCODE_DONE_PARTIAL))
-   {
-      g_mt4_lastError=0;
-      PrintFormat("modify #%I64d %s price: %.5f sl: %.5f tp: %.5f ok",
-                  ticket,request.symbol,request.price,request.sl,request.tp);
-      return true;
-   }
-   MT4PrintTradeReject("modify",request,result);
-   return false;
-}
-
-//====================================================================
-// OrderClose() kieu MQL4 (dong vi the theo ticket, ho tro dong 1 phan)
-//====================================================================
-bool OrderClose(long ticket,double lots,double price,int slippage,color arrow_color=clrNONE)
-{
-   if(!PositionSelectByTicket((ulong)ticket))
-   {
-      g_mt4_lastError = 4108; // ERR_INVALID_TICKET
-      return false;
-   }
-   string symbol=PositionGetString(POSITION_SYMBOL);
-   double volume=PositionGetDouble(POSITION_VOLUME);
-   long   posType=PositionGetInteger(POSITION_TYPE);
-   double closeLots=(lots>0.0 && lots<volume)?lots:volume;
-
-   MqlTradeRequest request;
-   MqlTradeResult  result;
-   ZeroMemory(request);
-   ZeroMemory(result);
-   request.action=TRADE_ACTION_DEAL;
-   request.position=(ulong)ticket;
-   request.symbol=symbol;
-   request.volume=closeLots;
-   request.deviation=(ulong)MathMax(slippage,0);
-   request.type_filling=MT4SelectFilling(symbol);
-   if(posType==POSITION_TYPE_BUY)
-   {
-      request.type=ORDER_TYPE_SELL;
-      request.price=SymbolInfoDouble(symbol,SYMBOL_BID);
-   }
-   else
-   {
-      request.type=ORDER_TYPE_BUY;
-      request.price=SymbolInfoDouble(symbol,SYMBOL_ASK);
-   }
-
-   bool ok=::OrderSend(request,result);
-   if(!ok && result.retcode==0) result.retcode=TRADE_RETCODE_ERROR;
-   g_mt4_lastError=TradeRetcodeToMT4Error(result.retcode);
-   if(ok && (result.retcode==TRADE_RETCODE_DONE || result.retcode==TRADE_RETCODE_DONE_PARTIAL))
-   {
-      g_mt4_lastError=0;
-      // MT4 in "close #ticket <chieu vi the goc> lots symbol at gia ok"
-      PrintFormat("close #%I64d %s %.2f %s at %.5f ok",
-                  ticket,(posType==POSITION_TYPE_BUY)?"buy":"sell",
-                  closeLots,symbol,request.price);
-      return true;
-   }
-   MT4PrintTradeReject("close",request,result);
-   return false;
-}
-
-//====================================================================
-// OrderDelete() kieu MQL4 (huy lenh cho)
-//====================================================================
-bool OrderDelete(long ticket,color arrow_color=clrNONE)
-{
-   MqlTradeRequest request;
-   MqlTradeResult  result;
-   ZeroMemory(request);
-   ZeroMemory(result);
-   request.action=TRADE_ACTION_REMOVE;
-   request.order=(ulong)ticket;
-   // Lay thong tin lenh TRUOC khi xoa de log giong MT4
-   // ("delete #123 buy stop 0.14 XAUUSD at 3962.66 ok")
-   string delName="order"; double delVol=0.0,delPrice=0.0; string delSym="";
-   if(::OrderSelect((ulong)ticket))
-   {
-      delName=MT4OrderTypeName((int)::OrderGetInteger(ORDER_TYPE));
-      delVol=::OrderGetDouble(ORDER_VOLUME_CURRENT);
-      delPrice=::OrderGetDouble(ORDER_PRICE_OPEN);
-      delSym=::OrderGetString(ORDER_SYMBOL);
-   }
-
-   bool ok=::OrderSend(request,result);
-   if(!ok && result.retcode==0) result.retcode=TRADE_RETCODE_ERROR;
-   g_mt4_lastError=TradeRetcodeToMT4Error(result.retcode);
-   if(ok && result.retcode==TRADE_RETCODE_DONE)
-   {
-      g_mt4_lastError=0;
-      PrintFormat("delete #%I64d %s %.2f %s at %.5f ok",
-                  ticket,delName,delVol,delSym,delPrice);
-      return true;
-   }
-   MT4PrintTradeReject("delete",request,result);
-   return false;
-}
-
-//====================================================================
-// Vung du lieu "lenh dang chon" hien tai kieu MQL4 (OrderSelect/
-// OrderTicket/OrderType/OrderLots/...). Ho tro ca vi the dang mo,
-// lenh cho dang mo (pool=MODE_TRADES) va lich su (pool=MODE_HISTORY).
-//====================================================================
-// Trang thai "lenh dang chon" kieu MQL4 - gom vao 1 struct cho gon
-// (truoc day la 16 bien toan cu roi g_selOrder.*). OrderSelect() dien
-// vao day; OrderTicket()/OrderLots()/OrderType()/... doc ra tu day.
-struct MT4SelectedOrder
-{
-   long     ticket;
-   string   symbol;
-   int      type;
-   double   lots;
-   double   openPrice;
-   double   closePrice;
-   double   sl;
-   double   tp;
-   datetime openTime;
-   datetime closeTime;
-   datetime expiration;
-   double   profit;
-   double   swap;
-   double   commission;
-   string   comment;
-   int      magic;
-};
-MT4SelectedOrder g_selOrder;
-
-//--- danh sach cache cho pool=MODE_HISTORY (xay tu HistoryDealsTotal) ---
-long     g_hist_ticket[];
-string   g_hist_symbol[];
-int      g_hist_type[];
-double   g_hist_lots[];
-double   g_hist_openPrice[];
-double   g_hist_closePrice[];
-datetime g_hist_openTime[];
-datetime g_hist_closeTime[];
-double   g_hist_profit[];
-double   g_hist_swap[];
-double   g_hist_commission[];
-string   g_hist_comment[];
-int      g_hist_magic[];
-datetime g_hist_expiration[];
-int      g_hist_count=0;
-datetime g_hist_builtAt=0;
-
-void MT4BuildHistoryCache()
-{
-   // Xay lai toi da 1 lan / giay de tranh qua tai khi vong lap goi lien tuc
-   if(TimeCurrent()==g_hist_builtAt) return;
-   g_hist_builtAt=TimeCurrent();
-
-   ArrayResize(g_hist_ticket,0);
-   ArrayResize(g_hist_symbol,0);
-   ArrayResize(g_hist_type,0);
-   ArrayResize(g_hist_lots,0);
-   ArrayResize(g_hist_openPrice,0);
-   ArrayResize(g_hist_closePrice,0);
-   ArrayResize(g_hist_openTime,0);
-   ArrayResize(g_hist_closeTime,0);
-   ArrayResize(g_hist_profit,0);
-   ArrayResize(g_hist_swap,0);
-   ArrayResize(g_hist_commission,0);
-   ArrayResize(g_hist_comment,0);
-   ArrayResize(g_hist_magic,0);
-   ArrayResize(g_hist_expiration,0);
-   g_hist_count=0;
-
-   if(!HistorySelect(0,TimeCurrent())) return;
-   int deals=HistoryDealsTotal();
-
-   long     posIds[];
-   int      idxByPos_pos[]; // song song voi posIds: vi tri trong mang cache
-   ArrayResize(posIds,0);
-
-   for(int i=0;i<deals;i++)
-   {
-      ulong dealTicket=HistoryDealGetTicket(i);
-      if(dealTicket==0) continue;
-      long entry=HistoryDealGetInteger(dealTicket,DEAL_ENTRY);
-      long posId=HistoryDealGetInteger(dealTicket,DEAL_POSITION_ID);
-      long dealType=HistoryDealGetInteger(dealTicket,DEAL_TYPE);
-      if(dealType!=DEAL_TYPE_BUY && dealType!=DEAL_TYPE_SELL) continue; // bo qua balance/credit/...
-
-      int pos=-1;
-      for(int k=0;k<ArraySize(posIds);k++)
-      {
-         if(posIds[k]==posId) { pos=k; break; }
-      }
-      if(pos<0)
-      {
-         pos=ArraySize(posIds);
-         ArrayResize(posIds,pos+1);
-         posIds[pos]=posId;
-         int n=g_hist_count+1;
-         ArrayResize(g_hist_ticket,n);
-         ArrayResize(g_hist_symbol,n);
-         ArrayResize(g_hist_type,n);
-         ArrayResize(g_hist_lots,n);
-         ArrayResize(g_hist_openPrice,n);
-         ArrayResize(g_hist_closePrice,n);
-         ArrayResize(g_hist_openTime,n);
-         ArrayResize(g_hist_closeTime,n);
-         ArrayResize(g_hist_profit,n);
-         ArrayResize(g_hist_swap,n);
-         ArrayResize(g_hist_commission,n);
-         ArrayResize(g_hist_comment,n);
-         ArrayResize(g_hist_magic,n);
-         ArrayResize(g_hist_expiration,n);
-         g_hist_ticket[g_hist_count]=(long)posId;
-         g_hist_symbol[g_hist_count]="";
-         g_hist_type[g_hist_count]=0;
-         g_hist_lots[g_hist_count]=0.0;
-         g_hist_openPrice[g_hist_count]=0.0;
-         g_hist_closePrice[g_hist_count]=0.0;
-         g_hist_openTime[g_hist_count]=0;
-         g_hist_closeTime[g_hist_count]=0;
-         g_hist_profit[g_hist_count]=0.0;
-         g_hist_swap[g_hist_count]=0.0;
-         g_hist_commission[g_hist_count]=0.0;
-         g_hist_comment[g_hist_count]="";
-         g_hist_magic[g_hist_count]=0;
-         g_hist_expiration[g_hist_count]=0;
-         g_hist_count=n;
-      }
-
-      if(entry==DEAL_ENTRY_IN)
-      {
-         g_hist_symbol[pos]=HistoryDealGetString(dealTicket,DEAL_SYMBOL);
-         g_hist_type[pos]=(dealType==DEAL_TYPE_BUY)?OP_BUY:OP_SELL;
-         g_hist_lots[pos]=HistoryDealGetDouble(dealTicket,DEAL_VOLUME);
-         g_hist_openPrice[pos]=HistoryDealGetDouble(dealTicket,DEAL_PRICE);
-         g_hist_openTime[pos]=(datetime)HistoryDealGetInteger(dealTicket,DEAL_TIME);
-         g_hist_magic[pos]=(int)HistoryDealGetInteger(dealTicket,DEAL_MAGIC);
-         g_hist_comment[pos]=HistoryDealGetString(dealTicket,DEAL_COMMENT);
-         g_hist_profit[pos]+=HistoryDealGetDouble(dealTicket,DEAL_PROFIT);
-         g_hist_swap[pos]+=HistoryDealGetDouble(dealTicket,DEAL_SWAP);
-         g_hist_commission[pos]+=HistoryDealGetDouble(dealTicket,DEAL_COMMISSION);
-      }
-      else // DEAL_ENTRY_OUT hoac DEAL_ENTRY_OUT_BY (dong 1 phan/toan bo)
-      {
-         g_hist_closePrice[pos]=HistoryDealGetDouble(dealTicket,DEAL_PRICE);
-         datetime ct=(datetime)HistoryDealGetInteger(dealTicket,DEAL_TIME);
-         if(ct>g_hist_closeTime[pos]) g_hist_closeTime[pos]=ct;
-         g_hist_profit[pos]+=HistoryDealGetDouble(dealTicket,DEAL_PROFIT);
-         g_hist_swap[pos]+=HistoryDealGetDouble(dealTicket,DEAL_SWAP);
-         g_hist_commission[pos]+=HistoryDealGetDouble(dealTicket,DEAL_COMMISSION);
-         if(g_hist_symbol[pos]=="") g_hist_symbol[pos]=HistoryDealGetString(dealTicket,DEAL_SYMBOL);
-         if(g_hist_magic[pos]==0)   g_hist_magic[pos]=(int)HistoryDealGetInteger(dealTicket,DEAL_MAGIC);
-      }
-   }
-   // sap xep tang dan theo thoi gian dong (gan giong thu tu ticket MQL4)
-   for(int a=0;a<g_hist_count;a++)
-   for(int b=a+1;b<g_hist_count;b++)
-   {
-      if(g_hist_closeTime[b]<g_hist_closeTime[a])
-      {
-         long lt; string ss; int it; double dd; datetime dt;
-         lt=g_hist_ticket[a]; g_hist_ticket[a]=g_hist_ticket[b]; g_hist_ticket[b]=lt;
-         ss=g_hist_symbol[a]; g_hist_symbol[a]=g_hist_symbol[b]; g_hist_symbol[b]=ss;
-         it=g_hist_type[a]; g_hist_type[a]=g_hist_type[b]; g_hist_type[b]=it;
-         dd=g_hist_lots[a]; g_hist_lots[a]=g_hist_lots[b]; g_hist_lots[b]=dd;
-         dd=g_hist_openPrice[a]; g_hist_openPrice[a]=g_hist_openPrice[b]; g_hist_openPrice[b]=dd;
-         dd=g_hist_closePrice[a]; g_hist_closePrice[a]=g_hist_closePrice[b]; g_hist_closePrice[b]=dd;
-         dt=g_hist_openTime[a]; g_hist_openTime[a]=g_hist_openTime[b]; g_hist_openTime[b]=dt;
-         dt=g_hist_closeTime[a]; g_hist_closeTime[a]=g_hist_closeTime[b]; g_hist_closeTime[b]=dt;
-         dd=g_hist_profit[a]; g_hist_profit[a]=g_hist_profit[b]; g_hist_profit[b]=dd;
-         dd=g_hist_swap[a]; g_hist_swap[a]=g_hist_swap[b]; g_hist_swap[b]=dd;
-         dd=g_hist_commission[a]; g_hist_commission[a]=g_hist_commission[b]; g_hist_commission[b]=dd;
-         ss=g_hist_comment[a]; g_hist_comment[a]=g_hist_comment[b]; g_hist_comment[b]=ss;
-         it=g_hist_magic[a]; g_hist_magic[a]=g_hist_magic[b]; g_hist_magic[b]=it;
-      }
-   }
-}
-
-//====================================================================
-// OrdersTotal() kieu MQL4 (vi the dang mo + lenh cho) -> doi ten thanh
-// MT4OrdersTotal() vi OrdersTotal() da la ham co san cua MQL5 (chi dem
-// lenh cho) nen khong the dinh nghia chong len.
-//====================================================================
-int MT4OrdersTotal()
-{
-   return PositionsTotal()+OrdersTotal();
-}
-
-int HistoryTotal()
-{
-   MT4BuildHistoryCache();
-   return g_hist_count;
-}
-
-//====================================================================
-// OrderSelect() kieu MQL4 (3 tham so, khac chu ky voi ham OrderSelect
-// 1-tham-so co san cua MQL5 nen khong xung dot).
-//====================================================================
-bool OrderSelect(int index_or_ticket,int select,int pool=MODE_TRADES)
-{
-   if(select==SELECT_BY_TICKET)
-   {
-      long ticket=(long)index_or_ticket;
-      if(PositionSelectByTicket((ulong)ticket))
-      {
-         g_selOrder.ticket=ticket;
-         g_selOrder.symbol=PositionGetString(POSITION_SYMBOL);
-         g_selOrder.type=(int)PositionGetInteger(POSITION_TYPE);
-         g_selOrder.lots=PositionGetDouble(POSITION_VOLUME);
-         g_selOrder.openPrice=PositionGetDouble(POSITION_PRICE_OPEN);
-         g_selOrder.closePrice=PositionGetDouble(POSITION_PRICE_CURRENT);
-         g_selOrder.sl=PositionGetDouble(POSITION_SL);
-         g_selOrder.tp=PositionGetDouble(POSITION_TP);
-         g_selOrder.openTime=(datetime)PositionGetInteger(POSITION_TIME);
-         g_selOrder.closeTime=0;
-         g_selOrder.expiration=0;
-         g_selOrder.profit=PositionGetDouble(POSITION_PROFIT);
-         g_selOrder.swap=PositionGetDouble(POSITION_SWAP);
-         g_selOrder.commission=0.0;
-         g_selOrder.comment=PositionGetString(POSITION_COMMENT);
-         g_selOrder.magic=(int)PositionGetInteger(POSITION_MAGIC);
-         return true;
-      }
-      if(::OrderSelect((ulong)ticket))
-      {
-         g_selOrder.ticket=ticket;
-         g_selOrder.symbol=::OrderGetString(ORDER_SYMBOL);
-         g_selOrder.type=(int)::OrderGetInteger(ORDER_TYPE);
-         g_selOrder.lots=::OrderGetDouble(ORDER_VOLUME_CURRENT);
-         g_selOrder.openPrice=::OrderGetDouble(ORDER_PRICE_OPEN);
-         g_selOrder.closePrice=0.0;
-         g_selOrder.sl=::OrderGetDouble(ORDER_SL);
-         g_selOrder.tp=::OrderGetDouble(ORDER_TP);
-         g_selOrder.openTime=(datetime)::OrderGetInteger(ORDER_TIME_SETUP);
-         g_selOrder.closeTime=0;
-         g_selOrder.expiration=(datetime)::OrderGetInteger(ORDER_TIME_EXPIRATION);
-         g_selOrder.profit=0.0;
-         g_selOrder.swap=0.0;
-         g_selOrder.commission=0.0;
-         g_selOrder.comment=::OrderGetString(ORDER_COMMENT);
-         g_selOrder.magic=(int)::OrderGetInteger(ORDER_MAGIC);
-         return true;
-      }
-      MT4BuildHistoryCache();
-      for(int i=0;i<g_hist_count;i++)
-      {
-         if(g_hist_ticket[i]==ticket)
-         {
-            g_selOrder.ticket=g_hist_ticket[i];
-            g_selOrder.symbol=g_hist_symbol[i];
-            g_selOrder.type=g_hist_type[i];
-            g_selOrder.lots=g_hist_lots[i];
-            g_selOrder.openPrice=g_hist_openPrice[i];
-            g_selOrder.closePrice=g_hist_closePrice[i];
-            g_selOrder.sl=0.0;
-            g_selOrder.tp=0.0;
-            g_selOrder.openTime=g_hist_openTime[i];
-            g_selOrder.closeTime=g_hist_closeTime[i];
-            g_selOrder.expiration=0;
-            g_selOrder.profit=g_hist_profit[i];
-            g_selOrder.swap=g_hist_swap[i];
-            g_selOrder.commission=g_hist_commission[i];
-            g_selOrder.comment=g_hist_comment[i];
-            g_selOrder.magic=g_hist_magic[i];
-            return true;
-         }
-      }
-      return false;
-   }
-
-   // SELECT_BY_POS
-   if(pool==MODE_HISTORY)
-   {
-      MT4BuildHistoryCache();
-      if(index_or_ticket<0 || index_or_ticket>=g_hist_count) return false;
-      int i=index_or_ticket;
-      g_selOrder.ticket=g_hist_ticket[i];
-      g_selOrder.symbol=g_hist_symbol[i];
-      g_selOrder.type=g_hist_type[i];
-      g_selOrder.lots=g_hist_lots[i];
-      g_selOrder.openPrice=g_hist_openPrice[i];
-      g_selOrder.closePrice=g_hist_closePrice[i];
-      g_selOrder.sl=0.0;
-      g_selOrder.tp=0.0;
-      g_selOrder.openTime=g_hist_openTime[i];
-      g_selOrder.closeTime=g_hist_closeTime[i];
-      g_selOrder.expiration=0;
-      g_selOrder.profit=g_hist_profit[i];
-      g_selOrder.swap=g_hist_swap[i];
-      g_selOrder.commission=g_hist_commission[i];
-      g_selOrder.comment=g_hist_comment[i];
-      g_selOrder.magic=g_hist_magic[i];
-      return true;
-   }
-
-   // pool==MODE_TRADES: vi the dang mo (index 0..PositionsTotal()-1) roi
-   // toi lenh cho dang mo (index PositionsTotal()..total-1)
-   int posTotal=PositionsTotal();
-   if(index_or_ticket>=0 && index_or_ticket<posTotal)
-   {
-      ulong ticket=PositionGetTicket(index_or_ticket);
-      if(ticket==0) return false;
-      g_selOrder.ticket=(long)ticket;
-      g_selOrder.symbol=PositionGetString(POSITION_SYMBOL);
-      g_selOrder.type=(int)PositionGetInteger(POSITION_TYPE);
-      g_selOrder.lots=PositionGetDouble(POSITION_VOLUME);
-      g_selOrder.openPrice=PositionGetDouble(POSITION_PRICE_OPEN);
-      g_selOrder.closePrice=PositionGetDouble(POSITION_PRICE_CURRENT);
-      g_selOrder.sl=PositionGetDouble(POSITION_SL);
-      g_selOrder.tp=PositionGetDouble(POSITION_TP);
-      g_selOrder.openTime=(datetime)PositionGetInteger(POSITION_TIME);
-      g_selOrder.closeTime=0;
-      g_selOrder.expiration=0;
-      g_selOrder.profit=PositionGetDouble(POSITION_PROFIT);
-      g_selOrder.swap=PositionGetDouble(POSITION_SWAP);
-      g_selOrder.commission=0.0;
-      g_selOrder.comment=PositionGetString(POSITION_COMMENT);
-      g_selOrder.magic=(int)PositionGetInteger(POSITION_MAGIC);
-      return true;
-   }
-   int ordIdx=index_or_ticket-posTotal;
-   int ordTotal=::OrdersTotal();
-   if(ordIdx>=0 && ordIdx<ordTotal)
-   {
-      ulong ticket=::OrderGetTicket(ordIdx);
-      if(ticket==0) return false;
-      g_selOrder.ticket=(long)ticket;
-      g_selOrder.symbol=::OrderGetString(ORDER_SYMBOL);
-      g_selOrder.type=(int)::OrderGetInteger(ORDER_TYPE);
-      g_selOrder.lots=::OrderGetDouble(ORDER_VOLUME_CURRENT);
-      g_selOrder.openPrice=::OrderGetDouble(ORDER_PRICE_OPEN);
-      g_selOrder.closePrice=0.0;
-      g_selOrder.sl=::OrderGetDouble(ORDER_SL);
-      g_selOrder.tp=::OrderGetDouble(ORDER_TP);
-      g_selOrder.openTime=(datetime)::OrderGetInteger(ORDER_TIME_SETUP);
-      g_selOrder.closeTime=0;
-      g_selOrder.expiration=(datetime)::OrderGetInteger(ORDER_TIME_EXPIRATION);
-      g_selOrder.profit=0.0;
-      g_selOrder.swap=0.0;
-      g_selOrder.commission=0.0;
-      g_selOrder.comment=::OrderGetString(ORDER_COMMENT);
-      g_selOrder.magic=(int)::OrderGetInteger(ORDER_MAGIC);
-      return true;
-   }
-   return false;
-}
-
-//====================================================================
-// Cac ham lay thuoc tinh cua "lenh dang chon" kieu MQL4
-//====================================================================
-long   OrderTicket()      { return g_selOrder.ticket;      }
-string OrderSymbol()      { return g_selOrder.symbol;      }
-int    OrderType()        { return g_selOrder.type;        }
-double OrderLots()        { return g_selOrder.lots;        }
-double OrderOpenPrice()   { return g_selOrder.openPrice;   }
-double OrderClosePrice()  { return g_selOrder.closePrice;  }
-double OrderStopLoss()    { return g_selOrder.sl;          }
-double OrderTakeProfit()  { return g_selOrder.tp;          }
-datetime OrderOpenTime()  { return g_selOrder.openTime;    }
-datetime OrderCloseTime() { return g_selOrder.closeTime;   }
-datetime OrderExpiration(){ return g_selOrder.expiration;  }
-double OrderProfit()      { return g_selOrder.profit;      }
-double OrderSwap()        { return g_selOrder.swap;        }
-double OrderCommission()  { return g_selOrder.commission;  }
-string OrderComment()     { return g_selOrder.comment;     }
-int    OrderMagicNumber() { return g_selOrder.magic;       }
-
-#endif // __MQL4COMPAT_MQH__
-
+#property description "The Gold Reaper v4.5 (MT4) - giu 100% logic ban goc, fix loi & bo sung tinh nang:"
+#property description "- Fix loi lay gio www.worldtimeserver    - Fix loi OnlyUp"
+#property description "- Ngay NFP cung -> tu dong (Forex Factory), tu thu lai khi loi"
+#property description "- Them input dong lenh cuoi phien thu 6    - Hien Highest Balance tren panel"
+#property description "- Canh bao dung link con thieu    - Log lenh day du"
+#property description "- Them vai input tien ich (mac dinh giu nguyen hanh vi ban goc)"
+#property description "Telegram: t.me/Khonglammadoicoan96"
+#property strict
 
   enum enum_TradeFrequency      {Extreme_cons_Frequency = 0,//extreme conservative
                    Conservative_Frequency = 1,//conservative
@@ -888,70 +45,68 @@ int    OrderMagicNumber() { return g_selOrder.magic;       }
 
 
 //------------------
-input string lijntje="=============================================================="  ;   //- - -
-input bool UseVariableValues=true  ;   
-input bool AdjustLotsizeToVariableValues=true  ;   
-input bool ShowInfoPanel=true  ;   
-input bool UpdateInfoTesting=false ;    //update infopanel during testing
-input double InfoPanelSizeAdjust=1  ;    //Adjustment for Infopanel size
-input int   SetFontSize=0  ;
-input string spreadfilter="------------------------------ Settings ------------------------------"  ;   //- - -
-input bool AllowBuyTrades=true  ;    //Allow Buy Trades
-input bool AllowSellTrades=true  ;    //Allow Sell Trades
-input  enum_TradeFrequency  TradeFrequency=5  ;   
-input double MaxSpread=500  ;    //Maximum allowed spread
-input bool UseHL_TrailingSL=true  ;   
-input int   FridayStopHour=25  ;    //Friday stop hour (brokertime; close all trades)
-input bool FridayClosePending=true  ;
-input bool FridayCloseOpen=true  ;
-input bool setSL_TP_After_Entry=false ;   
-input bool Virtual_expiration=true  ;    //Use Virtual Expiration
-input double Randomization=0  ;    //Randomization (entries and exit) in pips
-input  FakeoutFilters  FakeOutFilter=2  ;    //Fake Breakout Filter
-input int   ST1_MagicNumber=8000  ;    //BaseMagicnumber
-input string ST1_Comment="The Gold Reaper"  ;   //Comment for trades
-input bool RemoveCommentSuffix=false ;   
-input string NFP_FILTER="----------------------- NFP Filter -----------------------"  ;  
-input bool EnableNFP_Filter=true  ;
-input bool UseMQL5Calendar=true  ;
-input bool AutoGMT=true  ;
-input int   Broker_GMT_OFFSET_Winter=2  ;    //GMT_OFFSET_Winter (AutoGMT=false or backtesting)
-input int   Broker_GMT_OFFSET_Summer=3  ;    //MT_OFFSET_Summer (AutoGMT=false or backtesting)
-input bool NFP_CloseOpenTrades=true  ;   
-input bool NFP_ClosePendingOrders=true  ;   
-input int   NFP_MinutesBefore=100  ;   
-input int   NFP_MinutesAfter=60  ;   
-input string propfirmsettings="----------------------- Propfirm unique trades settings -----------------------"  ;   //- - -
-input double AdjustEntry=0  ;   
-input double AdjustSL=0  ;   
-input double AdjustTP=0  ;   
-input double AdjustTrailSL=0  ;   
-input double AdjustTrailTP=0  ;   
-input double AdjustBreakEven=0  ;   
-input string LotSizeSettings="----------------------- LotSize Settings -----------------------"  ;   //- - -
-input double ManualBalance=0  ;    //manually set balance to use (if > 0)
-input  e_Risk  Risk=1234  ;    //Lotsize Calculation method
-input double StartLots=0.01  ;   
-double g_startLots_rw=0.0;
-input double MaxAllowedDD=30  ;    //Max Allowed TOTAL Drawdown
-input bool UseWeightedLots=true  ;    //Weighted Lotsize
-input double MaxRiskPerStrategy_=1  ;    //Max Risk Per Strat
-input double PropFirmMaxDailyDD=0  ;    //Set Max DAILY Drawdown (Prop Firms)
-input bool OnlyUp=true  ;   
-input bool ResetHighestBalance=false ;
-input bool CheckMargin=true  ;    //check for free margin before setting trades
-input bool UseEquity=false ;    //Use Equity Instead of Balance
-input string ManualStratSelect="------------------------- Manual Strategy Selection -------------------------"  ;   //- - -
-input string ManStratWarn="!! DO NOT RUN MANUAL STRATEGIES WHILE USING \'MAX ALLOWED TOTAL DD\' OPTION !! "  ;   //- - -
-input bool RunStrat1=true  ;    //Run Strategy 1 (low risk)
-input bool RunStrat2=true  ;    //Run Strategy 2 (low risk)
-input bool RunStrat3=true  ;    //Run Strategy 3 (low risk)
-input bool RunStrat4=true  ;    //Run Strategy 4 (med risk)
-input bool RunStrat5=true  ;    //Run Strategy 5 (med risk)
-input bool RunStrat6=true  ;    //Run Strategy 6 (med risk)
-input bool RunStrat7=true  ;    //Run Strategy 7 (med risk)
-input bool RunStrat8=true  ;    //Run Strategy 8 (high risk)
-input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
+extern string lijntje="=============================================================="  ;   //- - -
+extern bool UseVariableValues=true  ;   
+extern bool AdjustLotsizeToVariableValues=true  ;   
+extern bool ShowInfoPanel=true  ;   
+extern bool UpdateInfoTesting=false ;    //update infopanel during testing
+extern double InfoPanelSizeAdjust=1  ;    //Adjustment for Infopanel size
+extern int   SetFontSize=0  ;
+extern string spreadfilter="------------------------------ Settings ------------------------------"  ;   //- - -
+extern bool AllowBuyTrades=true  ;    //Allow Buy Trades
+extern bool AllowSellTrades=true  ;    //Allow Sell Trades
+extern  enum_TradeFrequency  TradeFrequency=5  ;   
+extern double MaxSpread=500  ;    //Maximum allowed spread
+extern bool UseHL_TrailingSL=true  ;   
+extern int   FridayStopHour=25  ;    //Friday stop hour (brokertime; close all trades)
+extern bool FridayClosePending=true  ;
+extern bool FridayCloseOpen=true  ;
+extern bool setSL_TP_After_Entry=false ;   
+extern bool Virtual_expiration=true  ;    //Use Virtual Expiration
+extern double Randomization=0  ;    //Randomization (entries and exit) in pips
+extern  FakeoutFilters  FakeOutFilter=2  ;    //Fake Breakout Filter
+extern int   ST1_MagicNumber=8000  ;    //BaseMagicnumber
+extern string ST1_Comment="The Gold Reaper"  ;   //Comment for trades
+extern bool RemoveCommentSuffix=false ;   
+extern string NFP_FILTER="----------------------- NFP Filter -----------------------"  ;  
+extern bool EnableNFP_Filter=true  ;   
+extern bool AutoGMT=true  ;   
+extern int   Broker_GMT_OFFSET_Winter=2  ;    //GMT_OFFSET_Winter (AutoGMT=false or backtesting)
+extern int   Broker_GMT_OFFSET_Summer=3  ;    //MT_OFFSET_Summer (AutoGMT=false or backtesting)
+extern bool NFP_CloseOpenTrades=true  ;   
+extern bool NFP_ClosePendingOrders=true  ;   
+extern int   NFP_MinutesBefore=100  ;   
+extern int   NFP_MinutesAfter=60  ;   
+extern string propfirmsettings="----------------------- Propfirm unique trades settings -----------------------"  ;   //- - -
+extern double AdjustEntry=0  ;   
+extern double AdjustSL=0  ;   
+extern double AdjustTP=0  ;   
+extern double AdjustTrailSL=0  ;   
+extern double AdjustTrailTP=0  ;   
+extern double AdjustBreakEven=0  ;   
+extern string LotSizeSettings="----------------------- LotSize Settings -----------------------"  ;   //- - -
+extern double ManualBalance=0  ;    //manually set balance to use (if > 0)
+extern  e_Risk  Risk=1234  ;    //Lotsize Calculation method
+extern double StartLots=0.01  ;   
+extern double MaxAllowedDD=30  ;    //Max Allowed TOTAL Drawdown
+extern bool UseWeightedLots=true  ;    //Weighted Lotsize
+extern double MaxRiskPerStrategy_=1  ;    //Max Risk Per Strat
+extern double PropFirmMaxDailyDD=0  ;    //Set Max DAILY Drawdown (Prop Firms)
+extern bool OnlyUp=true  ;   
+extern bool ResetHighestBalance=false ;
+extern bool CheckMargin=true  ;    //check for free margin before setting trades
+extern bool UseEquity=false ;    //Use Equity Instead of Balance
+extern string ManualStratSelect="------------------------- Manual Strategy Selection -------------------------"  ;   //- - -
+extern string ManStratWarn="!! DO NOT RUN MANUAL STRATEGIES WHILE USING \'MAX ALLOWED TOTAL DD\' OPTION !! "  ;   //- - -
+extern bool RunStrat1=true  ;    //Run Strategy 1 (low risk)
+extern bool RunStrat2=true  ;    //Run Strategy 2 (low risk)
+extern bool RunStrat3=true  ;    //Run Strategy 3 (low risk)
+extern bool RunStrat4=true  ;    //Run Strategy 4 (med risk)
+extern bool RunStrat5=true  ;    //Run Strategy 5 (med risk)
+extern bool RunStrat6=true  ;    //Run Strategy 6 (med risk)
+extern bool RunStrat7=true  ;    //Run Strategy 7 (med risk)
+extern bool RunStrat8=true  ;    //Run Strategy 8 (high risk)
+extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
   double    总_1_do_0 = 0.0;
   double    总_2_do_8 = 0.0;
   int       总_3_in_10 = 30;
@@ -1354,74 +509,20 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
   double    总_400_do_67B4_si99[99];
   double    总_401_do_6AD0 = 0.0;
   double    总_402_do_6AD8 = 0.0;
-  bool      g_nfpFromCalendar = false;      // true neu 总_391_da_5DFC_si300[] dang lay tu Lich MQL5 (khong con dung mang hardcode)
-  datetime  g_nfpCalendarBuiltDay = 0;      // ngay (00:00, GMT) lan gan nhat da thu lam moi tu Lich MQL5
-  int       g_nfpStatus = 0;                // trang thai lay tin NFP cho panel: 0 = binh thuong (dung 总_391_da_5DFC_si300[]), 2 = loi lay tin (Lich MQL5 khong doc duoc). mq5 dung Lich (khong co link) nen khong co trang thai thieu link (=1)
-  long      g_onlyUpRunId = 0;              // ma rieng cho moi lan chay Strategy Tester, dung de tach biet dinh OnlyUp giua cac lan backtest (xem OnlyUpPeakGVName)
+  bool      g_discardResult = false; // MQL4 khong ho tro (void)Call() de bo qua ket qua nhu MQL5 ->
+                                      // gan vao bien dung chung nay de "kiem tra" ket qua tra ve cua
+                                      // OrderDelete/OrderClose/OrderModify (dung o cac cho code goc
+                                      // chua bao gio quan tam ket qua) ma khong doi hanh vi.
+  int       g_discardResultInt = 0;  // tuong tu nhung cho OrderSend (tra ve int, khong phai bool)
+  long      g_onlyUpRunId = 0;       // ma rieng cho moi lan chay Strategy Tester, dung de tach biet dinh OnlyUp giua cac lan backtest (xem OnlyUpPeakGVName)
+  datetime  g_nfpFFBuiltDay = 0;     // ngay (00:00, GMT) lan gan nhat da thu lam moi tu Forex Factory JSON feed (xem RefreshNFPFromForexFactory)
+  datetime  g_nfpFFDate = 0;         // ngay/gio NFP (GMT) da xac nhan that tu Forex Factory cho tuan hien tai; 0 = chua co xac nhan, dong Next NFP se hien "-"
+  int       g_nfpStatus = 0;         // trang thai lay tin NFP cho panel: 0 = binh thuong (dung g_nfpFFDate), 1 = thieu allowed URL (4060), 2 = loi lay tin (mang/parse)
+  datetime  g_nfpRetryAfter = 0;     // thoi diem som nhat duoc thu lay tin NFP lai sau khi loi server (mang/parse): cu 5 phut thu lai 1 lan cho toi khi thanh cong (KHONG ap dung cho loi 4060 thieu URL)
 
-//+------------------------------------------------------------------+
-//| Lay ngay NFP (Non-Farm Payrolls) tu Lich kinh te (Economic       |
-//| Calendar) co san cua MQL5, thay cho mang 总_391_da_5DFC_si300[]   |
-//| ma hoa cung. Neu khong tim/lay duoc (vi du: khong kha dung trong |
-//| Strategy Tester cua broker nay) thi GIU NGUYEN mang hardcode co  |
-//| san de kiem thu nguoc (backtest) van chay binh thuong.           |
-//+------------------------------------------------------------------+
- void BuildNFPDatesFromCalendar()
- {
-  g_nfpCalendarBuiltDay = (datetime)(TimeCurrent() - TimeCurrent() % 86400) ;
-  MqlCalendarEvent 临_events[];
-  int       临_evTotal = CalendarEventByCountry("US",临_events) ;
-  long      临_nfpId = -1;
-  int       临_i;
-  string    临_code;
-//----- -----
- if ( 临_evTotal <= 0 )   { g_nfpStatus = 2 ; return; } // Lich MQL5 khong doc duoc -> panel bao loi lay tin
- for (临_i = 0 ; 临_i < 临_evTotal ; 临_i ++)
- {
-   // MqlCalendarEvent.name tra ve theo NGON NGU CUA TERMINAL (tai lieu MQL5)
-   // nen so sanh chuoi tieng Anh co the khong bao gio khop neu terminal dat
-   // ngon ngu khac. event_code moi la ma dinh danh CO DINH, khong phu thuoc
-   // ngon ngu (vi du "NONFARM-PAYROLLS") - dung field nay lam chinh, giu lai
-   // kiem tra .name nhu du phong.
-   临_code = 临_events[临_i].event_code ;
-   StringToUpper(临_code) ;
-   if ( StringFind(临_code,"NONFARM") >= 0 || StringFind(临_events[临_i].name,"Nonfarm Payrolls") >= 0 || StringFind(临_events[临_i].name,"Non-Farm Payrolls") >= 0 || StringFind(临_events[临_i].name,"Non Farm Payrolls") >= 0 )
-   {
-     临_nfpId = (long)临_events[临_i].id ;
-     break;
-   }
- }
- if ( 临_nfpId < 0 )   { g_nfpStatus = 2 ; return; } // khong tim thay su kien NFP trong Lich -> loi lay tin
- MqlCalendarValue 临_values[];
- datetime  临_from = D'2007.01.01 00:00';
- datetime  临_to = TimeCurrent() + 400 * 24 * 60 * 60 ;
- int       临_n = CalendarValueHistoryByEvent((ulong)临_nfpId,临_values,临_from,临_to) ;
- if ( 临_n <= 0 )   { g_nfpStatus = 2 ; return; } // khong lay duoc gia tri lich NFP -> loi lay tin
- // 总_390_da_5DC0 (GMT hien tai) da duoc tinh xong truoc khi ham nay duoc goi (xem
- // OnTick). MqlCalendarValue.time tra ve theo GIO SERVER, trong khi
- // 总_391_da_5DFC_si300[] va toan bo bo loc NFP con lai dang quy uoc luu GIO GMT roi
- // moi cong offset de quy doi sang gio server luc so sanh/hien thi. TimeCurrent()-
- // 总_390_da_5DC0 chinh la offset GMT bo loc dang dung tai thoi diem nay (du la tu
- // AutoGMT/WebRequest thanh cong hay phai roi ve TimeGMT()), nen dung gia tri nay de
- // tru truoc khi luu, tranh bi quy doi 2 lan.
- long      临_offsetSeconds = (long)(TimeCurrent() - 总_390_da_5DC0) ;
- int       临_count = 0;
- for (临_i = 0 ; 临_i < 临_n && 临_count < 300 ; 临_i ++)
- {
-   if ( 临_values[临_i].time <= 0 )   continue;
-   总_391_da_5DFC_si300[临_count] = (datetime)(临_values[临_i].time - 临_offsetSeconds) ;
-   临_count ++;
- }
- if ( 临_count <= 0 )   { g_nfpStatus = 0 ; return; } // lay tin OK nhung khong co ngay hop le -> "No News Coming Up"
- for (临_i = 临_count ; 临_i < 300 ; 临_i ++)   总_391_da_5DFC_si300[临_i] = 0 ;
- g_nfpFromCalendar = true ;
- g_nfpStatus = 0 ; // lay Lich thanh cong -> panel hien binh thuong (Next NFP / No News)
- }
-//BuildNFPDatesFromCalendar <<==--------   --------
 
- int OnInit()
+ int init()
  {
-g_startLots_rw=StartLots;
   double    子_2_do;
   double    子_3_do;
   int       子_4_in;
@@ -1431,9 +532,10 @@ g_startLots_rw=StartLots;
   int       子_8_in;
   int       子_9_in;
 //----- -----
- // MQL4 tu dong khoi tao bool local ve false; MQL5 thi khong, nen phai gan
- // ro rang de giu dung hanh vi ban goc (bien nay khong duoc gan truoc khi
- // dung o duoi, IsDemo() ket qua bi bo qua trong ca ban mq4 goc).
+ // MQL4 tu dong khoi tao bool local ve false; nhung MetaEditor van canh bao
+ // "possible use of uninitialized variable" vi bien nay khong duoc gan truoc
+ // khi dung o duoi (IsDemo() ket qua bi bo qua). Gan ro rang de tat canh bao
+ // ma khong doi hanh vi (van luon la false nhu truoc).
  bool       临_bo_1 = false;
 
  // Sinh ma rieng cho lan chay Strategy Tester nay (xem OnlyUpPeakGVName) -
@@ -1458,7 +560,7 @@ g_startLots_rw=StartLots;
    总_401_do_6AD0 = ManualBalance ;
  }
  // OnlyUp cai tien: doc lai muc so du cao nhat da luu trong GlobalVariable
- // cua terminal (ton tai xuyen suot restart EA/MT5), thay vi luon reset ve
+ // cua terminal (ton tai xuyen suot restart EA/MT4), thay vi luon reset ve
  // so du hien tai moi lan khoi dong nhu truoc - tranh mat muc dinh cao da
  // dat duoc truoc do.
  // ResetHighestBalance: xoa dinh OnlyUp da luu, bat dau lai tu balance hien tai
@@ -1718,19 +820,9 @@ g_startLots_rw=StartLots;
  总_391_da_5DFC_si300[237] = D'2007.03.09 12:30';
  总_391_da_5DFC_si300[238] = D'2007.02.02 12:30';
  总_391_da_5DFC_si300[239] = D'2007.01.05 12:30';
- // UseMQL5Calendar=true: CHI dung Lich MQL5 lam nguon ngay NFP - xoa sach
- // mang ngay co san vua gan o tren, de khi Lich chua tai duoc/khong co du
- // lieu thi KHONG roi ve mang cu (panel se hien "no news coming up" va bo
- // loc NFP khong co ngay nao cho den khi Lich tra du lieu). Rieng trong
- // Strategy Tester van giu mang co san bat ke cong tac, vi Lich MQL5 khong
- // hoat dong trong tester (gioi han cua nen tang) - giong hanh vi v4.3.
- if ( UseMQL5Calendar && MQLInfoInteger(MQL_TESTER) != 1 )
- {
-   for (子_4_in = 0 ; 子_4_in < 300 ; 子_4_in ++)   总_391_da_5DFC_si300[子_4_in] = 0 ;
- }
  if ( Risk == 1234 )
  {
-   g_startLots_rw = MarketInfo(总_336_st_3130,MODE_MINLOT) ;
+   StartLots = MarketInfo(总_336_st_3130,MODE_MINLOT) ;
  }
  if ( TradeFrequency == 5 && Risk == 1234 )
  {
@@ -1895,10 +987,10 @@ g_startLots_rw=StartLots;
  }
  总_251_do_2520 = (double)TimeCurrent() ;
  总_1_do_0 = MarketInfo(总_336_st_3130,MODE_ASK) - MarketInfo(总_336_st_3130,MODE_BID) ;
- 总_223_do_1AC4_si99[总_328_in_3100] = NormalizeDouble(MathFloor(g_startLots_rw * 100.0) / 100.0,2);
+ 总_223_do_1AC4_si99[总_328_in_3100] = NormalizeDouble(MathFloor(StartLots * 100.0) / 100.0,2);
  if ( MarketInfo(总_336_st_3130,MODE_LOTSTEP)==0.1 )
  {
-   总_223_do_1AC4_si99[总_328_in_3100] = NormalizeDouble((MathFloor(g_startLots_rw * 10.0)) / 10.0,1);
+   总_223_do_1AC4_si99[总_328_in_3100] = NormalizeDouble((MathFloor(StartLots * 10.0)) / 10.0,1);
    if ( 总_223_do_1AC4_si99[总_328_in_3100]<0.1 )
    {
      总_223_do_1AC4_si99[总_328_in_3100] = 0.1;
@@ -1912,7 +1004,7 @@ g_startLots_rw=StartLots;
  {
    总_223_do_1AC4_si99[总_328_in_3100] = MarketInfo(总_336_st_3130,MODE_MAXLOT);
  }
- 总_306_in_2884 = iBars(总_336_st_3130,MT4Period(PERIOD_CURRENT)) ;
+ 总_306_in_2884 = Bars ;
  if ( 总_131_do_328 * 总_229_do_1E00<总_337_do_3140 )
  {
    总_131_do_328 = 总_337_do_3140 / 总_229_do_1E00 ;
@@ -2017,9 +1109,9 @@ g_startLots_rw=StartLots;
  总_194_bo_530 = false ;
  总_195_bo_531 = false ;
  总_258_in_2568 = Month() ;
- 总_313_da_28B8 = iTime(总_336_st_3130,MT4Period(PERIOD_W1),1) ;
- 总_314_da_28C0 = iTime(总_336_st_3130,MT4Period(PERIOD_M1),1) ;
- 总_315_da_28C8 = iTime(总_336_st_3130,MT4Period(PERIOD_M1),1) ;
+ 总_313_da_28B8 = iTime(总_336_st_3130,PERIOD_W1,1) ;
+ 总_314_da_28C0 = iTime(总_336_st_3130,PERIOD_M1,1) ;
+ 总_315_da_28C8 = iTime(总_336_st_3130,PERIOD_M1,1) ;
  if ( 总_37_do_B8>MaxSpread )
  {
    总_37_do_B8 = MaxSpread ;
@@ -2048,9 +1140,9 @@ g_startLots_rw=StartLots;
  {
    总_139_bo_3EC = true ;
  }
- if ( g_startLots_rw<0.0 )
+ if ( StartLots<0.0 )
  {
-   g_startLots_rw = 0.01 ;
+   StartLots = 0.01 ;
  }
  if ( 总_141_do_3F8>MarketInfo(总_336_st_3130,MODE_MAXLOT) )
  {
@@ -2105,9 +1197,9 @@ g_startLots_rw=StartLots;
  {
    总_322_in_2AE0_si99[子_9_in] = 0;
    总_321_in_2920_si99[子_9_in] = 0;
-   总_215_da_174C_si99[子_9_in] = iTime(总_336_st_3130,MT4Period(总_71_in_174),1);
-   if ( !(总_223_do_1AC4_si99[子_9_in]<g_startLots_rw) )   continue;
-   总_223_do_1AC4_si99[子_9_in] = g_startLots_rw;
+   总_215_da_174C_si99[子_9_in] = iTime(总_336_st_3130,总_71_in_174,1);
+   if ( !(总_223_do_1AC4_si99[子_9_in]<StartLots) )   continue;
+   总_223_do_1AC4_si99[子_9_in] = StartLots;
    
  }
  总_216_lo_1A68 = 0 ;
@@ -2348,13 +1440,14 @@ g_startLots_rw=StartLots;
  {
    总_390_da_5DC0=TimeCurrent() - 总_395_in_6760 * 3600;
  }
- // Lich MQL5 khong kha dung/dang tin cay trong Strategy Tester (backtest) nen chi
- // lam moi tu Lich MQL5 khi dang chay live/demo that; kiem thu nguoc luon dung mang
- // 总_391_da_5DFC_si300[] ma hoa cung ben tren (da cap nhat toi het nam 2026) de dam
- // bao ket qua backtest 100% xac dinh, lap lai duoc.
- if ( EnableNFP_Filter && UseMQL5Calendar && MQLInfoInteger(MQL_TESTER) != 1 && TimeCurrent() - TimeCurrent() % 86400 > g_nfpCalendarBuiltDay )
+ // Lam moi 1 lan/ngay tu Forex Factory (xem RefreshNFPFromForexFactory), chi khi
+ // dang chay live/demo that de ket qua backtest luon dung mang cung, on dinh.
+ // Lay 1 lan/ngay khi thanh cong (g_nfpFFBuiltDay = hom nay se dong gate toi mai).
+ // Neu loi server thi g_nfpFFBuiltDay KHONG duoc dat -> gate van mo, nhung
+ // g_nfpRetryAfter chan lai 5 phut de thu lai (khong spam moi tick).
+ if ( EnableNFP_Filter && MQLInfoInteger(MQL_TESTER) != 1 && TimeCurrent() - TimeCurrent() % 86400 > g_nfpFFBuiltDay && TimeCurrent() >= g_nfpRetryAfter )
  {
-   BuildNFPDatesFromCalendar();
+   RefreshNFPFromForexFactory();
  }
  if ( TradeFrequency == 5 && Risk == 1234 )
  {
@@ -2484,9 +1577,9 @@ g_startLots_rw=StartLots;
      }
    }
  }
- if ( iBars(总_336_st_3130,MT4Period(PERIOD_D1)) != 总_383_in_5D9C )
+ if ( iBars(总_336_st_3130,PERIOD_D1) != 总_383_in_5D9C )
  {
-   总_383_in_5D9C = iBars(总_336_st_3130,MT4Period(PERIOD_D1)) ;
+   总_383_in_5D9C = iBars(总_336_st_3130,PERIOD_D1) ;
    总_382_bo_5D98 = false ;
    总_384_do_5DA0 = 0.0 ;
  }
@@ -2496,10 +1589,10 @@ g_startLots_rw=StartLots;
  }
  if ( 总_382_bo_5D98 || !(总_380_bo_5D90) )   return;
  子_4_bo = false ;
- if ( 总_399_da_6778 != iTime(总_336_st_3130,MT4Period(PERIOD_H1),1) )
+ if ( 总_399_da_6778 != iTime(总_336_st_3130,PERIOD_H1,1) )
  {
    子_4_bo = true ;
-   总_399_da_6778 = iTime(总_336_st_3130,MT4Period(PERIOD_H1),1) ;
+   总_399_da_6778 = iTime(总_336_st_3130,PERIOD_H1,1) ;
  }
  if ( ( StringFind(Symbol(),"XAUUSD",0) >= 0 || StringFind(Symbol(),"xauusd",0) >= 0 || StringFind(Symbol(),"GOLD",0) >= 0 || StringFind(Symbol(),"GLD",0) >= 0 || StringFind(Symbol(),"gold",0) >= 0 || StringFind(Symbol(),"Gold",0) >= 0 ) )
  {
@@ -2820,9 +1913,10 @@ g_startLots_rw=StartLots;
  总_381_in_5D94 = 0 ;
  }
 //OnTick <<==--------   --------
- void OnDeinit(const int reason)
+ int deinit()
  {
  lizong_26(); 
+ return(0); 
  }
 //deinit <<==--------   --------
  void lizong_6( int 木_0_in)
@@ -2860,7 +1954,7 @@ g_startLots_rw=StartLots;
  
  if ( 总_7_do_50>0.0 )
  {
-   总_8_do_58 = iOpen(总_336_st_3130,MT4Period(PERIOD_D1),1) / 总_7_do_50 ;
+   总_8_do_58 = iOpen(总_336_st_3130,PERIOD_D1,1) / 总_7_do_50 ;
  }
  else
  {
@@ -3042,9 +2136,9 @@ g_startLots_rw=StartLots;
  }
  else
  {
-   if ( 总_321_in_2920_si99[总_328_in_3100] != iBars(总_336_st_3130,MT4Period(总_99_in_22C)) )
+   if ( 总_321_in_2920_si99[总_328_in_3100] != iBars(总_336_st_3130,总_99_in_22C) )
    {
-     总_321_in_2920_si99[总_328_in_3100] = iBars(总_336_st_3130,MT4Period(总_99_in_22C));
+     总_321_in_2920_si99[总_328_in_3100] = iBars(总_336_st_3130,总_99_in_22C);
      if ( lizong_18() )
      {
        子_2_bo = true ;
@@ -3102,7 +2196,7 @@ g_startLots_rw=StartLots;
          }
        }
        临_in_3 = 0;
-       for (临_in_4 = MT4OrdersTotal() ; 临_in_4 >= 0 ; 临_in_4=临_in_4 - 1)
+       for (临_in_4 = OrdersTotal() ; 临_in_4 >= 0 ; 临_in_4=临_in_4 - 1)
        {
          if ( OrderSelect(临_in_4,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 )   continue;
          
@@ -3116,34 +2210,34 @@ g_startLots_rw=StartLots;
        }
      }
      临_in_5 = 1;
-     for (临_in_6 = MT4OrdersTotal() ; 临_in_6 >= 0 ; 临_in_6=临_in_6 - 1)
+     for (临_in_6 = OrdersTotal() ; 临_in_6 >= 0 ; 临_in_6=临_in_6 - 1)
      {
        if ( OrderSelect(临_in_6,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
-       OrderDelete(OrderTicket(),0xFFFFFFFF); 
+       g_discardResult = OrderDelete(OrderTicket(),0xFFFFFFFF); 
        
      }
      if ( 临_in_5 == 2 )
      {
-       for (临_in_7 = MT4OrdersTotal() ; 临_in_7 >= 0 ; 临_in_7=临_in_7 - 1)
+       for (临_in_7 = OrdersTotal() ; 临_in_7 >= 0 ; 临_in_7=临_in_7 - 1)
        {
          if ( OrderSelect(临_in_7,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
-         OrderDelete(OrderTicket(),0xFFFFFFFF); 
+         g_discardResult = OrderDelete(OrderTicket(),0xFFFFFFFF); 
          
        }
      }
      临_in_8 = 1;
-     for (临_in_9 = MT4OrdersTotal() ; 临_in_9 >= 0 ; 临_in_9=临_in_9 - 1)
+     for (临_in_9 = OrdersTotal() ; 临_in_9 >= 0 ; 临_in_9=临_in_9 - 1)
      {
        if ( OrderSelect(临_in_9,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
-       OrderDelete(OrderTicket(),0xFFFFFFFF); 
+       g_discardResult = OrderDelete(OrderTicket(),0xFFFFFFFF); 
        
      }
      if ( 临_in_8 == 2 )
      {
-       for (临_in_10 = MT4OrdersTotal() ; 临_in_10 >= 0 ; 临_in_10=临_in_10 - 1)
+       for (临_in_10 = OrdersTotal() ; 临_in_10 >= 0 ; 临_in_10=临_in_10 - 1)
        {
          if ( OrderSelect(临_in_10,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
-         OrderDelete(OrderTicket(),0xFFFFFFFF); 
+         g_discardResult = OrderDelete(OrderTicket(),0xFFFFFFFF); 
          
        }
      }
@@ -3153,7 +2247,7 @@ g_startLots_rw=StartLots;
        do
        {
          if ( OrderSelect(1,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
-         OrderDelete(OrderTicket(),0xFFFFFFFF); 
+         g_discardResult = OrderDelete(OrderTicket(),0xFFFFFFFF); 
          
        }
        while( - 1 >= 0);
@@ -3161,10 +2255,10 @@ g_startLots_rw=StartLots;
      }
      if ( 临_in_11 == 2 )
      {
-       for (临_in_12 = MT4OrdersTotal() ; 临_in_12 >= 0 ; 临_in_12=临_in_12 - 1)
+       for (临_in_12 = OrdersTotal() ; 临_in_12 >= 0 ; 临_in_12=临_in_12 - 1)
        {
          if ( OrderSelect(临_in_12,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
-         OrderDelete(OrderTicket(),0xFFFFFFFF); 
+         g_discardResult = OrderDelete(OrderTicket(),0xFFFFFFFF); 
          
        }
      }
@@ -3174,7 +2268,7 @@ g_startLots_rw=StartLots;
        do
        {
          if ( OrderSelect(1,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
-         OrderDelete(OrderTicket(),0xFFFFFFFF); 
+         g_discardResult = OrderDelete(OrderTicket(),0xFFFFFFFF); 
          
        }
        while( - 1 >= 0);
@@ -3182,10 +2276,10 @@ g_startLots_rw=StartLots;
      }
      if ( 临_in_13 == 2 )
      {
-       for (临_in_14 = MT4OrdersTotal() ; 临_in_14 >= 0 ; 临_in_14=临_in_14 - 1)
+       for (临_in_14 = OrdersTotal() ; 临_in_14 >= 0 ; 临_in_14=临_in_14 - 1)
        {
          if ( OrderSelect(临_in_14,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
-         OrderDelete(OrderTicket(),0xFFFFFFFF); 
+         g_discardResult = OrderDelete(OrderTicket(),0xFFFFFFFF); 
          
        }
      }
@@ -3195,7 +2289,7 @@ g_startLots_rw=StartLots;
  }
  if ( EnableNFP_Filter )
  {
-   if ( Year() <= 2026 || g_nfpFromCalendar )
+   if ( Year() <= 2026 )
    {
      子_3_lo = 0 ;
      for (子_4_in = 0 ; 子_4_in < 300 ; 子_4_in ++)
@@ -3218,34 +2312,34 @@ g_startLots_rw=StartLots;
        if ( NFP_ClosePendingOrders )
        {
          临_in_17 = 1;
-         for (临_in_18 = MT4OrdersTotal() ; 临_in_18 >= 0 ; 临_in_18=临_in_18 - 1)
+         for (临_in_18 = OrdersTotal() ; 临_in_18 >= 0 ; 临_in_18=临_in_18 - 1)
          {
            if ( OrderSelect(临_in_18,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
-           OrderDelete(OrderTicket(),0xFFFFFFFF); 
+           g_discardResult = OrderDelete(OrderTicket(),0xFFFFFFFF); 
            
          }
          if ( 临_in_17 == 2 )
          {
-           for (临_in_19 = MT4OrdersTotal() ; 临_in_19 >= 0 ; 临_in_19=临_in_19 - 1)
+           for (临_in_19 = OrdersTotal() ; 临_in_19 >= 0 ; 临_in_19=临_in_19 - 1)
            {
              if ( OrderSelect(临_in_19,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
-             OrderDelete(OrderTicket(),0xFFFFFFFF); 
+             g_discardResult = OrderDelete(OrderTicket(),0xFFFFFFFF); 
              
            }
          }
          临_in_20 = 1;
-         for (临_in_21 = MT4OrdersTotal() ; 临_in_21 >= 0 ; 临_in_21=临_in_21 - 1)
+         for (临_in_21 = OrdersTotal() ; 临_in_21 >= 0 ; 临_in_21=临_in_21 - 1)
          {
            if ( OrderSelect(临_in_21,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
-           OrderDelete(OrderTicket(),0xFFFFFFFF); 
+           g_discardResult = OrderDelete(OrderTicket(),0xFFFFFFFF); 
            
          }
          if ( 临_in_20 == 2 )
          {
-           for (临_in_22 = MT4OrdersTotal() ; 临_in_22 >= 0 ; 临_in_22=临_in_22 - 1)
+           for (临_in_22 = OrdersTotal() ; 临_in_22 >= 0 ; 临_in_22=临_in_22 - 1)
            {
              if ( OrderSelect(临_in_22,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
-             OrderDelete(OrderTicket(),0xFFFFFFFF); 
+             g_discardResult = OrderDelete(OrderTicket(),0xFFFFFFFF); 
              
            }
          }
@@ -3255,7 +2349,7 @@ g_startLots_rw=StartLots;
            do
            {
              if ( OrderSelect(1,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
-             OrderDelete(OrderTicket(),0xFFFFFFFF); 
+             g_discardResult = OrderDelete(OrderTicket(),0xFFFFFFFF); 
              
            }
            while( - 1 >= 0);
@@ -3263,10 +2357,10 @@ g_startLots_rw=StartLots;
          }
          if ( 临_in_23 == 2 )
          {
-           for (临_in_24 = MT4OrdersTotal() ; 临_in_24 >= 0 ; 临_in_24=临_in_24 - 1)
+           for (临_in_24 = OrdersTotal() ; 临_in_24 >= 0 ; 临_in_24=临_in_24 - 1)
            {
              if ( OrderSelect(临_in_24,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
-             OrderDelete(OrderTicket(),0xFFFFFFFF); 
+             g_discardResult = OrderDelete(OrderTicket(),0xFFFFFFFF); 
              
            }
          }
@@ -3276,7 +2370,7 @@ g_startLots_rw=StartLots;
            do
            {
              if ( OrderSelect(1,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
-             OrderDelete(OrderTicket(),0xFFFFFFFF); 
+             g_discardResult = OrderDelete(OrderTicket(),0xFFFFFFFF); 
              
            }
            while( - 1 >= 0);
@@ -3284,17 +2378,17 @@ g_startLots_rw=StartLots;
          }
          if ( 临_in_25 == 2 )
          {
-           for (临_in_26 = MT4OrdersTotal() ; 临_in_26 >= 0 ; 临_in_26=临_in_26 - 1)
+           for (临_in_26 = OrdersTotal() ; 临_in_26 >= 0 ; 临_in_26=临_in_26 - 1)
            {
              if ( OrderSelect(临_in_26,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
-             OrderDelete(OrderTicket(),0xFFFFFFFF); 
+             g_discardResult = OrderDelete(OrderTicket(),0xFFFFFFFF); 
              
            }
          }
        }
        if ( NFP_CloseOpenTrades )
        {
-         for (临_in_27 = MT4OrdersTotal() ; 临_in_27 >= 0 ; 临_in_27=临_in_27 - 1)
+         for (临_in_27 = OrdersTotal() ; 临_in_27 >= 0 ; 临_in_27=临_in_27 - 1)
          {
            if ( OrderSelect(临_in_27,0,0) != true || OrderSymbol() != 总_336_st_3130 )   continue;
            临_in_28 = OrderMagicNumber();
@@ -3372,10 +2466,10 @@ g_startLots_rw=StartLots;
            }
            if ( OrderType() == 0 )
            {
-             OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),99999,Red); 
+             g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),99999,Red); 
            }
            if ( OrderType() != 1 )   continue;
-           OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),99999,Red); 
+           g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),99999,Red); 
            
          }
        }
@@ -3401,34 +2495,34 @@ g_startLots_rw=StartLots;
          if ( NFP_ClosePendingOrders )
          {
            临_in_44 = 1;
-           for (临_in_45 = MT4OrdersTotal() ; 临_in_45 >= 0 ; 临_in_45=临_in_45 - 1)
+           for (临_in_45 = OrdersTotal() ; 临_in_45 >= 0 ; 临_in_45=临_in_45 - 1)
            {
              if ( OrderSelect(临_in_45,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
-             OrderDelete(OrderTicket(),0xFFFFFFFF); 
+             g_discardResult = OrderDelete(OrderTicket(),0xFFFFFFFF); 
              
            }
            if ( 临_in_44 == 2 )
            {
-             for (临_in_46 = MT4OrdersTotal() ; 临_in_46 >= 0 ; 临_in_46=临_in_46 - 1)
+             for (临_in_46 = OrdersTotal() ; 临_in_46 >= 0 ; 临_in_46=临_in_46 - 1)
              {
                if ( OrderSelect(临_in_46,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
-               OrderDelete(OrderTicket(),0xFFFFFFFF); 
+               g_discardResult = OrderDelete(OrderTicket(),0xFFFFFFFF); 
                
              }
            }
            临_in_47 = 1;
-           for (临_in_48 = MT4OrdersTotal() ; 临_in_48 >= 0 ; 临_in_48=临_in_48 - 1)
+           for (临_in_48 = OrdersTotal() ; 临_in_48 >= 0 ; 临_in_48=临_in_48 - 1)
            {
              if ( OrderSelect(临_in_48,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
-             OrderDelete(OrderTicket(),0xFFFFFFFF); 
+             g_discardResult = OrderDelete(OrderTicket(),0xFFFFFFFF); 
              
            }
            if ( 临_in_47 == 2 )
            {
-             for (临_in_49 = MT4OrdersTotal() ; 临_in_49 >= 0 ; 临_in_49=临_in_49 - 1)
+             for (临_in_49 = OrdersTotal() ; 临_in_49 >= 0 ; 临_in_49=临_in_49 - 1)
              {
                if ( OrderSelect(临_in_49,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
-               OrderDelete(OrderTicket(),0xFFFFFFFF); 
+               g_discardResult = OrderDelete(OrderTicket(),0xFFFFFFFF); 
                
              }
            }
@@ -3438,7 +2532,7 @@ g_startLots_rw=StartLots;
              do
              {
                if ( OrderSelect(1,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
-               OrderDelete(OrderTicket(),0xFFFFFFFF); 
+               g_discardResult = OrderDelete(OrderTicket(),0xFFFFFFFF); 
                
              }
              while( - 1 >= 0);
@@ -3446,10 +2540,10 @@ g_startLots_rw=StartLots;
            }
            if ( 临_in_50 == 2 )
            {
-             for (临_in_51 = MT4OrdersTotal() ; 临_in_51 >= 0 ; 临_in_51=临_in_51 - 1)
+             for (临_in_51 = OrdersTotal() ; 临_in_51 >= 0 ; 临_in_51=临_in_51 - 1)
              {
                if ( OrderSelect(临_in_51,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
-               OrderDelete(OrderTicket(),0xFFFFFFFF); 
+               g_discardResult = OrderDelete(OrderTicket(),0xFFFFFFFF); 
                
              }
            }
@@ -3459,7 +2553,7 @@ g_startLots_rw=StartLots;
              do
              {
                if ( OrderSelect(1,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
-               OrderDelete(OrderTicket(),0xFFFFFFFF); 
+               g_discardResult = OrderDelete(OrderTicket(),0xFFFFFFFF); 
                
              }
              while( - 1 >= 0);
@@ -3467,17 +2561,17 @@ g_startLots_rw=StartLots;
            }
            if ( 临_in_52 == 2 )
            {
-             for (临_in_53 = MT4OrdersTotal() ; 临_in_53 >= 0 ; 临_in_53=临_in_53 - 1)
+             for (临_in_53 = OrdersTotal() ; 临_in_53 >= 0 ; 临_in_53=临_in_53 - 1)
              {
                if ( OrderSelect(临_in_53,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
-               OrderDelete(OrderTicket(),0xFFFFFFFF); 
+               g_discardResult = OrderDelete(OrderTicket(),0xFFFFFFFF); 
                
              }
            }
          }
          if ( NFP_CloseOpenTrades )
          {
-           for (临_in_54 = MT4OrdersTotal() ; 临_in_54 >= 0 ; 临_in_54=临_in_54 - 1)
+           for (临_in_54 = OrdersTotal() ; 临_in_54 >= 0 ; 临_in_54=临_in_54 - 1)
            {
              if ( OrderSelect(临_in_54,0,0) != true || OrderSymbol() != 总_336_st_3130 )   continue;
              临_in_55 = OrderMagicNumber();
@@ -3555,10 +2649,10 @@ g_startLots_rw=StartLots;
              }
              if ( OrderType() == 0 )
              {
-               OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),99999,Red); 
+               g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),99999,Red); 
              }
              if ( OrderType() != 1 )   continue;
-             OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),99999,Red); 
+             g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),99999,Red); 
              
            }
          }
@@ -3583,7 +2677,7 @@ g_startLots_rw=StartLots;
  {
    if ( DayOfWeek() == 5 && Hour() >= FridayStopHour && !(总_305_bo_2880) )
    {
-     for (临_in_71 = MT4OrdersTotal() ; 临_in_71 >= 0 ; 临_in_71=临_in_71 - 1)
+     for (临_in_71 = OrdersTotal() ; 临_in_71 >= 0 ; 临_in_71=临_in_71 - 1)
      {
        if ( OrderSelect(临_in_71,0,0) != true || OrderSymbol() != 总_336_st_3130 )   continue;
        临_in_72 = OrderMagicNumber();
@@ -3661,14 +2755,14 @@ g_startLots_rw=StartLots;
        }
        if ( FridayCloseOpen && OrderType() == 0 )
        {
-         OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
+         g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
        }
        if ( FridayCloseOpen && OrderType() == 1 )
        {
-         OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
+         g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
        }
        if ( ( OrderType() != 4 && OrderType() != 5 ) || !(FridayClosePending) )   continue;
-       OrderDelete(OrderTicket(),Red); 
+       g_discardResult = OrderDelete(OrderTicket(),Red); 
        
      }
      Print("Weekend starting! closing trades.."); 
@@ -3701,7 +2795,7 @@ g_startLots_rw=StartLots;
  if ( 总_69_in_160 == 1 )
  {
    临_in_88 = 0;
-   for (临_in_89 = MT4OrdersTotal() ; 临_in_89 >= 0 ; 临_in_89=临_in_89 - 1)
+   for (临_in_89 = OrdersTotal() ; 临_in_89 >= 0 ; 临_in_89=临_in_89 - 1)
    {
      if ( OrderSelect(临_in_89,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
      临_in_88=临_in_88 + 1;
@@ -3711,7 +2805,7 @@ g_startLots_rw=StartLots;
    {
      临_do_90 = 0.0;
      临_lo_91 = 0;
-     for (临_in_92 = MT4OrdersTotal() ; 临_in_92 >= 0 ; 临_in_92=临_in_92 - 1)
+     for (临_in_92 = OrdersTotal() ; 临_in_92 >= 0 ; 临_in_92=临_in_92 - 1)
      {
        if ( OrderSelect(临_in_92,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 || !(OrderOpenPrice()>临_do_90) )   continue;
        临_lo_91 = OrderTicket();
@@ -3720,7 +2814,7 @@ g_startLots_rw=StartLots;
      }
      if ( 临_lo_91 != 0 )
      {
-       OrderDelete(临_lo_91,Green); 
+       g_discardResult = OrderDelete((int)临_lo_91,Green); 
        临_lo_93 = 临_lo_91;
        for (临_in_94 = 0 ; 临_in_94 < 100 ; 临_in_94=临_in_94 + 1)
        {
@@ -3734,7 +2828,7 @@ g_startLots_rw=StartLots;
      }
    }
    临_in_95 = 0;
-   for (临_in_96 = MT4OrdersTotal() ; 临_in_96 >= 0 ; 临_in_96=临_in_96 - 1)
+   for (临_in_96 = OrdersTotal() ; 临_in_96 >= 0 ; 临_in_96=临_in_96 - 1)
    {
      if ( OrderSelect(临_in_96,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
      临_in_95=临_in_95 + 1;
@@ -3744,7 +2838,7 @@ g_startLots_rw=StartLots;
    {
      临_do_97 = 9999.0;
      临_lo_98 = 0;
-     for (临_in_99 = MT4OrdersTotal() ; 临_in_99 >= 0 ; 临_in_99=临_in_99 - 1)
+     for (临_in_99 = OrdersTotal() ; 临_in_99 >= 0 ; 临_in_99=临_in_99 - 1)
      {
        if ( OrderSelect(临_in_99,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 || !(OrderOpenPrice()<临_do_97) )   continue;
        临_lo_98 = OrderTicket();
@@ -3753,7 +2847,7 @@ g_startLots_rw=StartLots;
      }
      if ( 临_lo_98 != 0 )
      {
-       OrderDelete(临_lo_98,Green); 
+       g_discardResult = OrderDelete((int)临_lo_98,Green); 
        临_lo_100 = 临_lo_98;
        for (临_in_101 = 0 ; 临_in_101 < 100 ; 临_in_101=临_in_101 + 1)
        {
@@ -3769,9 +2863,9 @@ g_startLots_rw=StartLots;
  }
  if ( !(总_305_bo_2880) && 总_69_in_160 == 1 && !(总_303_bo_2878) )
  {
-   if ( ( 总_322_in_2AE0_si99[总_328_in_3100] != iBars(总_336_st_3130,MT4Period(总_72_in_178)) || 总_72_in_178 == 0 ) )
+   if ( ( 总_322_in_2AE0_si99[总_328_in_3100] != iBars(总_336_st_3130,总_72_in_178) || 总_72_in_178 == 0 ) )
    {
-     总_322_in_2AE0_si99[总_328_in_3100] = iBars(总_336_st_3130,MT4Period(总_72_in_178));
+     总_322_in_2AE0_si99[总_328_in_3100] = iBars(总_336_st_3130,总_72_in_178);
      if ( 总_119_in_2D0 >  0 && 总_120_in_2D4 >= 0 )
      {
        总_241_do_1E78_si99[总_328_in_3100] = 总_123_do_2E0 * 总_229_do_1E00 + (lizong_13(总_117_in_2C8,总_119_in_2D0,总_120_in_2D4) + 总_1_do_0);
@@ -3786,7 +2880,7 @@ g_startLots_rw=StartLots;
      if ( 总_63_in_140 != 1 )
      {
        临_in_102 = 0;
-       for (临_in_103 = MT4OrdersTotal() ; 临_in_103 >= 0 ; 临_in_103=临_in_103 - 1)
+       for (临_in_103 = OrdersTotal() ; 临_in_103 >= 0 ; 临_in_103=临_in_103 - 1)
        {
          if ( OrderSelect(临_in_103,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 0 )   continue;
          临_in_102=临_in_102 + 1;
@@ -3795,7 +2889,7 @@ g_startLots_rw=StartLots;
        if ( 临_in_102 == 0 )
        {
          临_in_104 = 0;
-         for (临_in_105 = MT4OrdersTotal() ; 临_in_105 >= 0 ; 临_in_105=临_in_105 - 1)
+         for (临_in_105 = OrdersTotal() ; 临_in_105 >= 0 ; 临_in_105=临_in_105 - 1)
          {
            if ( OrderSelect(临_in_105,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 1 )   continue;
            临_in_104=临_in_104 + 1;
@@ -3808,7 +2902,7 @@ g_startLots_rw=StartLots;
            {
              if ( !(总_196_do_568_si20si2[临_in_107][0]>0.0) )   continue;
              临_bo_106 = false;
-             for (临_in_108 = MT4OrdersTotal() ; 临_in_108 >= 0 ; 临_in_108=临_in_108 - 1)
+             for (临_in_108 = OrdersTotal() ; 临_in_108 >= 0 ; 临_in_108=临_in_108 - 1)
              {
                if ( OrderSelect(临_in_108,0,0) != true )   continue;
                
@@ -3838,7 +2932,7 @@ g_startLots_rw=StartLots;
      {
        临_lo_111 = (long)总_198_do_1070_si100si2[临_in_110][0];
        临_bo_109 = false;
-       for (临_in_112 = MT4OrdersTotal() ; 临_in_112 >= 0 ; 临_in_112=临_in_112 - 1)
+       for (临_in_112 = OrdersTotal() ; 临_in_112 >= 0 ; 临_in_112=临_in_112 - 1)
        {
          if ( !(OrderSelect(临_in_112,0,0)) )   continue;
          临_lo_113 = OrderTicket();
@@ -3857,7 +2951,7 @@ g_startLots_rw=StartLots;
  {
    临_st_114="Current spread: " + string(NormalizeDouble(总_1_do_0 / 总_229_do_1E00,1)) + "\nPending Buy Order: ";
    临_in_115 = 0;
-   for (临_in_116 = MT4OrdersTotal() ; 临_in_116 >= 0 ; 临_in_116=临_in_116 - 1)
+   for (临_in_116 = OrdersTotal() ; 临_in_116 >= 0 ; 临_in_116=临_in_116 - 1)
    {
      if ( OrderSelect(临_in_116,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
      临_in_115=临_in_115 + 1;
@@ -3866,7 +2960,7 @@ g_startLots_rw=StartLots;
    临_st_114=临_st_114 + string(临_in_115);
    临_st_114=临_st_114 + "\nPending Sell Orders: ";
    临_in_117 = 0;
-   for (临_in_118 = MT4OrdersTotal() ; 临_in_118 >= 0 ; 临_in_118=临_in_118 - 1)
+   for (临_in_118 = OrdersTotal() ; 临_in_118 >= 0 ; 临_in_118=临_in_118 - 1)
    {
      if ( OrderSelect(临_in_118,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
      临_in_117=临_in_117 + 1;
@@ -3903,7 +2997,7 @@ g_startLots_rw=StartLots;
    if ( 总_197_do_6DC_si100si3[子_1_in][1]==4.0 && MarketInfo(总_336_st_3130,MODE_ASK)<总_197_do_6DC_si100si3[子_1_in][0] - 总_221_do_1A80 )
    {
      Print("Restoring pending buy-order"); 
-     总_230_in_1E08 = (int)OrderSend(总_336_st_3130,4,总_197_do_6DC_si100si3[子_1_in][2],总_197_do_6DC_si100si3[子_1_in][0],int(总_38_do_C0 * 总_229_do_1E00),总_197_do_6DC_si100si3[子_1_in][0] - (总_100_do_230 + 总_64_do_148) * 总_229_do_1E00,总_101_do_238 * 总_229_do_1E00 + 总_197_do_6DC_si100si3[子_1_in][0],总_334_st_3120,总_93_in_1F0,总_302_da_2870 + 0x2A300,Green) ;
+     总_230_in_1E08 = OrderSend(总_336_st_3130,4,总_197_do_6DC_si100si3[子_1_in][2],总_197_do_6DC_si100si3[子_1_in][0],int(总_38_do_C0 * 总_229_do_1E00),总_197_do_6DC_si100si3[子_1_in][0] - (总_100_do_230 + 总_64_do_148) * 总_229_do_1E00,总_101_do_238 * 总_229_do_1E00 + 总_197_do_6DC_si100si3[子_1_in][0],总_334_st_3120,总_93_in_1F0,总_302_da_2870 + 0x2A300,Green) ;
      总_280_bo_25FA = false ;
      临_do_1 = 总_197_do_6DC_si100si3[子_1_in][0];
      临_lo_2 = 总_230_in_1E08;
@@ -3917,7 +3011,7 @@ g_startLots_rw=StartLots;
      }
      if ( 总_230_in_1E08 <= 0 )
      {
-       if ( MT4_LastError() == 132 )
+       if ( GetLastError() == 132 )
        {
          ResetLastError();
          if(1==0) //条件不成立
@@ -3925,7 +3019,7 @@ g_startLots_rw=StartLots;
            do
            {
              Sleep(2500); 
-             总_230_in_1E08 = (int)OrderSend(总_336_st_3130,4,总_197_do_6DC_si100si3[子_1_in][2],总_197_do_6DC_si100si3[子_1_in][0],int(总_38_do_C0 * 总_229_do_1E00),总_197_do_6DC_si100si3[子_1_in][0] - (总_100_do_230 + 总_64_do_148) * 总_229_do_1E00,总_101_do_238 * 总_229_do_1E00 + 总_197_do_6DC_si100si3[子_1_in][0],总_334_st_3120,总_93_in_1F0,总_302_da_2870 + 0x2A300,Green) ;
+             总_230_in_1E08 = OrderSend(总_336_st_3130,4,总_197_do_6DC_si100si3[子_1_in][2],总_197_do_6DC_si100si3[子_1_in][0],int(总_38_do_C0 * 总_229_do_1E00),总_197_do_6DC_si100si3[子_1_in][0] - (总_100_do_230 + 总_64_do_148) * 总_229_do_1E00,总_101_do_238 * 总_229_do_1E00 + 总_197_do_6DC_si100si3[子_1_in][0],总_334_st_3120,总_93_in_1F0,总_302_da_2870 + 0x2A300,Green) ;
              总_280_bo_25FA = false ;
              临_do_4 = 总_197_do_6DC_si100si3[子_1_in][0];
              临_lo_5 = 总_230_in_1E08;
@@ -3938,16 +3032,16 @@ g_startLots_rw=StartLots;
                
              }
            }
-           while(MT4_LastError() == 132);
+           while(GetLastError() == 132);
            
          }
        }
-       Print("error: \'" + lizong_21(MT4_LastError()) + "\' when setting entry order"); 
+       Print("error: \'" + lizong_21(GetLastError()) + "\' when setting entry order"); 
      }
    }
    if ( !(总_197_do_6DC_si100si3[子_1_in][1]==5.0) || !(MarketInfo(总_336_st_3130,MODE_BID)>总_197_do_6DC_si100si3[子_1_in][0] + 总_221_do_1A80) )   continue;
    Print("Restoring pending sell-order"); 
-   总_230_in_1E08 = (int)OrderSend(总_336_st_3130,5,总_197_do_6DC_si100si3[子_1_in][2],总_197_do_6DC_si100si3[子_1_in][0],int(总_38_do_C0 * 总_229_do_1E00),(总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 + 总_197_do_6DC_si100si3[子_1_in][0],总_197_do_6DC_si100si3[子_1_in][0] - 总_101_do_238 * 总_229_do_1E00,总_334_st_3120,总_93_in_1F0,总_302_da_2870 + 0x2A300,Green) ;
+   总_230_in_1E08 = OrderSend(总_336_st_3130,5,总_197_do_6DC_si100si3[子_1_in][2],总_197_do_6DC_si100si3[子_1_in][0],int(总_38_do_C0 * 总_229_do_1E00),(总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 + 总_197_do_6DC_si100si3[子_1_in][0],总_197_do_6DC_si100si3[子_1_in][0] - 总_101_do_238 * 总_229_do_1E00,总_334_st_3120,总_93_in_1F0,总_302_da_2870 + 0x2A300,Green) ;
    总_281_bo_25FB = false ;
    临_do_7 = 总_197_do_6DC_si100si3[子_1_in][0];
    临_lo_8 = 总_230_in_1E08;
@@ -3961,7 +3055,7 @@ g_startLots_rw=StartLots;
    }
    if ( 总_230_in_1E08 > 0 )   continue;
    
-   if ( MT4_LastError() == 132 )
+   if ( GetLastError() == 132 )
    {
      ResetLastError();
      if(1==0) //条件不成立
@@ -3969,7 +3063,7 @@ g_startLots_rw=StartLots;
        do
        {
          Sleep(2500); 
-         总_230_in_1E08 = (int)OrderSend(总_336_st_3130,5,总_197_do_6DC_si100si3[子_1_in][2],总_197_do_6DC_si100si3[子_1_in][0],int(总_38_do_C0 * 总_229_do_1E00),(总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 + 总_197_do_6DC_si100si3[子_1_in][0],总_197_do_6DC_si100si3[子_1_in][0] - 总_101_do_238 * 总_229_do_1E00,总_334_st_3120,总_93_in_1F0,总_302_da_2870 + 0x2A300,Green) ;
+         总_230_in_1E08 = OrderSend(总_336_st_3130,5,总_197_do_6DC_si100si3[子_1_in][2],总_197_do_6DC_si100si3[子_1_in][0],int(总_38_do_C0 * 总_229_do_1E00),(总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 + 总_197_do_6DC_si100si3[子_1_in][0],总_197_do_6DC_si100si3[子_1_in][0] - 总_101_do_238 * 总_229_do_1E00,总_334_st_3120,总_93_in_1F0,总_302_da_2870 + 0x2A300,Green) ;
          总_281_bo_25FB = false ;
          临_do_10 = 总_197_do_6DC_si100si3[子_1_in][0];
          临_lo_11 = 总_230_in_1E08;
@@ -3982,11 +3076,11 @@ g_startLots_rw=StartLots;
            
          }
        }
-       while(MT4_LastError() == 132);
+       while(GetLastError() == 132);
        
      }
    }
-   Print("error: \'" + lizong_21(MT4_LastError()) + "\' when setting entry order"); 
+   Print("error: \'" + lizong_21(GetLastError()) + "\' when setting entry order"); 
    
  }
  for (临_in_13 = 0 ; 临_in_13 < 总_200_in_16B4 ; 临_in_13=临_in_13 + 1)
@@ -4014,7 +3108,7 @@ g_startLots_rw=StartLots;
  long       临_lo_9;
  int        临_in_10;
 
- for (子_2_in = MT4OrdersTotal() ; 子_2_in >= 0 ; 子_2_in --)
+ for (子_2_in = OrdersTotal() ; 子_2_in >= 0 ; 子_2_in --)
  {
    if ( OrderSelect(子_2_in,0,0) != true )   continue;
    
@@ -4045,7 +3139,7 @@ g_startLots_rw=StartLots;
          break;
          
        }
-       OrderDelete(OrderTicket(),Green); 
+       g_discardResult = OrderDelete(OrderTicket(),Green); 
      }
      else
      {
@@ -4059,7 +3153,7 @@ g_startLots_rw=StartLots;
          break;
          
        }
-       OrderDelete(OrderTicket(),Green); 
+       g_discardResult = OrderDelete(OrderTicket(),Green); 
      }
    }
    if ( OrderType() != 5 )   continue;
@@ -4091,7 +3185,7 @@ g_startLots_rw=StartLots;
        break;
        
      }
-     OrderDelete(OrderTicket(),Green); 
+     g_discardResult = OrderDelete(OrderTicket(),Green); 
       continue;
    }
    Print("Spread too high..(" + string(总_1_do_0) + ") deleting order " + string(OrderTicket())); 
@@ -4104,7 +3198,7 @@ g_startLots_rw=StartLots;
      break;
      
    }
-   OrderDelete(OrderTicket(),Green); 
+   g_discardResult = OrderDelete(OrderTicket(),Green); 
    
  }
  return(false); 
@@ -4175,11 +3269,11 @@ g_startLots_rw=StartLots;
  {
    if ( MarketInfo(总_336_st_3130,MODE_LOTSTEP)==0.1 )
    {
-     子_2_do = NormalizeDouble(木_1_in * 0.01 * g_startLots_rw,1) ;
+     子_2_do = NormalizeDouble(木_1_in * 0.01 * StartLots,1) ;
    }
    if ( MarketInfo(总_336_st_3130,MODE_LOTSTEP)==0.01 )
    {
-     子_2_do = NormalizeDouble(木_1_in * 0.01 * g_startLots_rw,2) ;
+     子_2_do = NormalizeDouble(木_1_in * 0.01 * StartLots,2) ;
    }
  }
  if ( Risk == 9999 )
@@ -4309,45 +3403,45 @@ g_startLots_rw=StartLots;
    子_4_bo = true ;
    for (子_6_in = 子_5_in ; 子_6_in >= 子_5_in - 总_74_in_180 ; 子_6_in --)
    {
-     if ( iHigh(总_336_st_3130,MT4Period(木_0_in),子_6_in)>iHigh(总_336_st_3130,MT4Period(木_0_in),子_5_in) )
+     if ( iHigh(总_336_st_3130,木_0_in,子_6_in)>iHigh(总_336_st_3130,木_0_in,子_5_in) )
      {
        子_4_bo = false ;
      }
    }
    for (子_7_in = 子_5_in ; 子_7_in <= 子_5_in + 总_73_in_17C ; 子_7_in ++)
    {
-     if ( iHigh(总_336_st_3130,MT4Period(木_0_in),子_7_in)>iHigh(总_336_st_3130,MT4Period(木_0_in),子_5_in) )
+     if ( iHigh(总_336_st_3130,木_0_in,子_7_in)>iHigh(总_336_st_3130,木_0_in,子_5_in) )
      {
        子_3_bo = false ;
      }
    }
-   if ( 子_4_bo && 子_3_bo && iHigh(总_336_st_3130,MT4Period(木_0_in),子_5_in)>总_80_do_198 * 总_229_do_1E00 + MarketInfo(总_336_st_3130,MODE_ASK) )
+   if ( 子_4_bo && 子_3_bo && iHigh(总_336_st_3130,木_0_in,子_5_in)>总_80_do_198 * 总_229_do_1E00 + MarketInfo(总_336_st_3130,MODE_ASK) )
    {
-     临_do_1 = iHigh(总_336_st_3130,MT4Period(木_0_in),子_5_in);
+     临_do_1 = iHigh(总_336_st_3130,木_0_in,子_5_in);
      临_in_2 = 子_5_in;
-     临_do_3 = iHigh(总_336_st_3130,MT4Period(总_71_in_174),0);
+     临_do_3 = iHigh(总_336_st_3130,总_71_in_174,0);
      for (临_in_4 = 1 ; 临_in_4 <= 临_in_2 ; 临_in_4=临_in_4 + 1)
      {
-       if ( iHigh(总_336_st_3130,MT4Period(总_71_in_174),临_in_4)>临_do_3 )
+       if ( iHigh(总_336_st_3130,总_71_in_174,临_in_4)>临_do_3 )
        {
-         临_do_3 = iHigh(总_336_st_3130,MT4Period(总_71_in_174),临_in_4);
+         临_do_3 = iHigh(总_336_st_3130,总_71_in_174,临_in_4);
        }
      }
      if ( 临_do_1>=临_do_3 )
      {
-       临_do_5 = NormalizeDouble(iHigh(总_336_st_3130,MT4Period(木_0_in),子_5_in),总_190_in_518);
+       临_do_5 = NormalizeDouble(iHigh(总_336_st_3130,木_0_in,子_5_in),总_190_in_518);
        临_bo_7=false; 
-       for (临_in_6 = MT4OrdersTotal() ; 临_in_6 >= 0 ; 临_in_6=临_in_6 - 1)
+       for (临_in_6 = OrdersTotal() ; 临_in_6 >= 0 ; 临_in_6=临_in_6 - 1)
        {
          if ( OrderSelect(临_in_6,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 || !(MathAbs(OrderOpenPrice() - (总_83_do_1B0 * 总_229_do_1E00 + 临_do_5))<总_88_do_1D0 * 总_229_do_1E00) )   continue;
          临_bo_7 = true;
           break;
          
        }
-       if ( !(临_bo_7) && ( !(总_75_bo_184) || !(iClose(总_336_st_3130,MT4Period(木_0_in),子_5_in - 1)>iHigh(总_336_st_3130,MT4Period(木_0_in),子_5_in) - 总_80_do_198 * 总_229_do_1E00) ) )
+       if ( !(临_bo_7) && ( !(总_75_bo_184) || !(iClose(总_336_st_3130,木_0_in,子_5_in - 1)>iHigh(总_336_st_3130,木_0_in,子_5_in) - 总_80_do_198 * 总_229_do_1E00) ) )
        {
          子_2_bo = true ;
-         总_262_do_2580 = NormalizeDouble(iHigh(总_336_st_3130,MT4Period(木_0_in),子_5_in),总_190_in_518) ;
+         总_262_do_2580 = NormalizeDouble(iHigh(总_336_st_3130,木_0_in,子_5_in),总_190_in_518) ;
          总_265_in_2598 = 子_5_in ;
          break;
        }
@@ -4389,45 +3483,45 @@ g_startLots_rw=StartLots;
    子_4_bo = true ;
    for (子_6_in = 子_5_in ; 子_6_in >= 子_5_in - 总_74_in_180 ; 子_6_in --)
    {
-     if ( iLow(总_336_st_3130,MT4Period(木_0_in),子_6_in)<iLow(总_336_st_3130,MT4Period(木_0_in),子_5_in) )
+     if ( iLow(总_336_st_3130,木_0_in,子_6_in)<iLow(总_336_st_3130,木_0_in,子_5_in) )
      {
        子_4_bo = false ;
      }
    }
    for (子_7_in = 子_5_in ; 子_7_in <= 子_5_in + 总_73_in_17C ; 子_7_in ++)
    {
-     if ( iLow(总_336_st_3130,MT4Period(木_0_in),子_7_in)<iLow(总_336_st_3130,MT4Period(木_0_in),子_5_in) )
+     if ( iLow(总_336_st_3130,木_0_in,子_7_in)<iLow(总_336_st_3130,木_0_in,子_5_in) )
      {
        子_3_bo = false ;
      }
    }
-   if ( 子_4_bo && 子_3_bo && iLow(总_336_st_3130,MT4Period(木_0_in),子_5_in)<MarketInfo(总_336_st_3130,MODE_BID) - 总_80_do_198 * 总_229_do_1E00 )
+   if ( 子_4_bo && 子_3_bo && iLow(总_336_st_3130,木_0_in,子_5_in)<MarketInfo(总_336_st_3130,MODE_BID) - 总_80_do_198 * 总_229_do_1E00 )
    {
-     临_do_1 = iLow(总_336_st_3130,MT4Period(木_0_in),子_5_in);
+     临_do_1 = iLow(总_336_st_3130,木_0_in,子_5_in);
      临_in_2 = 子_5_in;
-     临_do_3 = iLow(总_336_st_3130,MT4Period(总_71_in_174),0);
+     临_do_3 = iLow(总_336_st_3130,总_71_in_174,0);
      for (临_in_4 = 1 ; 临_in_4 <= 临_in_2 ; 临_in_4=临_in_4 + 1)
      {
-       if ( iLow(总_336_st_3130,MT4Period(总_71_in_174),临_in_4)<临_do_3 )
+       if ( iLow(总_336_st_3130,总_71_in_174,临_in_4)<临_do_3 )
        {
-         临_do_3 = iLow(总_336_st_3130,MT4Period(总_71_in_174),临_in_4);
+         临_do_3 = iLow(总_336_st_3130,总_71_in_174,临_in_4);
        }
      }
      if ( 临_do_1<=临_do_3 )
      {
-       临_do_5 = NormalizeDouble(iLow(总_336_st_3130,MT4Period(木_0_in),子_5_in),总_190_in_518);
+       临_do_5 = NormalizeDouble(iLow(总_336_st_3130,木_0_in,子_5_in),总_190_in_518);
        临_bo_7=false; 
-       for (临_in_6 = MT4OrdersTotal() ; 临_in_6 >= 0 ; 临_in_6=临_in_6 - 1)
+       for (临_in_6 = OrdersTotal() ; 临_in_6 >= 0 ; 临_in_6=临_in_6 - 1)
        {
          if ( OrderSelect(临_in_6,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 || !(MathAbs(OrderOpenPrice() - (临_do_5 - 总_84_do_1B8 * 总_229_do_1E00))<总_88_do_1D0 * 总_229_do_1E00) )   continue;
          临_bo_7 = true;
           break;
          
        }
-       if ( !(临_bo_7) && ( !(总_75_bo_184) || !(iClose(总_336_st_3130,MT4Period(木_0_in),子_5_in - 1)<总_80_do_198 * 总_229_do_1E00 + iLow(总_336_st_3130,MT4Period(木_0_in),子_5_in)) ) )
+       if ( !(临_bo_7) && ( !(总_75_bo_184) || !(iClose(总_336_st_3130,木_0_in,子_5_in - 1)<总_80_do_198 * 总_229_do_1E00 + iLow(总_336_st_3130,木_0_in,子_5_in)) ) )
        {
          子_2_bo = true ;
-         总_261_do_2578 = NormalizeDouble(iLow(总_336_st_3130,MT4Period(木_0_in),子_5_in),总_190_in_518) ;
+         总_261_do_2578 = NormalizeDouble(iLow(总_336_st_3130,木_0_in,子_5_in),总_190_in_518) ;
          总_266_in_259C = 子_5_in ;
          break;
        }
@@ -4463,22 +3557,22 @@ g_startLots_rw=StartLots;
    子_5_bo = true ;
    for (子_7_in = 子_6_in ; 子_7_in >= 子_6_in - 木_2_in ; 子_7_in --)
    {
-     if ( iHigh(总_336_st_3130,MT4Period(木_0_in),子_7_in)>iHigh(总_336_st_3130,MT4Period(木_0_in),子_6_in) )
+     if ( iHigh(总_336_st_3130,木_0_in,子_7_in)>iHigh(总_336_st_3130,木_0_in,子_6_in) )
      {
        子_5_bo = false ;
      }
    }
    for (子_8_in = 子_6_in ; 子_8_in <= 子_6_in + 木_1_in ; 子_8_in ++)
    {
-     if ( iHigh(总_336_st_3130,MT4Period(木_0_in),子_8_in)>iHigh(总_336_st_3130,MT4Period(木_0_in),子_6_in) )
+     if ( iHigh(总_336_st_3130,木_0_in,子_8_in)>iHigh(总_336_st_3130,木_0_in,子_6_in) )
      {
        子_4_bo = false ;
      }
    }
-   if ( 子_5_bo && 子_4_bo && iHigh(总_336_st_3130,MT4Period(木_0_in),子_6_in)>总_221_do_1A80 * 总_229_do_1E00 + MarketInfo(总_336_st_3130,MODE_ASK) )
+   if ( 子_5_bo && 子_4_bo && iHigh(总_336_st_3130,木_0_in,子_6_in)>总_221_do_1A80 * 总_229_do_1E00 + MarketInfo(总_336_st_3130,MODE_ASK) )
    {
      子_2_bo = true ;
-     子_3_do = NormalizeDouble(iHigh(总_336_st_3130,MT4Period(木_0_in),子_6_in),总_190_in_518) ;
+     子_3_do = NormalizeDouble(iHigh(总_336_st_3130,木_0_in,子_6_in),总_190_in_518) ;
      break;
    }
    子_6_in ++;
@@ -4511,22 +3605,22 @@ g_startLots_rw=StartLots;
    子_5_bo = true ;
    for (子_7_in = 子_6_in ; 子_7_in >= 子_6_in - 木_2_in ; 子_7_in --)
    {
-     if ( iLow(总_336_st_3130,MT4Period(木_0_in),子_7_in)<iLow(总_336_st_3130,MT4Period(木_0_in),子_6_in) )
+     if ( iLow(总_336_st_3130,木_0_in,子_7_in)<iLow(总_336_st_3130,木_0_in,子_6_in) )
      {
        子_5_bo = false ;
      }
    }
    for (子_8_in = 子_6_in ; 子_8_in <= 子_6_in + 木_1_in ; 子_8_in ++)
    {
-     if ( iLow(总_336_st_3130,MT4Period(木_0_in),子_8_in)<iLow(总_336_st_3130,MT4Period(木_0_in),子_6_in) )
+     if ( iLow(总_336_st_3130,木_0_in,子_8_in)<iLow(总_336_st_3130,木_0_in,子_6_in) )
      {
        子_4_bo = false ;
      }
    }
-   if ( 子_5_bo && 子_4_bo && iLow(总_336_st_3130,MT4Period(木_0_in),子_6_in)<MarketInfo(总_336_st_3130,MODE_BID) - 总_221_do_1A80 * 总_229_do_1E00 )
+   if ( 子_5_bo && 子_4_bo && iLow(总_336_st_3130,木_0_in,子_6_in)<MarketInfo(总_336_st_3130,MODE_BID) - 总_221_do_1A80 * 总_229_do_1E00 )
    {
      子_2_bo = true ;
-     子_3_do = NormalizeDouble(iLow(总_336_st_3130,MT4Period(木_0_in),子_6_in),总_190_in_518) ;
+     子_3_do = NormalizeDouble(iLow(总_336_st_3130,木_0_in,子_6_in),总_190_in_518) ;
      break;
    }
    子_6_in ++;
@@ -4574,7 +3668,7 @@ g_startLots_rw=StartLots;
  if ( Virtual_expiration )
  {
    总_302_da_2870 = 0 ;
-   for (子_1_in = MT4OrdersTotal() ; 子_1_in >= 0 ; 子_1_in --)
+   for (子_1_in = OrdersTotal() ; 子_1_in >= 0 ; 子_1_in --)
    {
      if ( OrderSelect(子_1_in,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 )   continue;
      
@@ -4582,12 +3676,12 @@ g_startLots_rw=StartLots;
      临_lo_1 = TimeCurrent();
      临_lo_2=OrderOpenTime() + 总_234_in_1E20;
      if ( 临_lo_1 < 临_lo_2 )   continue;
-     OrderDelete(OrderTicket(),Red); 
+     g_discardResult = OrderDelete(OrderTicket(),Red); 
      
    }
  }
  临_in_3 = 0;
- for (临_in_4 = MT4OrdersTotal() ; 临_in_4 >= 0 ; 临_in_4=临_in_4 - 1)
+ for (临_in_4 = OrdersTotal() ; 临_in_4 >= 0 ; 临_in_4=临_in_4 - 1)
  {
    if ( OrderSelect(临_in_4,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 0 )   continue;
    临_in_3=临_in_3 + 1;
@@ -4600,24 +3694,24 @@ g_startLots_rw=StartLots;
  else
  {
    临_in_5 = 1;
-   for (临_in_6 = MT4OrdersTotal() ; 临_in_6 >= 0 ; 临_in_6=临_in_6 - 1)
+   for (临_in_6 = OrdersTotal() ; 临_in_6 >= 0 ; 临_in_6=临_in_6 - 1)
    {
      if ( OrderSelect(临_in_6,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
-     OrderDelete(OrderTicket(),0xFFFFFFFF); 
+     g_discardResult = OrderDelete(OrderTicket(),0xFFFFFFFF); 
      
    }
    if ( 临_in_5 == 2 )
    {
-     for (临_in_7 = MT4OrdersTotal() ; 临_in_7 >= 0 ; 临_in_7=临_in_7 - 1)
+     for (临_in_7 = OrdersTotal() ; 临_in_7 >= 0 ; 临_in_7=临_in_7 - 1)
      {
        if ( OrderSelect(临_in_7,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
-       OrderDelete(OrderTicket(),0xFFFFFFFF); 
+       g_discardResult = OrderDelete(OrderTicket(),0xFFFFFFFF); 
        
      }
    }
  }
  临_in_8 = 0;
- for (临_in_9 = MT4OrdersTotal() ; 临_in_9 >= 0 ; 临_in_9=临_in_9 - 1)
+ for (临_in_9 = OrdersTotal() ; 临_in_9 >= 0 ; 临_in_9=临_in_9 - 1)
  {
    if ( OrderSelect(临_in_9,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 1 )   continue;
    临_in_8=临_in_8 + 1;
@@ -4629,17 +3723,17 @@ g_startLots_rw=StartLots;
    return;
  }
  临_in_10 = 1;
- for (临_in_11 = MT4OrdersTotal() ; 临_in_11 >= 0 ; 临_in_11=临_in_11 - 1)
+ for (临_in_11 = OrdersTotal() ; 临_in_11 >= 0 ; 临_in_11=临_in_11 - 1)
  {
    if ( OrderSelect(临_in_11,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
-   OrderDelete(OrderTicket(),0xFFFFFFFF); 
+   g_discardResult = OrderDelete(OrderTicket(),0xFFFFFFFF); 
    
  }
  if ( 临_in_10 != 2 )   return;
- for (临_in_12 = MT4OrdersTotal() ; 临_in_12 >= 0 ; 临_in_12=临_in_12 - 1)
+ for (临_in_12 = OrdersTotal() ; 临_in_12 >= 0 ; 临_in_12=临_in_12 - 1)
  {
    if ( OrderSelect(临_in_12,0,0) != true || OrderMagicNumber() != 总_96_in_208 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
-   OrderDelete(OrderTicket(),0xFFFFFFFF); 
+   g_discardResult = OrderDelete(OrderTicket(),0xFFFFFFFF); 
    
  }
  }
@@ -4683,7 +3777,7 @@ g_startLots_rw=StartLots;
  else
  {
    临_bo_1=false; 
-   for (临_in_2 = 0 ; 临_in_2 < MT4OrdersTotal() ; 临_in_2=临_in_2 + 1)
+   for (临_in_2 = 0 ; 临_in_2 < OrdersTotal() ; 临_in_2=临_in_2 + 1)
    {
      if ( OrderSelect(临_in_2,0,0) != true || OrderType() != 0 || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 )   continue;
      临_bo_1 = true;
@@ -4705,7 +3799,7 @@ g_startLots_rw=StartLots;
    子_2_bo = false ;
    临_do_3 = 总_262_do_2580;
    临_bo_5=false; 
-   for (临_in_4 = MT4OrdersTotal() ; 临_in_4 >= 0 ; 临_in_4=临_in_4 - 1)
+   for (临_in_4 = OrdersTotal() ; 临_in_4 >= 0 ; 临_in_4=临_in_4 - 1)
    {
      if ( OrderSelect(临_in_4,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 || !(MathAbs(OrderOpenPrice() - (总_83_do_1B0 * 总_229_do_1E00 + 临_do_3))<总_88_do_1D0 * 总_229_do_1E00) )   continue;
      临_bo_5 = true;
@@ -4715,7 +3809,7 @@ g_startLots_rw=StartLots;
    if ( !(临_bo_5) )
    {
      临_in_6 = 0;
-     for (临_in_7 = MT4OrdersTotal() ; 临_in_7 >= 0 ; 临_in_7=临_in_7 - 1)
+     for (临_in_7 = OrdersTotal() ; 临_in_7 >= 0 ; 临_in_7=临_in_7 - 1)
      {
        if ( OrderSelect(临_in_7,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 )   continue;
        临_in_6=临_in_6 + 1;
@@ -4724,7 +3818,7 @@ g_startLots_rw=StartLots;
      if ( 临_in_6 == 总_86_in_1C8 )
      {
        临_do_8 = 9999.0;
-       for (临_in_9 = MT4OrdersTotal() ; 临_in_9 >= 0 ; 临_in_9=临_in_9 - 1)
+       for (临_in_9 = OrdersTotal() ; 临_in_9 >= 0 ; 临_in_9=临_in_9 - 1)
        {
          if ( OrderSelect(临_in_9,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 || !(OrderOpenPrice()<临_do_8) )   continue;
          临_do_8 = OrderOpenPrice();
@@ -4749,7 +3843,7 @@ g_startLots_rw=StartLots;
      子_3_do = NormalizeDouble(总_83_do_1B0 * 总_229_do_1E00 + 总_188_do_508,总_190_in_518) ;
      临_do_10 = 子_3_do;
      临_bo_12=false; 
-     for (临_in_11 = MT4OrdersTotal() ; 临_in_11 >= 0 ; 临_in_11=临_in_11 - 1)
+     for (临_in_11 = OrdersTotal() ; 临_in_11 >= 0 ; 临_in_11=临_in_11 - 1)
      {
        if ( OrderSelect(临_in_11,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 4 || !(OrderOpenPrice()<=临_do_10) )   continue;
        临_bo_12 = true;
@@ -4804,7 +3898,7 @@ g_startLots_rw=StartLots;
        }
        else
        {
-         临_bo_15 = MT4OrdersTotal()<临_in_14;
+         临_bo_15 = OrdersTotal()<临_in_14;
        }
        if ( ( !(临_bo_13) || !(临_bo_15) ) )
        {
@@ -4814,16 +3908,16 @@ g_startLots_rw=StartLots;
        {
          if ( !(setSL_TP_After_Entry) )
          {
-           总_230_in_1E08 = (int)OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),子_5_do,子_6_do,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Green) ;
+           总_230_in_1E08 = OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),子_5_do,子_6_do,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Green) ;
          }
          else
          {
-           总_230_in_1E08 = (int)OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),0.0,0.0,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Green) ;
+           总_230_in_1E08 = OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),0.0,0.0,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Green) ;
          }
          总_280_bo_25FA = false ;
          if ( 总_230_in_1E08 <= 0 )
          {
-           临_in_16 = MT4_LastError();
+           临_in_16 = GetLastError();
            if ( 临_in_16 == 132 )
            {
              ResetLastError();
@@ -4835,19 +3929,19 @@ g_startLots_rw=StartLots;
                  if ( !(setSL_TP_After_Entry) )
                  {
                    临_in_16 = (int)(总_38_do_C0 * 总_229_do_1E00);
-                   总_230_in_1E08 = (int)OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,临_in_16,子_5_do,子_6_do,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Green) ;
+                   总_230_in_1E08 = OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,临_in_16,子_5_do,子_6_do,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Green) ;
                  }
                  else
                  {
-                   总_230_in_1E08 = (int)OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),0.0,0.0,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Green) ;
+                   总_230_in_1E08 = OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),0.0,0.0,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Green) ;
                  }
                  总_280_bo_25FA = false ;
                }
-               while(MT4_LastError() == 132);
+               while(GetLastError() == 132);
                
              }
            }
-           Print("error: \'" + lizong_21(MT4_LastError()) + "\' when setting entry order"); 
+           Print("error: \'" + lizong_21(GetLastError()) + "\' when setting entry order"); 
          }
          else
          {
@@ -4909,7 +4003,7 @@ g_startLots_rw=StartLots;
  else
  {
    临_bo_1=false; 
-   for (临_in_2 = 0 ; 临_in_2 < MT4OrdersTotal() ; 临_in_2=临_in_2 + 1)
+   for (临_in_2 = 0 ; 临_in_2 < OrdersTotal() ; 临_in_2=临_in_2 + 1)
    {
      if ( OrderSelect(临_in_2,0,0) != true || OrderType() != 1 || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 )   continue;
      临_bo_1 = true;
@@ -4931,7 +4025,7 @@ g_startLots_rw=StartLots;
    子_2_bo = false ;
    临_do_3 = 总_261_do_2578;
    临_bo_5=false; 
-   for (临_in_4 = MT4OrdersTotal() ; 临_in_4 >= 0 ; 临_in_4=临_in_4 - 1)
+   for (临_in_4 = OrdersTotal() ; 临_in_4 >= 0 ; 临_in_4=临_in_4 - 1)
    {
      if ( OrderSelect(临_in_4,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 || !(MathAbs(OrderOpenPrice() - (临_do_3 - 总_84_do_1B8 * 总_229_do_1E00))<总_88_do_1D0 * 总_229_do_1E00) )   continue;
      临_bo_5 = true;
@@ -4941,7 +4035,7 @@ g_startLots_rw=StartLots;
    if ( !(临_bo_5) )
    {
      临_in_6 = 0;
-     for (临_in_7 = MT4OrdersTotal() ; 临_in_7 >= 0 ; 临_in_7=临_in_7 - 1)
+     for (临_in_7 = OrdersTotal() ; 临_in_7 >= 0 ; 临_in_7=临_in_7 - 1)
      {
        if ( OrderSelect(临_in_7,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 )   continue;
        临_in_6=临_in_6 + 1;
@@ -4950,7 +4044,7 @@ g_startLots_rw=StartLots;
      if ( 临_in_6 == 总_86_in_1C8 )
      {
        临_do_8 = 0.0;
-       for (临_in_9 = MT4OrdersTotal() ; 临_in_9 >= 0 ; 临_in_9=临_in_9 - 1)
+       for (临_in_9 = OrdersTotal() ; 临_in_9 >= 0 ; 临_in_9=临_in_9 - 1)
        {
          if ( OrderSelect(临_in_9,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 || !(OrderOpenPrice()>临_do_8) )   continue;
          临_do_8 = OrderOpenPrice();
@@ -4975,7 +4069,7 @@ g_startLots_rw=StartLots;
      子_3_do = NormalizeDouble(总_189_do_510 - 总_84_do_1B8 * 总_229_do_1E00,总_190_in_518) ;
      临_do_10 = 子_3_do;
      临_bo_12=false; 
-     for (临_in_11 = MT4OrdersTotal() ; 临_in_11 >= 0 ; 临_in_11=临_in_11 - 1)
+     for (临_in_11 = OrdersTotal() ; 临_in_11 >= 0 ; 临_in_11=临_in_11 - 1)
      {
        if ( OrderSelect(临_in_11,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 || OrderType() != 5 || !(OrderOpenPrice()>=临_do_10) )   continue;
        临_bo_12 = true;
@@ -5030,7 +4124,7 @@ g_startLots_rw=StartLots;
        }
        else
        {
-         临_bo_15 = MT4OrdersTotal()<临_in_14;
+         临_bo_15 = OrdersTotal()<临_in_14;
        }
        if ( ( !(临_bo_13) || !(临_bo_15) ) )
        {
@@ -5040,16 +4134,16 @@ g_startLots_rw=StartLots;
        {
          if ( !(setSL_TP_After_Entry) )
          {
-           总_230_in_1E08 = (int)OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),子_5_do,子_6_do,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Red) ;
+           总_230_in_1E08 = OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),子_5_do,子_6_do,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Red) ;
          }
          else
          {
-           总_230_in_1E08 = (int)OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),0.0,0.0,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Red) ;
+           总_230_in_1E08 = OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),0.0,0.0,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Red) ;
          }
          总_281_bo_25FB = false ;
          if ( 总_230_in_1E08 <= 0 )
          {
-           临_in_16 = MT4_LastError();
+           临_in_16 = GetLastError();
            if ( 临_in_16 == 132 )
            {
              ResetLastError();
@@ -5061,19 +4155,19 @@ g_startLots_rw=StartLots;
                  if ( !(setSL_TP_After_Entry) )
                  {
                    临_in_16 = (int)(总_38_do_C0 * 总_229_do_1E00);
-                   总_230_in_1E08 = (int)OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,临_in_16,子_5_do,子_6_do,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Red) ;
+                   总_230_in_1E08 = OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,临_in_16,子_5_do,子_6_do,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Red) ;
                  }
                  else
                  {
-                   总_230_in_1E08 = (int)OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),0.0,0.0,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Red) ;
+                   总_230_in_1E08 = OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),0.0,0.0,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Red) ;
                  }
                  总_281_bo_25FB = false ;
                }
-               while(MT4_LastError() == 132);
+               while(GetLastError() == 132);
                
              }
            }
-           Print("error: \'" + lizong_21(MT4_LastError()) + "\' when setting entry order"); 
+           Print("error: \'" + lizong_21(GetLastError()) + "\' when setting entry order"); 
          }
          else
          {
@@ -5173,7 +4267,7 @@ g_startLots_rw=StartLots;
 
  子_4_do = 0.0 ;
  子_5_do = 0.0 ;
- for (子_6_in = 0 ; 子_6_in < MT4OrdersTotal() ; 子_6_in ++)
+ for (子_6_in = 0 ; 子_6_in < OrdersTotal() ; 子_6_in ++)
  {
    if ( OrderSelect(子_6_in,0,0) == true )
    {
@@ -5193,12 +4287,12 @@ g_startLots_rw=StartLots;
        if ( ( 子_7_do==0.0 || 子_7_do==0.0 ) )
        {
          子_7_do = NormalizeDouble(子_10_do - 总_100_do_230 * 总_229_do_1E00,总_190_in_518) ;
-         OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
+         g_discardResult = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
        }
        if ( ( 子_8_do==0.0 || 子_8_do==0.0 ) )
        {
          子_8_do = NormalizeDouble(总_101_do_238 * 总_229_do_1E00 + 子_10_do,总_190_in_518) ;
-         OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
+         g_discardResult = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
        }
      }
      if ( 子_14_in == 0 && ( ( 子_15_in == 总_93_in_1F0 && 总_69_in_160 == 1 && 子_16_st == 总_336_st_3130 ) || (总_69_in_160 == 2 && ( 总_95_in_204 == 0 || (总_95_in_204 == 1 && 子_16_st == 总_336_st_3130) ) && ( 子_15_in == 总_96_in_208 || 总_96_in_208 == 0 ) && (子_11_st == 总_97_st_210 || 总_97_st_210 == "")) ) )
@@ -5206,36 +4300,36 @@ g_startLots_rw=StartLots;
        if ( ( 子_7_do==0.0 || 子_7_do==0.0 ) )
        {
          子_7_do = NormalizeDouble(子_10_do - 总_100_do_230 * 总_229_do_1E00,总_190_in_518) ;
-         OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
+         g_discardResult = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
        }
        if ( ( 子_8_do==0.0 || 子_8_do==0.0 ) )
        {
          子_8_do = NormalizeDouble(总_101_do_238 * 总_229_do_1E00 + 子_10_do,总_190_in_518) ;
-         OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
+         g_discardResult = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
        }
-       if ( 总_53_bo_11C && iTime(总_336_st_3130,MT4Period(总_52_in_118),总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,MT4Period(总_52_in_118),0) >  子_13_da && iClose(总_336_st_3130,MT4Period(总_52_in_118),1)<iOpen(总_336_st_3130,MT4Period(总_52_in_118),1) && iClose(总_336_st_3130,MT4Period(总_52_in_118),1)<子_10_do )
+       if ( 总_53_bo_11C && iTime(总_336_st_3130,总_52_in_118,总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,总_52_in_118,0) >  子_13_da && iClose(总_336_st_3130,总_52_in_118,1)<iOpen(总_336_st_3130,总_52_in_118,1) && iClose(总_336_st_3130,总_52_in_118,1)<子_10_do )
        {
-         OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),0,Red); 
+         g_discardResult = OrderClose((int)子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),0,Red); 
          Print("closing candle confirmation"); 
        }
-       if ( 总_55_bo_124 && iTime(总_336_st_3130,MT4Period(总_54_in_120),总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,MT4Period(总_54_in_120),0) >  子_13_da && iClose(总_336_st_3130,MT4Period(总_54_in_120),1)<iOpen(总_336_st_3130,MT4Period(总_54_in_120),1) && iClose(总_336_st_3130,MT4Period(总_54_in_120),1)<子_10_do )
+       if ( 总_55_bo_124 && iTime(总_336_st_3130,总_54_in_120,总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,总_54_in_120,0) >  子_13_da && iClose(总_336_st_3130,总_54_in_120,1)<iOpen(总_336_st_3130,总_54_in_120,1) && iClose(总_336_st_3130,总_54_in_120,1)<子_10_do )
        {
-         OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),0,Red); 
+         g_discardResult = OrderClose((int)子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),0,Red); 
          Print("closing candle confirmation"); 
        }
-       if ( 总_57_bo_12C && iTime(总_336_st_3130,MT4Period(总_56_in_128),总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,MT4Period(总_56_in_128),0) >  子_13_da && iClose(总_336_st_3130,MT4Period(总_56_in_128),1)<iOpen(总_336_st_3130,MT4Period(总_56_in_128),1) && iClose(总_336_st_3130,MT4Period(总_56_in_128),1)<子_10_do )
+       if ( 总_57_bo_12C && iTime(总_336_st_3130,总_56_in_128,总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,总_56_in_128,0) >  子_13_da && iClose(总_336_st_3130,总_56_in_128,1)<iOpen(总_336_st_3130,总_56_in_128,1) && iClose(总_336_st_3130,总_56_in_128,1)<子_10_do )
        {
-         OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),0,Red); 
+         g_discardResult = OrderClose((int)子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),0,Red); 
          Print("closing candle confirmation"); 
        }
-       if ( 总_59_bo_134 && iTime(总_336_st_3130,MT4Period(总_58_in_130),总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,MT4Period(总_58_in_130),0) >  子_13_da && iClose(总_336_st_3130,MT4Period(总_58_in_130),1)<iOpen(总_336_st_3130,MT4Period(总_58_in_130),1) && iClose(总_336_st_3130,MT4Period(总_58_in_130),1)<子_10_do )
+       if ( 总_59_bo_134 && iTime(总_336_st_3130,总_58_in_130,总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,总_58_in_130,0) >  子_13_da && iClose(总_336_st_3130,总_58_in_130,1)<iOpen(总_336_st_3130,总_58_in_130,1) && iClose(总_336_st_3130,总_58_in_130,1)<子_10_do )
        {
-         OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),0,Red); 
+         g_discardResult = OrderClose((int)子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),0,Red); 
          Print("closing candle confirmation"); 
        }
-       if ( 总_61_bo_13C && iTime(总_336_st_3130,MT4Period(总_60_in_138),总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,MT4Period(总_60_in_138),0) >  子_13_da && iClose(总_336_st_3130,MT4Period(总_60_in_138),1)<iOpen(总_336_st_3130,MT4Period(总_60_in_138),1) && iClose(总_336_st_3130,MT4Period(总_60_in_138),1)<子_10_do )
+       if ( 总_61_bo_13C && iTime(总_336_st_3130,总_60_in_138,总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,总_60_in_138,0) >  子_13_da && iClose(总_336_st_3130,总_60_in_138,1)<iOpen(总_336_st_3130,总_60_in_138,1) && iClose(总_336_st_3130,总_60_in_138,1)<子_10_do )
        {
-         OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),0,Red); 
+         g_discardResult = OrderClose((int)子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),0,Red); 
          Print("closing candle confirmation"); 
        }
        总_247_do_2500 = 总_129_do_318 ;
@@ -5294,12 +4388,12 @@ g_startLots_rw=StartLots;
        if ( 子_7_do<NormalizeDouble(子_10_do - (总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 - 总_1_do_0,总_190_in_518) )
        {
          子_7_do = NormalizeDouble(子_10_do - (总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 - 总_1_do_0,总_190_in_518) ;
-         OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF); 
+         g_discardResult = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF); 
        }
        if ( MarketInfo(总_336_st_3130,MODE_BID)<子_10_do - (总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 - 总_1_do_0 )
        {
          RefreshRates(); 
-         OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_1_do_0,Red); 
+         g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_1_do_0,Red); 
          return(true); 
        }
        子_20_bo = false ;
@@ -5307,7 +4401,7 @@ g_startLots_rw=StartLots;
        {
          临_lo_8 = 子_9_lo;
          临_in_9 = 0;
-         for (临_in_10 = MT4OrdersTotal() ; 临_in_10 >= 0 ; 临_in_10=临_in_10 - 1)
+         for (临_in_10 = OrdersTotal() ; 临_in_10 >= 0 ; 临_in_10=临_in_10 - 1)
          {
            if ( OrderSelect(临_in_10,0,0) != true || OrderMagicNumber() != 总_168_in_4A8 || OrderSymbol() != 总_336_st_3130 )   continue;
            临_st_11 = OrderComment();
@@ -5341,7 +4435,7 @@ g_startLots_rw=StartLots;
              临_do_12 = AccountEquity();
              if ( 临_do_12>AccountBalance() + 总_163_do_480 )
              {
-               for (临_in_13 = MT4OrdersTotal() ; 临_in_13 >= 0 ; 临_in_13=临_in_13 - 1)
+               for (临_in_13 = OrdersTotal() ; 临_in_13 >= 0 ; 临_in_13=临_in_13 - 1)
                {
                  if ( OrderSelect(临_in_13,0,0) != true )   continue;
                  
@@ -5349,10 +4443,10 @@ g_startLots_rw=StartLots;
                  
                  if ( OrderType() == 0 )
                  {
-                   OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
+                   g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                  }
                  if ( OrderType() != 1 )   continue;
-                 OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
+                 g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
                  
                }
              }
@@ -5361,7 +4455,7 @@ g_startLots_rw=StartLots;
            {
              临_lo_14 = 子_9_lo;
              临_do_15 = 0.0;
-             for (临_in_16 = MT4OrdersTotal() ; 临_in_16 >= 0 ; 临_in_16=临_in_16 - 1)
+             for (临_in_16 = OrdersTotal() ; 临_in_16 >= 0 ; 临_in_16=临_in_16 - 1)
              {
                if ( OrderSelect(临_in_16,0,0) != true )   continue;
                临_lo_17 = OrderTicket();
@@ -5377,13 +4471,13 @@ g_startLots_rw=StartLots;
              {
                Print("Closing zone"); 
                临_lo_18 = 子_9_lo;
-               for (临_in_19 = MT4OrdersTotal() ; 临_in_19 >= 0 ; 临_in_19=临_in_19 - 1)
+               for (临_in_19 = OrdersTotal() ; 临_in_19 >= 0 ; 临_in_19=临_in_19 - 1)
                {
                  if ( OrderSelect(临_in_19,0,0) != true )   continue;
                  
                  if ( OrderMagicNumber() == 总_93_in_1F0 && OrderTicket() == 临_lo_18 )
                  {
-                   OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),3,Red); 
+                   g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),3,Red); 
                  }
                  if ( OrderMagicNumber() != 总_168_in_4A8 )   continue;
                  临_st_11 = OrderComment();
@@ -5391,10 +4485,10 @@ g_startLots_rw=StartLots;
                  
                  if ( OrderType() == 0 )
                  {
-                   OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
+                   g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                  }
                  if ( OrderType() != 1 )   continue;
-                 OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
+                 g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
                  
                }
                总_194_bo_530 = false ;
@@ -5423,13 +4517,13 @@ g_startLots_rw=StartLots;
                {
                  if ( 子_21_do>=总_166_in_498 )
                  {
-                   for (临_in_20 = MT4OrdersTotal() ; 临_in_20 >= 0 ; 临_in_20=临_in_20 - 1)
+                   for (临_in_20 = OrdersTotal() ; 临_in_20 >= 0 ; 临_in_20=临_in_20 - 1)
                    {
                      if ( OrderSelect(临_in_20,0,0) != true )   continue;
                      
                      if ( OrderMagicNumber() == 总_93_in_1F0 && OrderTicket() == 子_9_lo )
                      {
-                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),3,Red); 
+                       g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),3,Red); 
                      }
                      if ( OrderMagicNumber() != 总_168_in_4A8 )   continue;
                      临_st_11 = OrderComment();
@@ -5437,16 +4531,16 @@ g_startLots_rw=StartLots;
                      
                      if ( OrderType() == 0 )
                      {
-                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
+                       g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                      }
                      if ( OrderType() != 1 )   continue;
-                     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
+                     g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
                      
                    }
                  }
                  else
                  {
-                   OrderSend(总_336_st_3130,1,子_23_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,0.0,0.0,IntegerToString(子_9_lo,0,32),总_168_in_4A8,0,Green); 
+                   g_discardResultInt = OrderSend(总_336_st_3130,1,子_23_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,0.0,0.0,IntegerToString(子_9_lo,0,32),总_168_in_4A8,0,Green); 
                    总_192_in_528 = 1 ;
                    子_22_bo = true ;
                  }
@@ -5459,13 +4553,13 @@ g_startLots_rw=StartLots;
                {
                  if ( 子_21_do>=总_166_in_498 )
                  {
-                   for (临_in_21 = MT4OrdersTotal() ; 临_in_21 >= 0 ; 临_in_21=临_in_21 - 1)
+                   for (临_in_21 = OrdersTotal() ; 临_in_21 >= 0 ; 临_in_21=临_in_21 - 1)
                    {
                      if ( OrderSelect(临_in_21,0,0) != true )   continue;
                      
                      if ( OrderMagicNumber() == 总_93_in_1F0 && OrderTicket() == 子_9_lo )
                      {
-                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),3,Red); 
+                       g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),3,Red); 
                      }
                      if ( OrderMagicNumber() != 总_168_in_4A8 )   continue;
                      临_st_22 = OrderComment();
@@ -5473,16 +4567,16 @@ g_startLots_rw=StartLots;
                      
                      if ( OrderType() == 0 )
                      {
-                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
+                       g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                      }
                      if ( OrderType() != 1 )   continue;
-                     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
+                     g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
                      
                    }
                  }
                  else
                  {
-                   OrderSend(总_336_st_3130,0,子_23_do,MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,0.0,0.0,IntegerToString(子_9_lo,0,32),总_168_in_4A8,0,Green); 
+                   g_discardResultInt = OrderSend(总_336_st_3130,0,子_23_do,MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,0.0,0.0,IntegerToString(子_9_lo,0,32),总_168_in_4A8,0,Green); 
                    总_192_in_528 = 0 ;
                    子_22_bo = true ;
                  }
@@ -5540,7 +4634,7 @@ g_startLots_rw=StartLots;
            {
              Print("Closing with virtual SL"); 
              RefreshRates(); 
-             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_1_do_0,0xFFFFFFFF); 
+             g_discardResult = OrderClose((int)子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_1_do_0,0xFFFFFFFF); 
              return(true); 
            }
            if ( 总_125_do_2F8>0.0 && TimeCurrent() >= 子_13_da + 总_304_in_287C && MarketInfo(总_336_st_3130,MODE_BID)>NormalizeDouble(总_126_do_300 * 总_229_do_1E00 + (子_7_do + 总_337_do_3140),总_190_in_518) && MarketInfo(总_336_st_3130,MODE_BID)<子_8_do - 总_309_do_2898 )
@@ -5548,10 +4642,10 @@ g_startLots_rw=StartLots;
              子_7_do = NormalizeDouble(MarketInfo(总_336_st_3130,MODE_BID) - 总_126_do_300 * 总_229_do_1E00,总_190_in_518) ;
              if ( 子_7_do<MarketInfo(总_336_st_3130,MODE_BID) - 总_221_do_1A80 )
              {
-               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               总_230_in_1E08 = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
                if ( 总_230_in_1E08 <= 0 )
                {
-                 Print("TrailStop error: \'" + lizong_21(MT4_LastError()) + "\' when setting trailing Exit_TrailSL_after_X_Minutes_size loss.  Trying again!"); 
+                 Print("TrailStop error: \'" + lizong_21(GetLastError()) + "\' when setting trailing Exit_TrailSL_after_X_Minutes_size loss.  Trying again!"); 
                }
                子_2_bo = true ;
              }
@@ -5561,17 +4655,17 @@ g_startLots_rw=StartLots;
              子_7_do = NormalizeDouble(MarketInfo(总_336_st_3130,MODE_BID) - 总_103_do_250 * 总_229_do_1E00,总_190_in_518) ;
              if ( 子_7_do<MarketInfo(总_336_st_3130,MODE_BID) - 总_221_do_1A80 )
              {
-               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               总_230_in_1E08 = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
                if ( 总_230_in_1E08 <= 0 )
                {
-                 Print("TrailStop error: \'" + lizong_21(MT4_LastError()) + "\' when setting trailing Exit_stop loss.  Trying again!"); 
+                 Print("TrailStop error: \'" + lizong_21(GetLastError()) + "\' when setting trailing Exit_stop loss.  Trying again!"); 
                }
                else
                {
                  子_26_do = NormalizeDouble(总_107_do_270 / 100.0 * 总_223_do_1AC4_si99[总_328_in_3100],2) ;
                  if ( 子_26_do<子_12_do && 子_26_do>=MarketInfo(总_336_st_3130,MODE_LOTSTEP) )
                  {
-                   OrderClose(子_9_lo,子_26_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
+                   g_discardResult = OrderClose((int)子_9_lo,子_26_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                    return(true); 
                  }
                }
@@ -5583,17 +4677,17 @@ g_startLots_rw=StartLots;
              子_8_do = NormalizeDouble(MarketInfo(总_336_st_3130,MODE_BID) + 总_108_do_278 * 总_229_do_1E00,总_190_in_518) ;
              if ( 子_8_do>MarketInfo(总_336_st_3130,MODE_ASK) + 总_221_do_1A80 )
              {
-               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               总_230_in_1E08 = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
                if ( 总_230_in_1E08 <= 0 )
                {
-                 Print("TrailStop error: \'" + lizong_21(MT4_LastError()) + "\' when setting trailing Exit_TP.  Trying again!"); 
+                 Print("TrailStop error: \'" + lizong_21(GetLastError()) + "\' when setting trailing Exit_TP.  Trying again!"); 
                }
                else
                {
                  子_27_do = NormalizeDouble(总_107_do_270 / 100.0 * 总_223_do_1AC4_si99[总_328_in_3100],2) ;
                  if ( 子_27_do<子_12_do && 子_27_do>=SymbolInfoDouble(总_336_st_3130,34) )
                  {
-                   OrderClose(子_9_lo,子_27_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
+                   g_discardResult = OrderClose((int)子_9_lo,子_27_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                    return(true); 
                  }
                }
@@ -5605,10 +4699,10 @@ g_startLots_rw=StartLots;
              子_7_do = NormalizeDouble(MarketInfo(总_336_st_3130,MODE_BID) - 总_41_do_D8 * 总_229_do_1E00,总_190_in_518) ;
              if ( 子_7_do<MarketInfo(总_336_st_3130,MODE_BID) - 总_221_do_1A80 )
              {
-               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               总_230_in_1E08 = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
                if ( 总_230_in_1E08 <= 0 )
                {
-                 Print("TrailStop error: \'" + lizong_21(MT4_LastError()) + "\' when setting Slip TL.  Trying again!"); 
+                 Print("TrailStop error: \'" + lizong_21(GetLastError()) + "\' when setting Slip TL.  Trying again!"); 
                }
                else
                {
@@ -5622,10 +4716,10 @@ g_startLots_rw=StartLots;
              子_7_do = NormalizeDouble(总_242_do_21C4_si99[总_328_in_3100],总_190_in_518) ;
              if ( 子_7_do<MarketInfo(总_336_st_3130,MODE_BID) - 总_221_do_1A80 )
              {
-               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               总_230_in_1E08 = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
                if ( 总_230_in_1E08 <= 0 )
                {
-                 Print("error: \'" + lizong_21(MT4_LastError()) + "\' when modifying stoploss"); 
+                 Print("error: \'" + lizong_21(GetLastError()) + "\' when modifying stoploss"); 
                }
                子_2_bo = true ;
              }
@@ -5635,10 +4729,10 @@ g_startLots_rw=StartLots;
              子_7_do = NormalizeDouble(总_114_do_2B0 * 总_229_do_1E00 + 子_10_do,总_190_in_518) ;
              if ( 子_7_do<MarketInfo(总_336_st_3130,MODE_BID) - 总_221_do_1A80 )
              {
-               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               总_230_in_1E08 = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
                if ( 总_230_in_1E08 <= 0 )
                {
-                 Print("error when setting breakeven: \'" + lizong_21(MT4_LastError()) + "\' ..\'Exit_BE_start\' to close to \'Exit_BE_extra_pips\' ..trying again!"); 
+                 Print("error when setting breakeven: \'" + lizong_21(GetLastError()) + "\' ..\'Exit_BE_start\' to close to \'Exit_BE_extra_pips\' ..trying again!"); 
                }
                子_2_bo = true ;
              }
@@ -5650,7 +4744,7 @@ g_startLots_rw=StartLots;
              {
                总_250_in_2518 = 0 ;
                子_7_do = NormalizeDouble(总_131_do_328 * 总_229_do_1E00 + 子_7_do,总_190_in_518) ;
-               OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF); 
+               g_discardResult = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF); 
                子_2_bo = true ;
              }
            }
@@ -5659,7 +4753,7 @@ g_startLots_rw=StartLots;
            {
              Print("Closing with virtual SL"); 
              RefreshRates(); 
-             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_1_do_0,0xFFFFFFFF); 
+             g_discardResult = OrderClose((int)子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_1_do_0,0xFFFFFFFF); 
              return(true); 
            }
            if ( NormalizeDouble(子_4_do,总_190_in_518)!=NormalizeDouble(总_191_do_520,总_190_in_518) )
@@ -5722,7 +4816,7 @@ g_startLots_rw=StartLots;
            if ( MarketInfo(总_336_st_3130,MODE_BID)<=子_4_do )
            {
              RefreshRates(); 
-             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_1_do_0,0xFFFFFFFF); 
+             g_discardResult = OrderClose((int)子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_1_do_0,0xFFFFFFFF); 
              return(true); 
            }
            子_28_in = (int)(TimeCurrent() - 总_319_da_28E0) ;
@@ -5730,7 +4824,7 @@ g_startLots_rw=StartLots;
            {
              if ( NormalizeDouble(总_191_do_520,总_190_in_518)>子_7_do + 总_337_do_3140 )
              {
-               OrderModify(子_9_lo,子_10_do,NormalizeDouble(总_191_do_520,总_190_in_518),子_8_do,0,0xFFFFFFFF); 
+               g_discardResult = OrderModify((int)子_9_lo,子_10_do,NormalizeDouble(总_191_do_520,总_190_in_518),子_8_do,0,0xFFFFFFFF); 
              }
              总_319_da_28E0 = TimeCurrent() ;
            }
@@ -5746,7 +4840,7 @@ g_startLots_rw=StartLots;
              子_29_do = NormalizeDouble(总_107_do_270 / 100.0 * 总_223_do_1AC4_si99[总_328_in_3100],2) ;
              if ( 子_29_do<子_12_do && 子_29_do>=MarketInfo(总_336_st_3130,MODE_LOTSTEP) )
              {
-               OrderClose(子_9_lo,子_29_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
+               g_discardResult = OrderClose((int)子_9_lo,子_29_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                return(true); 
              }
            }
@@ -5764,10 +4858,10 @@ g_startLots_rw=StartLots;
            if ( 总_113_do_2A8>0.0 && 总_63_in_140 == 3 && MarketInfo(总_336_st_3130,MODE_BID)>总_113_do_2A8 * 总_229_do_1E00 + 子_10_do && 总_114_do_2B0 * 总_229_do_1E00 + 子_10_do>子_7_do + 总_337_do_3140 && MarketInfo(总_336_st_3130,MODE_BID)>总_114_do_2B0 * 总_229_do_1E00 + 子_10_do + 总_221_do_1A80 && MarketInfo(总_336_st_3130,MODE_BID)<子_8_do - 总_309_do_2898 && NormalizeDouble(总_114_do_2B0 * 总_229_do_1E00 + 子_10_do,总_190_in_518)>OrderStopLoss() )
            {
              总_191_do_520 = NormalizeDouble(总_114_do_2B0 * 总_229_do_1E00 + 子_10_do,总_190_in_518) ;
-             总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,总_191_do_520,子_8_do,0,0xFFFFFFFF) ;
+             总_230_in_1E08 = OrderModify((int)子_9_lo,子_10_do,总_191_do_520,子_8_do,0,0xFFFFFFFF) ;
              if ( 总_230_in_1E08 <= 0 )
              {
-               Print("error when setting breakeven: \'" + lizong_21(MT4_LastError()) + "\' ..\'Exit_BE_start\' to close to \'Exit_BE_extra_pips\' ..trying again!"); 
+               Print("error when setting breakeven: \'" + lizong_21(GetLastError()) + "\' ..\'Exit_BE_start\' to close to \'Exit_BE_extra_pips\' ..trying again!"); 
              }
              子_2_bo = true ;
            }
@@ -5789,7 +4883,7 @@ g_startLots_rw=StartLots;
            if ( MarketInfo(总_336_st_3130,MODE_BID)<=总_191_do_520 )
            {
              RefreshRates(); 
-             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_1_do_0,0xFFFFFFFF); 
+             g_discardResult = OrderClose((int)子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_1_do_0,0xFFFFFFFF); 
              return(true); 
            }
            if ( NormalizeDouble(子_4_do,总_190_in_518)!=NormalizeDouble(总_191_do_520,总_190_in_518) )
@@ -5899,7 +4993,7 @@ g_startLots_rw=StartLots;
 
  子_4_do = 0.0 ;
  子_5_do = 0.0 ;
- for (子_6_in = 0 ; 子_6_in < MT4OrdersTotal() ; 子_6_in ++)
+ for (子_6_in = 0 ; 子_6_in < OrdersTotal() ; 子_6_in ++)
  {
    if ( OrderSelect(子_6_in,0,0) == true )
    {
@@ -5919,12 +5013,12 @@ g_startLots_rw=StartLots;
        if ( ( 子_7_do==0.0 || 子_7_do==0.0 ) )
        {
          子_7_do = NormalizeDouble(总_100_do_230 * 总_229_do_1E00 + 子_10_do,总_190_in_518) ;
-         OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
+         g_discardResult = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
        }
        if ( ( 子_8_do==0.0 || 子_8_do==0.0 ) )
        {
          子_8_do = NormalizeDouble(子_10_do - 总_101_do_238 * 总_229_do_1E00,总_190_in_518) ;
-         OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
+         g_discardResult = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
        }
      }
      if ( 子_14_in == 1 && ( ( 子_15_in == 总_93_in_1F0 && 总_69_in_160 == 1 && 子_16_st == 总_336_st_3130 ) || (总_69_in_160 == 2 && ( 总_95_in_204 == 0 || (总_95_in_204 == 1 && 子_16_st == 总_336_st_3130) ) && ( 子_15_in == 总_96_in_208 || 总_96_in_208 == 0 ) && (子_11_st == 总_97_st_210 || 总_97_st_210 == "")) ) )
@@ -5932,36 +5026,36 @@ g_startLots_rw=StartLots;
        if ( ( 子_7_do==0.0 || 子_7_do==0.0 ) )
        {
          子_7_do = NormalizeDouble(总_100_do_230 * 总_229_do_1E00 + 子_10_do,总_190_in_518) ;
-         OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
+         g_discardResult = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
        }
        if ( ( 子_8_do==0.0 || 子_8_do==0.0 ) )
        {
          子_8_do = NormalizeDouble(子_10_do - 总_101_do_238 * 总_229_do_1E00,总_190_in_518) ;
-         OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
+         g_discardResult = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,Green); 
        }
-       if ( 总_53_bo_11C && iTime(总_336_st_3130,MT4Period(总_52_in_118),总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,MT4Period(总_52_in_118),0) >  子_13_da && iClose(总_336_st_3130,MT4Period(总_52_in_118),1)>iOpen(总_336_st_3130,MT4Period(总_52_in_118),1) && iClose(总_336_st_3130,MT4Period(总_52_in_118),1)>子_10_do )
+       if ( 总_53_bo_11C && iTime(总_336_st_3130,总_52_in_118,总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,总_52_in_118,0) >  子_13_da && iClose(总_336_st_3130,总_52_in_118,1)>iOpen(总_336_st_3130,总_52_in_118,1) && iClose(总_336_st_3130,总_52_in_118,1)>子_10_do )
        {
-         OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),0,Red); 
+         g_discardResult = OrderClose((int)子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),0,Red); 
          Print("closing candle confirmation"); 
        }
-       if ( 总_55_bo_124 && iTime(总_336_st_3130,MT4Period(总_54_in_120),总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,MT4Period(总_54_in_120),0) >  子_13_da && iClose(总_336_st_3130,MT4Period(总_54_in_120),1)>iOpen(总_336_st_3130,MT4Period(总_54_in_120),1) && iClose(总_336_st_3130,MT4Period(总_54_in_120),1)>子_10_do )
+       if ( 总_55_bo_124 && iTime(总_336_st_3130,总_54_in_120,总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,总_54_in_120,0) >  子_13_da && iClose(总_336_st_3130,总_54_in_120,1)>iOpen(总_336_st_3130,总_54_in_120,1) && iClose(总_336_st_3130,总_54_in_120,1)>子_10_do )
        {
-         OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),0,Red); 
+         g_discardResult = OrderClose((int)子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),0,Red); 
          Print("closing candle confirmation"); 
        }
-       if ( 总_57_bo_12C && iTime(总_336_st_3130,MT4Period(总_56_in_128),总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,MT4Period(总_56_in_128),0) >  子_13_da && iClose(总_336_st_3130,MT4Period(总_56_in_128),1)>iOpen(总_336_st_3130,MT4Period(总_56_in_128),1) && iClose(总_336_st_3130,MT4Period(总_56_in_128),1)>子_10_do )
+       if ( 总_57_bo_12C && iTime(总_336_st_3130,总_56_in_128,总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,总_56_in_128,0) >  子_13_da && iClose(总_336_st_3130,总_56_in_128,1)>iOpen(总_336_st_3130,总_56_in_128,1) && iClose(总_336_st_3130,总_56_in_128,1)>子_10_do )
        {
-         OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),0,Red); 
+         g_discardResult = OrderClose((int)子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),0,Red); 
          Print("closing candle confirmation"); 
        }
-       if ( 总_59_bo_134 && iTime(总_336_st_3130,MT4Period(总_58_in_130),总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,MT4Period(总_58_in_130),0) >  子_13_da && iClose(总_336_st_3130,MT4Period(总_58_in_130),1)>iOpen(总_336_st_3130,MT4Period(总_58_in_130),1) && iClose(总_336_st_3130,MT4Period(总_58_in_130),1)>子_10_do )
+       if ( 总_59_bo_134 && iTime(总_336_st_3130,总_58_in_130,总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,总_58_in_130,0) >  子_13_da && iClose(总_336_st_3130,总_58_in_130,1)>iOpen(总_336_st_3130,总_58_in_130,1) && iClose(总_336_st_3130,总_58_in_130,1)>子_10_do )
        {
-         OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),0,Red); 
+         g_discardResult = OrderClose((int)子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),0,Red); 
          Print("closing candle confirmation"); 
        }
-       if ( 总_61_bo_13C && iTime(总_336_st_3130,MT4Period(总_60_in_138),总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,MT4Period(总_60_in_138),0) >  子_13_da && iClose(总_336_st_3130,MT4Period(总_60_in_138),1)>iOpen(总_336_st_3130,MT4Period(总_60_in_138),1) && iClose(总_336_st_3130,MT4Period(总_60_in_138),1)>子_10_do )
+       if ( 总_61_bo_13C && iTime(总_336_st_3130,总_60_in_138,总_51_in_114) <= 子_13_da && iTime(总_336_st_3130,总_60_in_138,0) >  子_13_da && iClose(总_336_st_3130,总_60_in_138,1)>iOpen(总_336_st_3130,总_60_in_138,1) && iClose(总_336_st_3130,总_60_in_138,1)>子_10_do )
        {
-         OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),0,Red); 
+         g_discardResult = OrderClose((int)子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),0,Red); 
          Print("closing candle confirmation"); 
        }
        总_247_do_2500 = 总_129_do_318 ;
@@ -6020,12 +5114,12 @@ g_startLots_rw=StartLots;
        if ( 子_7_do>NormalizeDouble((总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 + 子_10_do + 总_1_do_0,总_190_in_518) )
        {
          子_7_do = NormalizeDouble((总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 + 子_10_do + 总_1_do_0,总_190_in_518) ;
-         OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF); 
+         g_discardResult = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF); 
        }
        if ( MarketInfo(总_336_st_3130,MODE_ASK)>(总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 + 子_10_do + 总_1_do_0 )
        {
          RefreshRates(); 
-         OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_1_do_0,Red); 
+         g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_1_do_0,Red); 
          return(true); 
        }
        子_20_bo = false ;
@@ -6033,7 +5127,7 @@ g_startLots_rw=StartLots;
        {
          临_lo_8 = 子_9_lo;
          临_in_9 = 0;
-         for (临_in_10 = MT4OrdersTotal() ; 临_in_10 >= 0 ; 临_in_10=临_in_10 - 1)
+         for (临_in_10 = OrdersTotal() ; 临_in_10 >= 0 ; 临_in_10=临_in_10 - 1)
          {
            if ( OrderSelect(临_in_10,0,0) != true || OrderMagicNumber() != 总_169_in_4AC || OrderSymbol() != 总_336_st_3130 )   continue;
            临_st_11 = OrderComment();
@@ -6067,7 +5161,7 @@ g_startLots_rw=StartLots;
              临_do_12 = AccountEquity();
              if ( 临_do_12>AccountBalance() + 总_163_do_480 )
              {
-               for (临_in_13 = MT4OrdersTotal() ; 临_in_13 >= 0 ; 临_in_13=临_in_13 - 1)
+               for (临_in_13 = OrdersTotal() ; 临_in_13 >= 0 ; 临_in_13=临_in_13 - 1)
                {
                  if ( OrderSelect(临_in_13,0,0) != true )   continue;
                  
@@ -6075,10 +5169,10 @@ g_startLots_rw=StartLots;
                  
                  if ( OrderType() == 0 )
                  {
-                   OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
+                   g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                  }
                  if ( OrderType() != 1 )   continue;
-                 OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
+                 g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
                  
                }
              }
@@ -6087,7 +5181,7 @@ g_startLots_rw=StartLots;
            {
              临_lo_14 = 子_9_lo;
              临_do_15 = 0.0;
-             for (临_in_16 = MT4OrdersTotal() ; 临_in_16 >= 0 ; 临_in_16=临_in_16 - 1)
+             for (临_in_16 = OrdersTotal() ; 临_in_16 >= 0 ; 临_in_16=临_in_16 - 1)
              {
                if ( OrderSelect(临_in_16,0,0) != true )   continue;
                临_lo_17 = OrderTicket();
@@ -6103,13 +5197,13 @@ g_startLots_rw=StartLots;
              {
                Print("Closing zone"); 
                临_lo_18 = 子_9_lo;
-               for (临_in_19 = MT4OrdersTotal() ; 临_in_19 >= 0 ; 临_in_19=临_in_19 - 1)
+               for (临_in_19 = OrdersTotal() ; 临_in_19 >= 0 ; 临_in_19=临_in_19 - 1)
                {
                  if ( OrderSelect(临_in_19,0,0) != true )   continue;
                  
                  if ( OrderMagicNumber() == 总_93_in_1F0 && OrderTicket() == 临_lo_18 )
                  {
-                   OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),3,Red); 
+                   g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),3,Red); 
                  }
                  if ( OrderMagicNumber() != 总_169_in_4AC )   continue;
                  临_st_11 = OrderComment();
@@ -6117,10 +5211,10 @@ g_startLots_rw=StartLots;
                  
                  if ( OrderType() == 0 )
                  {
-                   OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
+                   g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                  }
                  if ( OrderType() != 1 )   continue;
-                 OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
+                 g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
                  
                }
                总_195_bo_531 = false ;
@@ -6145,13 +5239,13 @@ g_startLots_rw=StartLots;
                {
                  if ( 子_21_do>=总_166_in_498 )
                  {
-                   for (临_in_20 = MT4OrdersTotal() ; 临_in_20 >= 0 ; 临_in_20=临_in_20 - 1)
+                   for (临_in_20 = OrdersTotal() ; 临_in_20 >= 0 ; 临_in_20=临_in_20 - 1)
                    {
                      if ( OrderSelect(临_in_20,0,0) != true )   continue;
                      
                      if ( OrderMagicNumber() == 总_93_in_1F0 && OrderTicket() == 子_9_lo )
                      {
-                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),3,Red); 
+                       g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),3,Red); 
                      }
                      if ( OrderMagicNumber() != 总_169_in_4AC )   continue;
                      临_st_11 = OrderComment();
@@ -6159,16 +5253,16 @@ g_startLots_rw=StartLots;
                      
                      if ( OrderType() == 0 )
                      {
-                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
+                       g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                      }
                      if ( OrderType() != 1 )   continue;
-                     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
+                     g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
                      
                    }
                  }
                  else
                  {
-                   OrderSend(总_336_st_3130,1,子_23_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,0.0,0.0,IntegerToString(子_9_lo,0,32),总_169_in_4AC,0,Green); 
+                   g_discardResultInt = OrderSend(总_336_st_3130,1,子_23_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,0.0,0.0,IntegerToString(子_9_lo,0,32),总_169_in_4AC,0,Green); 
                    总_193_in_52C = 1 ;
                    子_22_bo = true ;
                  }
@@ -6185,13 +5279,13 @@ g_startLots_rw=StartLots;
                {
                  if ( 子_21_do>=总_166_in_498 )
                  {
-                   for (临_in_21 = MT4OrdersTotal() ; 临_in_21 >= 0 ; 临_in_21=临_in_21 - 1)
+                   for (临_in_21 = OrdersTotal() ; 临_in_21 >= 0 ; 临_in_21=临_in_21 - 1)
                    {
                      if ( OrderSelect(临_in_21,0,0) != true )   continue;
                      
                      if ( OrderMagicNumber() == 总_93_in_1F0 && OrderTicket() == 子_9_lo )
                      {
-                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),3,Red); 
+                       g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),3,Red); 
                      }
                      if ( OrderMagicNumber() != 总_169_in_4AC )   continue;
                      临_st_22 = OrderComment();
@@ -6199,16 +5293,16 @@ g_startLots_rw=StartLots;
                      
                      if ( OrderType() == 0 )
                      {
-                       OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
+                       g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                      }
                      if ( OrderType() != 1 )   continue;
-                     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
+                     g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
                      
                    }
                  }
                  else
                  {
-                   OrderSend(总_336_st_3130,0,子_23_do,MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,0.0,0.0,IntegerToString(子_9_lo,0,32),总_169_in_4AC,0,Green); 
+                   g_discardResultInt = OrderSend(总_336_st_3130,0,子_23_do,MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,0.0,0.0,IntegerToString(子_9_lo,0,32),总_169_in_4AC,0,Green); 
                    总_193_in_52C = 0 ;
                    子_22_bo = true ;
                  }
@@ -6266,7 +5360,7 @@ g_startLots_rw=StartLots;
            {
              Print("Closing with virtual SL"); 
              RefreshRates(); 
-             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),(int)总_1_do_0,0xFFFFFFFF); 
+             g_discardResult = OrderClose((int)子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),(int)总_1_do_0,0xFFFFFFFF); 
              return(true); 
            }
            if ( 总_125_do_2F8>0.0 && TimeCurrent() >= 子_13_da + 总_304_in_287C && MarketInfo(总_336_st_3130,MODE_ASK)<子_7_do - 总_337_do_3140 - 总_126_do_300 * 总_229_do_1E00 && MarketInfo(总_336_st_3130,MODE_ASK)>子_8_do + 总_309_do_2898 && NormalizeDouble(MarketInfo(总_336_st_3130,MODE_ASK) + 总_126_do_300 * 总_229_do_1E00,总_190_in_518)<子_7_do )
@@ -6274,10 +5368,10 @@ g_startLots_rw=StartLots;
              子_7_do = NormalizeDouble(MarketInfo(总_336_st_3130,MODE_ASK) + 总_126_do_300 * 总_229_do_1E00,总_190_in_518) ;
              if ( 子_7_do>MarketInfo(总_336_st_3130,MODE_ASK) + 总_221_do_1A80 )
              {
-               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               总_230_in_1E08 = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
                if ( 总_230_in_1E08 <= 0 )
                {
-                 Print("TrailStop error: \'" + lizong_21(MT4_LastError()) + "\' when setting trailing Exit_TrailSL_after_X_Minutes_size loss.  Trying again!"); 
+                 Print("TrailStop error: \'" + lizong_21(GetLastError()) + "\' when setting trailing Exit_TrailSL_after_X_Minutes_size loss.  Trying again!"); 
                }
                子_2_bo = true ;
              }
@@ -6287,39 +5381,39 @@ g_startLots_rw=StartLots;
              子_7_do = NormalizeDouble(MarketInfo(总_336_st_3130,MODE_ASK) + 总_103_do_250 * 总_229_do_1E00,总_190_in_518) ;
              if ( 子_7_do>MarketInfo(总_336_st_3130,MODE_ASK) + 总_221_do_1A80 )
              {
-               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               总_230_in_1E08 = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
                if ( 总_230_in_1E08 <= 0 )
                {
-                 Print("TrailStop error: \'" + lizong_21(MT4_LastError()) + "\' when setting trailing Exit_stop loss.  Trying again!"); 
+                 Print("TrailStop error: \'" + lizong_21(GetLastError()) + "\' when setting trailing Exit_stop loss.  Trying again!"); 
                }
                else
                {
                  子_26_do = NormalizeDouble(总_107_do_270 / 100.0 * 总_223_do_1AC4_si99[总_328_in_3100],2) ;
                  if ( 子_26_do<子_12_do && 子_26_do>=MarketInfo(总_336_st_3130,MODE_LOTSTEP) )
                  {
-                   OrderClose(子_9_lo,子_26_do,MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
+                   g_discardResult = OrderClose((int)子_9_lo,子_26_do,MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
                    return(true); 
                  }
                }
                子_2_bo = true ;
              }
            }
-           if ( 总_108_do_278>0.0 && MarketInfo(总_336_st_3130,MODE_BID)>NormalizeDouble(总_108_do_278 * 总_229_do_1E00 + (子_8_do + 总_337_do_3140),总_190_in_518) && MarketInfo(总_336_st_3130,MODE_BID)>NormalizeDouble(总_109_do_280 * 总_229_do_1E00 + 子_5_do,总_190_in_518) && MarketInfo(总_336_st_3130,MODE_BID)>子_8_do + 总_309_do_2898 )
+           if ( 总_108_do_278>0.0 && MarketInfo(总_336_st_3130,MODE_BID)>NormalizeDouble(总_108_do_278 * 总_229_do_1E00 + (子_8_do + 总_337_do_3140),总_190_in_518) && Bid>NormalizeDouble(总_109_do_280 * 总_229_do_1E00 + 子_5_do,总_190_in_518) && MarketInfo(总_336_st_3130,MODE_BID)>子_8_do + 总_309_do_2898 )
            {
              子_8_do = NormalizeDouble(MarketInfo(总_336_st_3130,MODE_BID) - 总_108_do_278 * 总_229_do_1E00,总_190_in_518) ;
              if ( 子_8_do<MarketInfo(总_336_st_3130,MODE_BID) - 总_221_do_1A80 )
              {
-               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               总_230_in_1E08 = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
                if ( 总_230_in_1E08 <= 0 )
                {
-                 Print("TrailStop error: \'" + lizong_21(MT4_LastError()) + "\' when setting trailing Exit_TP.  Trying again!"); 
+                 Print("TrailStop error: \'" + lizong_21(GetLastError()) + "\' when setting trailing Exit_TP.  Trying again!"); 
                }
                else
                {
                  子_27_do = NormalizeDouble(总_107_do_270 / 100.0 * 总_223_do_1AC4_si99[总_328_in_3100],2) ;
                  if ( 子_27_do<子_12_do && 子_27_do>=SymbolInfoDouble(总_336_st_3130,34) )
                  {
-                   OrderClose(子_9_lo,子_27_do,MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
+                   g_discardResult = OrderClose((int)子_9_lo,子_27_do,MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
                    return(true); 
                  }
                }
@@ -6331,10 +5425,10 @@ g_startLots_rw=StartLots;
              子_7_do = NormalizeDouble(MarketInfo(总_336_st_3130,MODE_ASK) + 总_41_do_D8 * 总_229_do_1E00,总_190_in_518) ;
              if ( 子_7_do>MarketInfo(总_336_st_3130,MODE_ASK) + 总_221_do_1A80 )
              {
-               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               总_230_in_1E08 = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
                if ( 总_230_in_1E08 <= 0 )
                {
-                 Print("TrailStop error: \'" + lizong_21(MT4_LastError()) + "\' when setting Slip TL.  Trying again!"); 
+                 Print("TrailStop error: \'" + lizong_21(GetLastError()) + "\' when setting Slip TL.  Trying again!"); 
                }
                else
                {
@@ -6348,10 +5442,10 @@ g_startLots_rw=StartLots;
              子_7_do = NormalizeDouble(总_241_do_1E78_si99[总_328_in_3100],总_190_in_518) ;
              if ( 子_7_do>MarketInfo(总_336_st_3130,MODE_ASK) + 总_221_do_1A80 )
              {
-               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               总_230_in_1E08 = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
                if ( 总_230_in_1E08 <= 0 )
                {
-                 Print("error: \'" + lizong_21(MT4_LastError()) + "\' when modifying stoploss"); 
+                 Print("error: \'" + lizong_21(GetLastError()) + "\' when modifying stoploss"); 
                }
                子_2_bo = true ;
              }
@@ -6361,10 +5455,10 @@ g_startLots_rw=StartLots;
              子_7_do = NormalizeDouble(子_10_do - 总_114_do_2B0 * 总_229_do_1E00,总_190_in_518) ;
              if ( 子_7_do>MarketInfo(总_336_st_3130,MODE_ASK) + 总_221_do_1A80 )
              {
-               总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
+               总_230_in_1E08 = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF) ;
                if ( 总_230_in_1E08 <= 0 )
                {
-                 Print("error when setting breakeven: \'" + lizong_21(MT4_LastError()) + "\' ..\'Exit_BE_start\' to close to \'Exit_BE_extra_pips\' ..trying again!"); 
+                 Print("error when setting breakeven: \'" + lizong_21(GetLastError()) + "\' ..\'Exit_BE_start\' to close to \'Exit_BE_extra_pips\' ..trying again!"); 
                }
                子_2_bo = true ;
              }
@@ -6376,7 +5470,7 @@ g_startLots_rw=StartLots;
              {
                总_250_in_2518 = 0 ;
                子_7_do = NormalizeDouble(子_7_do - 总_131_do_328 * 总_229_do_1E00,总_190_in_518) ;
-               OrderModify(子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF); 
+               g_discardResult = OrderModify((int)子_9_lo,子_10_do,子_7_do,子_8_do,0,0xFFFFFFFF); 
                子_2_bo = true ;
              }
            }
@@ -6385,7 +5479,7 @@ g_startLots_rw=StartLots;
            {
              Print("Closing with virtual SL"); 
              RefreshRates(); 
-             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),(int)总_1_do_0,0xFFFFFFFF); 
+             g_discardResult = OrderClose((int)子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),(int)总_1_do_0,0xFFFFFFFF); 
              return(true); 
            }
            if ( NormalizeDouble(子_4_do,总_190_in_518)!=NormalizeDouble(总_191_do_520,总_190_in_518) )
@@ -6448,7 +5542,7 @@ g_startLots_rw=StartLots;
            if ( MarketInfo(总_336_st_3130,MODE_ASK)>=子_4_do )
            {
              RefreshRates(); 
-             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),(int)总_1_do_0,0xFFFFFFFF); 
+             g_discardResult = OrderClose((int)子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),(int)总_1_do_0,0xFFFFFFFF); 
              return(true); 
            }
            子_28_in = (int)(TimeCurrent() - 总_319_da_28E0) ;
@@ -6456,7 +5550,7 @@ g_startLots_rw=StartLots;
            {
              if ( NormalizeDouble(总_191_do_520,总_190_in_518)<子_7_do - 总_337_do_3140 )
              {
-               OrderModify(子_9_lo,子_10_do,NormalizeDouble(总_191_do_520,总_190_in_518),子_8_do,0,0xFFFFFFFF); 
+               g_discardResult = OrderModify((int)子_9_lo,子_10_do,NormalizeDouble(总_191_do_520,总_190_in_518),子_8_do,0,0xFFFFFFFF); 
              }
              总_319_da_28E0 = TimeCurrent() ;
            }
@@ -6471,7 +5565,7 @@ g_startLots_rw=StartLots;
              子_29_do = NormalizeDouble(总_107_do_270 / 100.0 * 总_223_do_1AC4_si99[总_328_in_3100],2) ;
              if ( 子_29_do<子_12_do && 子_29_do>=MarketInfo(总_336_st_3130,MODE_LOTSTEP) )
              {
-               OrderClose(子_9_lo,子_29_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
+               g_discardResult = OrderClose((int)子_9_lo,子_29_do,MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
                return(true); 
              }
              子_2_bo = true ;
@@ -6490,10 +5584,10 @@ g_startLots_rw=StartLots;
            if ( 总_113_do_2A8>0.0 && 总_63_in_140 == 3 && MarketInfo(总_336_st_3130,MODE_ASK)<子_10_do - 总_113_do_2A8 * 总_229_do_1E00 && 子_10_do - 总_114_do_2B0 * 总_229_do_1E00<子_7_do - 总_337_do_3140 && MarketInfo(总_336_st_3130,MODE_ASK)<子_10_do - 总_114_do_2B0 * 总_229_do_1E00 - 总_221_do_1A80 && MarketInfo(总_336_st_3130,MODE_ASK)>子_8_do + 总_309_do_2898 && NormalizeDouble(子_10_do - 总_114_do_2B0 * 总_229_do_1E00,总_190_in_518)<总_191_do_520 )
            {
              总_191_do_520 = NormalizeDouble(子_10_do - 总_114_do_2B0 * 总_229_do_1E00,总_190_in_518) ;
-             总_230_in_1E08 = OrderModify(子_9_lo,子_10_do,总_191_do_520,子_8_do,0,0xFFFFFFFF) ;
+             总_230_in_1E08 = OrderModify((int)子_9_lo,子_10_do,总_191_do_520,子_8_do,0,0xFFFFFFFF) ;
              if ( 总_230_in_1E08 <= 0 )
              {
-               Print("error when setting breakeven: \'" + lizong_21(MT4_LastError()) + "\' ..\'Exit_BE_start\' to close to \'Exit_BE_extra_pips\' ..trying again!"); 
+               Print("error when setting breakeven: \'" + lizong_21(GetLastError()) + "\' ..\'Exit_BE_start\' to close to \'Exit_BE_extra_pips\' ..trying again!"); 
              }
              子_2_bo = true ;
            }
@@ -6515,7 +5609,7 @@ g_startLots_rw=StartLots;
            if ( MarketInfo(总_336_st_3130,MODE_ASK)>=总_191_do_520 )
            {
              RefreshRates(); 
-             OrderClose(子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),(int)总_1_do_0,0xFFFFFFFF); 
+             g_discardResult = OrderClose((int)子_9_lo,子_12_do,MarketInfo(总_336_st_3130,MODE_ASK),(int)总_1_do_0,0xFFFFFFFF); 
              return(true); 
            }
            if ( NormalizeDouble(子_4_do,总_190_in_518)!=NormalizeDouble(总_191_do_520,总_190_in_518) )
@@ -7075,7 +6169,7 @@ g_startLots_rw=StartLots;
  
  if ( ( !(AccountBalance()>总_318_do_28D8 * 子_1_do) && !(AccountBalance()<总_318_do_28D8 / 子_1_do) && !(木_0_bo) ) )   return;
  lizong_10(总_100_do_230,总_92_in_1EC); 
- 子_2_in = MT4OrdersTotal() ;
+ 子_2_in = OrdersTotal() ;
  for (子_3_in = 子_2_in ; 子_3_in >= 0 ; 子_3_in --)
  {
    if ( OrderSelect(子_3_in,0,0) != true || OrderMagicNumber() != 总_93_in_1F0 || OrderSymbol() != 总_336_st_3130 )   continue;
@@ -7088,8 +6182,8 @@ g_startLots_rw=StartLots;
      子_7_do = OrderOpenPrice() ;
      子_8_da = OrderExpiration() ;
      子_9_st = OrderComment() ;
-     OrderDelete(子_5_lo,Red); 
-     子_10_in = (int)OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_7_do,(int)总_38_do_C0,子_4_do,子_6_do,子_9_st,总_93_in_1F0,子_8_da,Green) ;
+     g_discardResult = OrderDelete((int)子_5_lo,Red); 
+     子_10_in = OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_7_do,(int)总_38_do_C0,子_4_do,子_6_do,子_9_st,总_93_in_1F0,子_8_da,Green) ;
      临_lo_1 = 子_10_in;
      临_lo_2 = 子_5_lo;
      for (临_in_3 = 0 ; 临_in_3 < 100 ; 临_in_3=临_in_3 + 1)
@@ -7109,8 +6203,8 @@ g_startLots_rw=StartLots;
    子_14_do = OrderOpenPrice() ;
    子_15_da = OrderExpiration() ;
    子_16_st = OrderComment() ;
-   OrderDelete(子_12_lo,Red); 
-   子_17_in = (int)OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_14_do,(int)总_38_do_C0,子_11_do,子_13_do,子_16_st,总_93_in_1F0,子_15_da,Green) ;
+   g_discardResult = OrderDelete((int)子_12_lo,Red); 
+   子_17_in = OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_14_do,(int)总_38_do_C0,子_11_do,子_13_do,子_16_st,总_93_in_1F0,子_15_da,Green) ;
    临_lo_4 = 子_17_in;
    临_lo_5 = 子_12_lo;
    for (临_in_6 = 0 ; 临_in_6 < 100 ; 临_in_6=临_in_6 + 1)
@@ -7210,7 +6304,7 @@ g_startLots_rw=StartLots;
  ObjectSetInteger(0,"linec",OBJPROP_CORNER,子_11_in); 
  ObjectSetInteger(0,"linec",OBJPROP_YDISTANCE,long(子_13_in + InfoPanelSizeAdjust * 20.0 + 子_8_in)); 
  ObjectSetInteger(0,"linec",OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
- ObjectSetString(0,"linec",OBJPROP_TEXT,"EA Developed by Wim Schrynemakers - 2024"); 
+ ObjectSetString(0,"linec",OBJPROP_TEXT,"EA developer by Pham Duy Linh -2026"); 
  ObjectSetInteger(0,"linec",OBJPROP_COLOR,总_329_ui_3104);
  ObjectSetInteger(0,"linec",OBJPROP_FONTSIZE,总_372_in_5CFC);
  ObjectCreate(0,"line2",OBJ_LABEL,0,0,0.0);
@@ -7291,7 +6385,7 @@ g_startLots_rw=StartLots;
      ObjectSetInteger(0,"linet",OBJPROP_CORNER,子_11_in); 
      ObjectSetInteger(0,"linet",OBJPROP_YDISTANCE,long(子_13_in + InfoPanelSizeAdjust * 60.0 + 子_8_in)); 
      ObjectSetInteger(0,"linet",OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
-     ObjectSetString(0,"linet",OBJPROP_TEXT,"Manual lotsize: " + string(g_startLots_rw) + "lots");
+     ObjectSetString(0,"linet",OBJPROP_TEXT,"Manual lotsize: " + string(StartLots) + "lots");
      ObjectSetInteger(0,"linet",OBJPROP_COLOR,总_329_ui_3104);
      ObjectSetInteger(0,"linet",OBJPROP_FONTSIZE,总_372_in_5CFC);
    }
@@ -7311,9 +6405,9 @@ g_startLots_rw=StartLots;
  ObjectSetInteger(0,"linea" + IntegerToString(0,0,32),OBJPROP_COLOR,总_329_ui_3104);
  ObjectSetInteger(0,"linea" + IntegerToString(0,0,32),OBJPROP_FONTSIZE,总_372_in_5CFC);
  ObjectCreate(0,"linetp" + IntegerToString(0,0,32),OBJ_LABEL,0,0,0.0);
- ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_CORNER,子_11_in);
- ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_YDISTANCE,(long)(子_13_in + InfoPanelSizeAdjust * 124.0 + 子_8_in));
- ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_XDISTANCE,子_12_in + 子_7_in);
+ ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_CORNER,子_11_in); 
+ ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_YDISTANCE,(long)(子_13_in + InfoPanelSizeAdjust * 124.0 + 子_8_in)); 
+ ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
  ObjectSetString(0,"linetp" + IntegerToString(0,0,32),OBJPROP_TEXT,"Total P/L so far: -");
  ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_COLOR,总_329_ui_3104);
  ObjectSetInteger(0,"linetp" + IntegerToString(0,0,32),OBJPROP_FONTSIZE,总_372_in_5CFC);
@@ -7475,25 +6569,106 @@ g_startLots_rw=StartLots;
 //OnlyUpPeakGVName <<==--------   --------
  string GetNextNFPText()
  {
-  datetime  临_da_best = 0;
-  int       临_in_i;
 //----- -----
- // Theo trang thai lay tin (g_nfpStatus): 2 = Lich MQL5 khong doc duoc -> bao
- // loi lay tin. mq5 dung Lich (khong co link) nen khong co trang thai thieu
- // link. Binh thuong (0): co NFP -> "Next NFP: ..."; khong co -> "No News".
+ // Theo trang thai lay tin (g_nfpStatus):
+ //  1 = thieu allowed URL (loi 4060) -> yeu cau them link (tieng Anh)
+ //  2 = loi lay tin (mang/parse)     -> bao loi lay tin
+ // Neu binh thuong (0) thi giu nguyen nhu cu: co NFP -> "Next NFP: ...";
+ // khong co / chua co -> "No News Coming Up".
+ if ( g_nfpStatus == 1 )   return("NFP: add URL to allowed list");
  if ( g_nfpStatus == 2 )   return("NFP: news fetch error");
- for (临_in_i = 0 ; 临_in_i < 300 ; 临_in_i ++)
+ if ( g_nfpFFDate > 0 && g_nfpFFDate >= 总_390_da_5DC0 )
  {
-   if ( 总_391_da_5DFC_si300[临_in_i] <= 0 )   continue;
-   if ( 总_391_da_5DFC_si300[临_in_i] >= 总_390_da_5DC0 )
-   {
-     if ( 临_da_best == 0 || 总_391_da_5DFC_si300[临_in_i] < 临_da_best )   临_da_best = 总_391_da_5DFC_si300[临_in_i];
-   }
+   return("Next NFP: " + TimeToString(g_nfpFFDate + 总_395_in_6760 * 3600,TIME_DATE|TIME_SECONDS));
  }
- if ( 临_da_best == 0 )   return("No News Coming Up"); // chua co/chua lay duoc lich -> giong panel v4.3
- return("Next NFP: " + TimeToString(临_da_best + 总_395_in_6760 * 3600,TIME_DATE|TIME_SECONDS));
+ return("No News Coming Up");
  }
 //GetNextNFPText <<==--------   --------
+//+------------------------------------------------------------------+
+//| MQL4 khong co API Lich kinh te nhu MQL5, nen lay ngay NFP tu feed |
+//| JSON cong khai cua Forex Factory (khong yeu cau header dac biet, |
+//| khong bi chan bot - da kiem chung bang curl truoc khi dung). Feed |
+//| nay CHI co du lieu trong pham vi 1 tuan (khong co tuy chon lay ca |
+//| thang/nam nhu Lich MQL5). Theo yeu cau: dong "Next NFP" CHI hien  |
+//| thi khi tuan hien tai co xac nhan that su la co NFP - neu tuan   |
+//| nay khong co NFP (hau het cac tuan trong thang) thi KHONG hien   |
+//| thi gi ca, khong dung mang 总_391_da_5DFC_si300[] ma hoa cung de   |
+//| doan/uoc luong nua. Loi mang (khong ket noi duoc) thi giu nguyen |
+//| gia tri cu (khong xoa) - chi xoa khi kiem tra THANH CONG va xac  |
+//| nhan ro rang tuan nay khong co NFP.                              |
+//+------------------------------------------------------------------+
+ void RefreshNFPFromForexFactory()
+ {
+  char      临_data[];
+  char      临_result[];
+  string    临_headers;
+  string    临_json;
+  int       临_pos;
+  int       临_datePos;
+  string    临_iso;
+  int       临_year;
+  int       临_month;
+  int       临_day;
+  int       临_hour;
+  int       临_minute;
+  string    临_tzSign;
+  int       临_tzH;
+  int       临_tzM;
+  datetime  临_local;
+  int       临_offsetSec;
+//----- -----
+ // KHONG danh dau "da lay hom nay" o dau ham nua: chi danh dau khi lay THANH
+ // CONG (hoac loi 4060) de khoa toi mai; con loi server thi de gate mo cho
+ // lan thu lai. ResetLastError truoc khi goi de doc dung ma loi.
+ ResetLastError();
+ if ( WebRequest("GET","https://nfs.faireconomy.media/ff_calendar_thisweek.json",NULL,NULL,5000,临_data,0,临_result,临_headers) == -1 )
+ {
+   int 临_nfpErr = GetLastError();
+   Print("Error when reading Forex Factory NFP URL. Error code  =",临_nfpErr);
+   // Chi khi loi 4060 (URL chua add allowlist) -> canh bao them link, va GIU
+   // NGUYEN: khoa toi mai, KHONG thu lai. Con loi server (mang/tra ve loi) ->
+   // KHONG khoa ca ngay, hen thu lai sau 5 phut (300s) cho toi khi thanh cong.
+   if ( 临_nfpErr == 4060 )
+   {
+     g_nfpStatus = 1 ; // thieu allowed URL -> panel yeu cau them link
+     g_nfpFFBuiltDay = TimeCurrent() - TimeCurrent() % 86400 ; // giu nguyen: khoa toi mai
+     MessageBox("Add the address \'https://nfs.faireconomy.media/\' in the list of allowed URLs on tab \'Expert Advisors\'","Error",64);
+   }
+   else
+   {
+     g_nfpStatus = 2 ; // loi server -> panel bao loi lay tin
+     g_nfpRetryAfter = TimeCurrent() + 300 ; // thu lai sau 5 phut
+   }
+   return; // loi: giu nguyen gia tri cu
+ }
+ 临_json = CharArrayToString(临_result,0,0,0) ;
+ 临_pos = StringFind(临_json,"\"title\":\"Non-Farm Employment Change\"",0) ;
+ if ( 临_pos < 0 )
+ {
+   g_nfpStatus = 0 ; // lay tin thanh cong, xac nhan tuan nay khong co NFP
+   g_nfpFFDate = 0 ; // da kiem tra thanh cong, xac nhan tuan nay khong co NFP -> xoa hien thi
+   g_nfpFFBuiltDay = TimeCurrent() - TimeCurrent() % 86400 ; // thanh cong -> khoa toi mai
+   return;
+ }
+ 临_datePos = StringFind(临_json,"\"date\":\"",临_pos) ;
+ if ( 临_datePos < 0 )   { g_nfpStatus = 2 ; g_nfpRetryAfter = TimeCurrent() + 300 ; return; } // du lieu bat thuong -> loi lay tin, thu lai sau 5 phut
+ 临_iso = StringSubstr(临_json,临_datePos + 8,25) ;
+ if ( StringLen(临_iso) < 25 )   { g_nfpStatus = 2 ; g_nfpRetryAfter = TimeCurrent() + 300 ; return; } // du lieu bat thuong -> loi lay tin, thu lai sau 5 phut
+ 临_year = (int)StringSubstr(临_iso,0,4) ;
+ 临_month = (int)StringSubstr(临_iso,5,2) ;
+ 临_day = (int)StringSubstr(临_iso,8,2) ;
+ 临_hour = (int)StringSubstr(临_iso,11,2) ;
+ 临_minute = (int)StringSubstr(临_iso,14,2) ;
+ 临_tzSign = StringSubstr(临_iso,19,1) ;
+ 临_tzH = (int)StringSubstr(临_iso,20,2) ;
+ 临_tzM = (int)StringSubstr(临_iso,23,2) ;
+ 临_local = StringToTime(IntegerToString(临_year,0,32) + "." + IntegerToString(临_month,0,32) + "." + IntegerToString(临_day,0,32) + " " + IntegerToString(临_hour,0,32) + ":" + IntegerToString(临_minute,0,32)) ;
+ 临_offsetSec = (临_tzSign == "-" ? -1 : 1) * (临_tzH * 3600 + 临_tzM * 60) ;
+ g_nfpFFDate = 临_local - 临_offsetSec ;
+ g_nfpStatus = 0 ; // lay tin thanh cong, co NFP tuan nay -> panel hien "Next NFP"
+ g_nfpFFBuiltDay = TimeCurrent() - TimeCurrent() % 86400 ; // thanh cong -> khoa toi mai
+ }
+//RefreshNFPFromForexFactory <<==--------   --------
  void lizong_27()
  {
   string    子_1_st;
@@ -7529,7 +6704,7 @@ g_startLots_rw=StartLots;
  else
  {
    临_do_2 = 0.0;
-   for (临_in_3 = MT4OrdersTotal() ; 临_in_3 >= 0 ; 临_in_3=临_in_3 - 1)
+   for (临_in_3 = OrdersTotal() ; 临_in_3 >= 0 ; 临_in_3=临_in_3 - 1)
    {
      if ( OrderSelect(临_in_3,0,0) != true )   continue;
      
@@ -7665,7 +6840,7 @@ g_startLots_rw=StartLots;
    }
    else
    {
-     ObjectSetString(0,"linet",OBJPROP_TEXT,"Manual lotsize: " + string(g_startLots_rw) + "lots"); 
+     ObjectSetString(0,"linet",OBJPROP_TEXT,"Manual lotsize: " + string(StartLots) + "lots"); 
    }
  }
  }
@@ -8100,8 +7275,8 @@ g_startLots_rw=StartLots;
  void lizong_32()
  {
   int       子_1_in = 0;
-  double    子_2_do_si99[99];
-  double    子_3_do_si99[99];
+  double    子_2_do_si99[99]={0.0};
+  double    子_3_do_si99[99]={0.0};
   int       子_4_in;
   int       子_5_in;
   bool      子_6_bo;
@@ -8346,201 +7521,201 @@ g_startLots_rw=StartLots;
  if ( ( AccountCurrency() == "EUR" || AccountCurrency() == "eur" ) )
  {
    子_3_st="EURUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do / iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountCurrency() == "GBP" || AccountCurrency() == "gbp" ) )
  {
    子_3_st="GBPUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do / iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountCurrency() == "AUD" || AccountCurrency() == "aud" ) )
  {
    子_3_st="AUDUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do / iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountCurrency() == "JPY" || AccountCurrency() == "jpy" || AccountCurrency() == "YEN" || AccountCurrency() == "yen" ) )
  {
    子_3_st="USDJPY" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do * iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountCurrency() == "CHF" || AccountCurrency() == "chf" ) )
  {
    子_3_st="USDCHF" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do * iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountCurrency() == "HKD" || AccountCurrency() == "hkd" ) )
  {
    子_3_st="USDHKD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do * iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountCurrency() == "SGD" || AccountCurrency() == "sgd" ) )
  {
    子_3_st="USDSGD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do * iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountCurrency() == "PLN" || AccountCurrency() == "pln" ) )
  {
    子_3_st="USDPLN" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do * iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountCurrency() == "RUB" || AccountCurrency() == "rub" ) )
  {
    子_3_st="USDRUB" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do * iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountCurrency() == "BTC" || AccountCurrency() == "btc" ) )
  {
    子_3_st="BTCUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do / iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountCurrency() == "ETH" || AccountCurrency() == "eth" ) )
  {
    子_3_st="ETHUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do / iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountCurrency() == "BCH" || AccountCurrency() == "bch" ) )
  {
    子_3_st="BCHUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do / iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountCurrency() == "BCC" || AccountCurrency() == "bcc" ) )
  {
    子_3_st="BCCUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do / iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountCurrency() == "XRP" || AccountCurrency() == "xrp" ) )
  {
    子_3_st="XRPUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do / iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountCurrency() == "LTC" || AccountCurrency() == "ltc" ) )
  {
    子_3_st="LTCUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do / iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountCurrency() == "XMR" || AccountCurrency() == "xmr" ) )
  {
    子_3_st="XMRUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do / iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountCurrency() == "DSH" || AccountCurrency() == "dsh" ) )
  {
    子_3_st="DSHUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do / iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountCurrency() == "EOS" || AccountCurrency() == "eos" ) )
  {
    子_3_st="EOSUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do / iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountCurrency() == "TRX" || AccountCurrency() == "trx" ) )
  {
    子_3_st="TRXUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do / iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountCurrency() == "ADA" || AccountCurrency() == "ada" ) )
  {
    子_3_st="ADAUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do / iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountCurrency() == "BSV" || AccountCurrency() == "bsv" ) )
  {
    子_3_st="BSVUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do / iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountCurrency() == "XLM" || AccountCurrency() == "xlm" ) )
  {
    子_3_st="XLMUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do / iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountCurrency() == "GLD" || AccountCurrency() == "gld" ) )
  {
    子_3_st="GLDUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do / iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountCurrency() == "ZEC" || AccountCurrency() == "zec" ) )
  {
    子_3_st="ZECUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do / iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountCurrency() == "XEM" || AccountCurrency() == "xem" ) )
  {
    子_3_st="XEMUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do / iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  return(子_2_do); 
@@ -8560,225 +7735,225 @@ g_startLots_rw=StartLots;
  if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "EUR" || AccountInfoString(ACCOUNT_CURRENCY) == "eur" ) )
  {
    子_3_st="EURUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do * iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "GBP" || AccountInfoString(ACCOUNT_CURRENCY) == "gbp" ) )
  {
    子_3_st="GBPUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do * iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "AUD" || AccountInfoString(ACCOUNT_CURRENCY) == "aud" ) )
  {
    子_3_st="AUDUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do * iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "JPY" || AccountInfoString(ACCOUNT_CURRENCY) == "jpy" || AccountInfoString(ACCOUNT_CURRENCY) == "YEN" || AccountInfoString(ACCOUNT_CURRENCY) == "yen" ) )
  {
    子_3_st="USDJPY" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do / iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "CHF" || AccountInfoString(ACCOUNT_CURRENCY) == "chf" ) )
  {
    子_3_st="USDCHF" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do / iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "HKD" || AccountInfoString(ACCOUNT_CURRENCY) == "hkd" ) )
  {
    子_3_st="USDHKD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do / iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "RUB" || AccountInfoString(ACCOUNT_CURRENCY) == "rub" ) )
  {
    子_3_st="USDRUB" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do / iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "CNH" || AccountInfoString(ACCOUNT_CURRENCY) == "cnh" ) )
  {
    子_3_st="USDCNH" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do / iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
    }
    else
    {
      子_3_st="USDCNY" + 总_299_st_2850;
-     if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+     if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
      {
-       子_2_do = 木_0_do / iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+       子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
      }
    }
  }
  if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "CNY" || AccountInfoString(ACCOUNT_CURRENCY) == "cny" ) )
  {
    子_3_st="USDCNH" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do / iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
    }
    else
    {
      子_3_st="USDCNY" + 总_299_st_2850;
-     if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+     if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
      {
-       子_2_do = 木_0_do / iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+       子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
      }
    }
  }
  if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "SGD" || AccountInfoString(ACCOUNT_CURRENCY) == "sgd" ) )
  {
    子_3_st="USDSGD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do / iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do / iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "BTC" || AccountInfoString(ACCOUNT_CURRENCY) == "btc" ) )
  {
    子_3_st="BTCUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do * iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "ETH" || AccountInfoString(ACCOUNT_CURRENCY) == "eth" ) )
  {
    子_3_st="ETHUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do * iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "BCH" || AccountInfoString(ACCOUNT_CURRENCY) == "bch" ) )
  {
    子_3_st="BCHUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do * iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "BCC" || AccountInfoString(ACCOUNT_CURRENCY) == "bcc" ) )
  {
    子_3_st="BCCUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do * iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "XRP" || AccountInfoString(ACCOUNT_CURRENCY) == "xrp" ) )
  {
    子_3_st="XRPUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do * iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "LTC" || AccountInfoString(ACCOUNT_CURRENCY) == "ltc" ) )
  {
    子_3_st="LTCUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do * iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "XMR" || AccountInfoString(ACCOUNT_CURRENCY) == "xmr" ) )
  {
    子_3_st="XMRUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do * iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "DSH" || AccountInfoString(ACCOUNT_CURRENCY) == "dsh" ) )
  {
    子_3_st="DSHUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do * iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "EOS" || AccountInfoString(ACCOUNT_CURRENCY) == "eos" ) )
  {
    子_3_st="EOSUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do * iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "TRX" || AccountInfoString(ACCOUNT_CURRENCY) == "trx" ) )
  {
    子_3_st="TRXUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do * iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "ADA" || AccountInfoString(ACCOUNT_CURRENCY) == "ada" ) )
  {
    子_3_st="ADAUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do * iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "BSV" || AccountInfoString(ACCOUNT_CURRENCY) == "bsv" ) )
  {
    子_3_st="BSVUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do * iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "XLM" || AccountInfoString(ACCOUNT_CURRENCY) == "xlm" ) )
  {
    子_3_st="XLMUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do * iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "GLD" || AccountInfoString(ACCOUNT_CURRENCY) == "gld" ) )
  {
    子_3_st="GLDUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do * iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "ZEC" || AccountInfoString(ACCOUNT_CURRENCY) == "zec" ) )
  {
    子_3_st="ZECUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do * iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  if ( ( AccountInfoString(ACCOUNT_CURRENCY) == "XEM" || AccountInfoString(ACCOUNT_CURRENCY) == "xem" ) )
  {
    子_3_st="XEMUSD" + 总_299_st_2850;
-   if ( iClose(子_3_st,MT4Period(PERIOD_D1),1)>0.0 )
+   if ( iClose(子_3_st,PERIOD_D1,1)>0.0 )
    {
-     子_2_do = 木_0_do * iClose(子_3_st,MT4Period(PERIOD_D1),1) ;
+     子_2_do = 木_0_do * iClose(子_3_st,PERIOD_D1,1) ;
    }
  }
  return(MathRound(子_2_do)); 
@@ -10225,7 +9400,7 @@ g_startLots_rw=StartLots;
  {
    if ( OrderSelect(子_2_in,0,1) != true )   continue;
    临_lo_2 = OrderCloseTime();
-   if ( 临_lo_2 < iTime(总_336_st_3130,MT4Period(PERIOD_D1),0) )   continue;
+   if ( 临_lo_2 < iTime(总_336_st_3130,PERIOD_D1,0) )   continue;
    子_3_do = OrderProfit() + OrderSwap() + OrderCommission() ;
    子_1_do = 子_3_do + 子_1_do ;
    
@@ -10238,7 +9413,7 @@ g_startLots_rw=StartLots;
  {
    Print("Max Daily Drawdown reached, closing trades and skipping rest of the day"); 
  }
- for (临_in_3 = MT4OrdersTotal() ; 临_in_3 >= 0 ; 临_in_3=临_in_3 - 1)
+ for (临_in_3 = OrdersTotal() ; 临_in_3 >= 0 ; 临_in_3=临_in_3 - 1)
  {
    if ( OrderSelect(临_in_3,0,0) != true || OrderSymbol() != 总_336_st_3130 )   continue;
    临_in_4 = OrderMagicNumber();
@@ -10316,14 +9491,14 @@ g_startLots_rw=StartLots;
    }
    if ( OrderType() == 0 )
    {
-     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
+     g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_BID),(int)总_38_do_C0,Red); 
    }
    if ( OrderType() == 1 )
    {
-     OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
+     g_discardResult = OrderClose(OrderTicket(),OrderLots(),MarketInfo(总_336_st_3130,MODE_ASK),(int)总_38_do_C0,Red); 
    }
    if ( ( OrderType() != 4 && OrderType() != 5 ) )   continue;
-   OrderDelete(OrderTicket(),Red); 
+   g_discardResult = OrderDelete(OrderTicket(),Red); 
    
  }
  总_382_bo_5D98 = true ;
@@ -10346,22 +9521,42 @@ g_startLots_rw=StartLots;
  ResetLastError();
  if ( WebRequest("GET","https://www.worldtimeserver.com/time-zones/utc/",NULL,NULL,10000,子_7_ch_ko,0,子_8_ch_ko,临_st_1) == -1 )
  {
-   Print("Error when reading GMT URL. Error code  =",GetLastError());
-   MessageBox("Add the address \'https://www.worldtimeserver.com/\' in the list of allowed URLs on tab \'Expert Advisors\'","Error",64);
+   int      临_urlErr = GetLastError();
+   Print("Error when reading GMT URL. Error code  =",临_urlErr);
+   // Chi liet ke link nao that su CHUA duoc add vao allowlist (loi 4060 =
+   // "URL khong nam trong danh sach cho phep", tra ve tuc thi khong ton mang).
+   // Thieu 1 -> hien 1 link; thieu ca 2 -> gop ca 2 trong CUNG 1 thong bao.
+   // Chi nhac faireconomy khi EnableNFP_Filter dang bat (link do moi duoc dung).
+   // Giu nguyen cau MessageBox goc.
+   // Bung moi lan WebRequest that bai (spam giong ban goc, KHONG cap 1 lan).
+   // Van chi liet ke link con thieu (loi 4060); thieu 1 -> 1 link, thieu ca 2
+   // -> gop 2 trong 1 thong bao. Chi nhac faireconomy khi EnableNFP_Filter bat.
+   string   临_urlMiss = "";
+   if ( 临_urlErr == 4060 )   临_urlMiss = "\'https://www.worldtimeserver.com/\'";
+   if ( EnableNFP_Filter )
+   {
+     char     临_ffData[];
+     char     临_ffResult[];
+     string   临_ffHdr;
+     ResetLastError();
+     WebRequest("GET","https://nfs.faireconomy.media/ff_calendar_thisweek.json",NULL,NULL,10000,临_ffData,0,临_ffResult,临_ffHdr);
+     if ( GetLastError() == 4060 )
+     {
+       if ( 临_urlMiss != "" )   临_urlMiss = 临_urlMiss + " and ";
+       临_urlMiss = 临_urlMiss + "\'https://nfs.faireconomy.media/\'";
+     }
+   }
+   if ( 临_urlMiss != "" )   MessageBox("Add the address " + 临_urlMiss + " in the list of allowed URLs on tab \'Expert Advisors\'","Error",64);
    临_st_2 = "999";
  }
  else
  {
-   // MQL4 dung WHOLE_ARRAY=0 (quy uoc cu cua MQL4) de lay "toan bo mang" khi
-   // count=0; nhung MQL5 dinh nghia lai WHOLE_ARRAY=-1, con count=0 trong MQL5
-   // co nghia den la "lay 0 ky tu" -> luon ra chuoi rong du HTTP tra ve 200 va
-   // co du du lieu (day chinh la nguyen nhan that su cua loi "GMT time = 0").
-   临_st_2 = CharArrayToString(子_8_ch_ko,0,-1,0);
+   临_st_2 = CharArrayToString(子_8_ch_ko,0,0,0);
  }
  子_2_st = 临_st_2 ;
  if ( 子_2_st == "999" )
  {
-   return(999);
+   return(999); 
  }
  子_3_in = StringFind(子_2_st,"\"serverTimeStamp\" value=",0) ;
  子_4_st = StringSubstr(子_2_st,子_3_in + 25,10) ;
@@ -10414,8 +9609,8 @@ g_startLots_rw=StartLots;
  {
    子_5_in = (int)(MathMod(子_2_in * 6 + 2 - 子_2_in / 4,7.0) + 1.0) ;
    子_6_in = (int)(31.0 - (MathMod(子_2_in * 5 / 4 + 1,7.0))) ;
-   子_3_da=StringToTime(((string)子_2_in+".04.01")) + (子_5_in - 1) * 86400 + 0x1C20;
-   子_4_da=StringToTime(((string)子_2_in+".10.01")) + (子_6_in - 1) * 86400 + 0x1C20;
+   子_3_da=StringToTime(StringConcatenate(子_2_in,".04.01")) + (子_5_in - 1) * 86400 + 0x1C20;
+   子_4_da=StringToTime(StringConcatenate(子_2_in,".10.01")) + (子_6_in - 1) * 86400 + 0x1C20;
  }
  else
  {
@@ -10423,8 +9618,8 @@ g_startLots_rw=StartLots;
    {
      子_5_in = (int)(14.0 - (MathMod(子_2_in * 5 / 4 + 1,7.0))) ;
      子_6_in = (int)(7.0 - (MathMod(子_2_in * 5 / 4 + 1,7.0))) ;
-     子_3_da=StringToTime(((string)子_2_in+".03.01")) + (子_5_in - 1) * 86400 + 0x1C20;
-     子_4_da=StringToTime(((string)子_2_in+".11.01")) + (子_6_in - 1) * 86400 + 0x1C20;
+     子_3_da=StringToTime(StringConcatenate(子_2_in,".03.01")) + (子_5_in - 1) * 86400 + 0x1C20;
+     子_4_da=StringToTime(StringConcatenate(子_2_in,".11.01")) + (子_6_in - 1) * 86400 + 0x1C20;
    }
  }
  if ( TimeDayOfYear(TimeCurrent()) >  TimeDayOfYear(子_3_da) && TimeDayOfYear(TimeCurrent()) <  TimeDayOfYear(子_4_da) )
