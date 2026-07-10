@@ -1,5 +1,5 @@
 #property copyright  "Copyright 2026 - Pham Duy Linh"
-#property link       "https://t.me/Khonglammadoicoan96"
+#property link       "https://t.me/Khonglamdoicoan96"
 #property version    "4.5"
 #property description "- Fixed the www.worldtimeserver GMT fetch bug"
 #property description "- Fixed the OnlyUp bug"
@@ -9,7 +9,7 @@
 #property description "- Warns the exact missing allowed URL"
 #property description "- Full MT4-style trade logging"
 #property description "- A few handy inputs (all default to the original behavior)"
-#property description "Telegram: t.me/Khonglammadoicoan96"
+#property description "Telegram: t.me/Khonglamdoicoan96"
 
 //==================================================================
 // MQL4Compat: lop tuong thich MQL4->MQL5 (truoc day la file include
