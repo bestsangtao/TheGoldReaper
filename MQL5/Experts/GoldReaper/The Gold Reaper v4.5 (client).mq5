@@ -14,8 +14,9 @@
 //====================================================================
 // HAN SU DUNG (ban giao cho khach) - DOI NGAY o dong duoi cho tung khach
 // roi COMPILE ra .ex5 va CHI giao file .ex5 (dung giao .mq5) de khach
-// khong the sua ngay het han. Het han: EA NGUNG vao lenh moi (lenh dang
-// mo van do broker quan ly SL/TP), hien thong bao tren chart.
+// khong the sua ngay het han. Het han: EA TU GO khoi bieu do va khong
+// cho bat len lai (khong canh bao). Lenh dang mo van do broker quan ly
+// SL/TP nhu binh thuong - chi EA ngung hoat dong.
 //====================================================================
 #define GR_LICENSE_EXPIRY  D'2026.12.31 23:59'   // <-- DOI NGAY HET HAN TAI DAY
 
@@ -1440,10 +1441,8 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  int OnInit()
  {
 g_startLots_rw=StartLots;
- if ( TimeCurrent() > GR_LICENSE_EXPIRY )
-   Alert("The Gold Reaper v4.5: license expired (", TimeToString(GR_LICENSE_EXPIRY,TIME_DATE), "). Contact t.me/Khonglamdoicoan96");
- else
-   Print("The Gold Reaper v4.5 license valid until ", TimeToString(GR_LICENSE_EXPIRY,TIME_DATE|TIME_MINUTES));
+ if ( TimeCurrent() > GR_LICENSE_EXPIRY )   // het han: go EA khoi bieu do, khong chay, khong canh bao
+   { ExpertRemove(); return(INIT_FAILED); }
   double    子_2_do;
   double    子_3_do;
   int       子_4_in;
@@ -2169,9 +2168,9 @@ g_startLots_rw=StartLots;
 //init <<==--------   --------
  void OnTick()
  {
-   if ( TimeCurrent() > GR_LICENSE_EXPIRY )
+   if ( TimeCurrent() > GR_LICENSE_EXPIRY )   // het han: go EA khoi bieu do ngay, khong canh bao
    {
-      Comment("The Gold Reaper v4.5\nLICENSE EXPIRED  (", TimeToString(GR_LICENSE_EXPIRY,TIME_DATE), ")\nContact: t.me/Khonglamdoicoan96");
+      ExpertRemove();
       return;
    }
   bool      子_1_bo;
