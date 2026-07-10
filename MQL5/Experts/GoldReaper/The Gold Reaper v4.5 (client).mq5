@@ -14,8 +14,9 @@
 //====================================================================
 // HAN SU DUNG (ban giao cho khach) - DOI NGAY o dong duoi cho tung khach
 // roi COMPILE ra .ex5 va CHI giao file .ex5 (dung giao .mq5) de khach
-// khong the sua ngay het han. Het han: EA TU GO khoi bieu do (khong
-// canh bao). Lenh dang mo van do broker quan ly SL/TP nhu binh thuong.
+// khong the sua ngay het han. Het han: bam OK cung khong chay duoc -
+// EA tu rot khoi bieu do ngay (khong canh bao). Lenh dang mo van do
+// broker quan ly SL/TP nhu binh thuong.
 //====================================================================
 #define GR_LICENSE_EXPIRY  D'2026.12.31 23:59'   // <-- DOI NGAY HET HAN TAI DAY
 
@@ -1440,6 +1441,8 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  int OnInit()
  {
 g_startLots_rw=StartLots;
+ if ( TimeCurrent() > GR_LICENSE_EXPIRY )   // het han: bam OK cung khong chay - EA rot ngay, khong vao lenh
+   { ExpertRemove(); return(INIT_FAILED); }
   double    子_2_do;
   double    子_3_do;
   int       子_4_in;
