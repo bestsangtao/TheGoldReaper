@@ -1,12 +1,12 @@
 #property copyright  "Copyright 2026 - Pham Duy Linh"
 #property link       "https://t.me/Khonglammadoicoan96"
 #property version    "4.5"
-#property description "The Gold Reaper v4.5 - chuyen doi tu ban goc MT4 sang MT5, giu 100% logic goc:"
-#property description "- Fix loi lay gio www.worldtimeserver    - Fix loi OnlyUp"
-#property description "- Ngay NFP cung -> tu dong (Lich kinh te MT5), tu thu lai khi loi"
-#property description "- Them input dong lenh cuoi phien thu 6    - Hien Highest Balance tren panel"
-#property description "- Canh bao dung link con thieu    - Log lenh day du kieu MT4"
-#property description "- Them vai input tien ich (mac dinh giu nguyen hanh vi ban goc)"
+#property description "The Gold Reaper v4.5 - converted from the original MT4 to MT5, 100% identical logic:"
+#property description "- Fixed the www.worldtimeserver GMT fetch bug    - Fixed the OnlyUp bug"
+#property description "- Hardcoded NFP dates -> now automatic (MT5 Economic Calendar), auto-retries on error"
+#property description "- Added input to close trades at end of Friday session    - Highest Balance shown on panel"
+#property description "- Warns the exact missing allowed URL    - Full MT4-style trade logging"
+#property description "- A few handy inputs (all default to the original behavior)"
 #property description "Telegram: t.me/Khonglammadoicoan96"
 
 //==================================================================
@@ -7218,7 +7218,7 @@ g_startLots_rw=StartLots;
  ObjectSetInteger(0,"linec",OBJPROP_CORNER,子_11_in); 
  ObjectSetInteger(0,"linec",OBJPROP_YDISTANCE,long(子_13_in + InfoPanelSizeAdjust * 20.0 + 子_8_in)); 
  ObjectSetInteger(0,"linec",OBJPROP_XDISTANCE,子_12_in + 子_7_in); 
- ObjectSetString(0,"linec",OBJPROP_TEXT,"EA developer by Pham Duy Linh -2026"); 
+ ObjectSetString(0,"linec",OBJPROP_TEXT,"EA developer by Pham Duy Linh - 2026"); 
  ObjectSetInteger(0,"linec",OBJPROP_COLOR,总_329_ui_3104);
  ObjectSetInteger(0,"linec",OBJPROP_FONTSIZE,总_372_in_5CFC);
  ObjectCreate(0,"line2",OBJ_LABEL,0,0,0.0);
