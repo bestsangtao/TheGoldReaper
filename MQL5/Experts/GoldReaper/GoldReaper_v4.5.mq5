@@ -256,15 +256,37 @@ ENUM_ORDER_TYPE_FILLING MT4SelectFilling(string symbol)
 }
 
 //====================================================================
-// In log chan doan khi lenh bi server TU CHOI (reject) - chi log, khong
-// doi logic: retcode + mo ta cua server + noi dung request de biet ngay
-// vi sao lenh khong vao (sai gia/thieu tien/market closed/invalid stops...).
+// Log thao tac lenh GIONG TERMINAL MT4: MT4 tu dong in moi thao tac
+// cua EA vao tab Experts ("open #123 buy stop 0.11 XAUUSD at ... ok"),
+// ca thanh cong lan that bai. MT5 khong tu in nhu vay cho ::OrderSend
+// tho, nen tu in lai o day de log giong het MT4. Chi log, khong doi logic.
 //====================================================================
+string MT4OrderTypeName(int t)
+{
+   switch(t)
+   {
+      case ORDER_TYPE_BUY:        return "buy";
+      case ORDER_TYPE_SELL:       return "sell";
+      case ORDER_TYPE_BUY_LIMIT:  return "buy limit";
+      case ORDER_TYPE_SELL_LIMIT: return "sell limit";
+      case ORDER_TYPE_BUY_STOP:   return "buy stop";
+      case ORDER_TYPE_SELL_STOP:  return "sell stop";
+   }
+   return "order";
+}
+
+void MT4PrintTradeOk(string op,long ticket,const MqlTradeRequest &request)
+{
+   PrintFormat("%s #%I64d %s %.2f %s at %.5f sl: %.5f tp: %.5f ok",
+               op,ticket,MT4OrderTypeName((int)request.type),request.volume,
+               request.symbol,request.price,request.sl,request.tp);
+}
+
 void MT4PrintTradeReject(string op,const MqlTradeRequest &request,const MqlTradeResult &result)
 {
-   PrintFormat("%s REJECTED: retcode=%u (%s) | %s type=%d vol=%.2f price=%.5f sl=%.5f tp=%.5f ticket=%I64u",
-               op,result.retcode,result.comment,request.symbol,(int)request.type,
-               request.volume,request.price,request.sl,request.tp,
+   PrintFormat("failed %s %s %.2f %s at %.5f sl: %.5f tp: %.5f [%s] (retcode=%u, ticket=%I64u)",
+               op,MT4OrderTypeName((int)request.type),request.volume,request.symbol,
+               request.price,request.sl,request.tp,result.comment,result.retcode,
                (request.position>0)?request.position:request.order);
 }
 
@@ -319,9 +341,10 @@ long OrderSend(string symbol,int cmd,double volume,double price,int slippage,
       ulong ticket=result.order;
       if(ticket==0) ticket=result.deal;
       g_mt4_lastTicket=(long)ticket;
+      MT4PrintTradeOk("open",g_mt4_lastTicket,request);
       return g_mt4_lastTicket;
    }
-   MT4PrintTradeReject("OrderSend",request,result);
+   MT4PrintTradeReject("open",request,result);
    g_mt4_lastTicket=-1;
    return -1;
 }
@@ -366,9 +389,11 @@ bool OrderModify(long ticket,double price,double stoploss,double takeprofit,date
    if(ok && (result.retcode==TRADE_RETCODE_DONE || result.retcode==TRADE_RETCODE_DONE_PARTIAL))
    {
       g_mt4_lastError=0;
+      PrintFormat("modify #%I64d %s price: %.5f sl: %.5f tp: %.5f ok",
+                  ticket,request.symbol,request.price,request.sl,request.tp);
       return true;
    }
-   MT4PrintTradeReject("OrderModify",request,result);
+   MT4PrintTradeReject("modify",request,result);
    return false;
 }
 
@@ -414,9 +439,13 @@ bool OrderClose(long ticket,double lots,double price,int slippage,color arrow_co
    if(ok && (result.retcode==TRADE_RETCODE_DONE || result.retcode==TRADE_RETCODE_DONE_PARTIAL))
    {
       g_mt4_lastError=0;
+      // MT4 in "close #ticket <chieu vi the goc> lots symbol at gia ok"
+      PrintFormat("close #%I64d %s %.2f %s at %.5f ok",
+                  ticket,(posType==POSITION_TYPE_BUY)?"buy":"sell",
+                  closeLots,symbol,request.price);
       return true;
    }
-   MT4PrintTradeReject("OrderClose",request,result);
+   MT4PrintTradeReject("close",request,result);
    return false;
 }
 
@@ -431,6 +460,16 @@ bool OrderDelete(long ticket,color arrow_color=clrNONE)
    ZeroMemory(result);
    request.action=TRADE_ACTION_REMOVE;
    request.order=(ulong)ticket;
+   // Lay thong tin lenh TRUOC khi xoa de log giong MT4
+   // ("delete #123 buy stop 0.14 XAUUSD at 3962.66 ok")
+   string delName="order"; double delVol=0.0,delPrice=0.0; string delSym="";
+   if(::OrderSelect((ulong)ticket))
+   {
+      delName=MT4OrderTypeName((int)::OrderGetInteger(ORDER_TYPE));
+      delVol=::OrderGetDouble(ORDER_VOLUME_CURRENT);
+      delPrice=::OrderGetDouble(ORDER_PRICE_OPEN);
+      delSym=::OrderGetString(ORDER_SYMBOL);
+   }
 
    bool ok=::OrderSend(request,result);
    if(!ok && result.retcode==0) result.retcode=TRADE_RETCODE_ERROR;
@@ -438,9 +477,11 @@ bool OrderDelete(long ticket,color arrow_color=clrNONE)
    if(ok && result.retcode==TRADE_RETCODE_DONE)
    {
       g_mt4_lastError=0;
+      PrintFormat("delete #%I64d %s %.2f %s at %.5f ok",
+                  ticket,delName,delVol,delSym,delPrice);
       return true;
    }
-   MT4PrintTradeReject("OrderDelete",request,result);
+   MT4PrintTradeReject("delete",request,result);
    return false;
 }
 
