@@ -256,6 +256,19 @@ ENUM_ORDER_TYPE_FILLING MT4SelectFilling(string symbol)
 }
 
 //====================================================================
+// In log chan doan khi lenh bi server TU CHOI (reject) - chi log, khong
+// doi logic: retcode + mo ta cua server + noi dung request de biet ngay
+// vi sao lenh khong vao (sai gia/thieu tien/market closed/invalid stops...).
+//====================================================================
+void MT4PrintTradeReject(string op,const MqlTradeRequest &request,const MqlTradeResult &result)
+{
+   PrintFormat("%s REJECTED: retcode=%u (%s) | %s type=%d vol=%.2f price=%.5f sl=%.5f tp=%.5f ticket=%I64u",
+               op,result.retcode,result.comment,request.symbol,(int)request.type,
+               request.volume,request.price,request.sl,request.tp,
+               (request.position>0)?request.position:request.order);
+}
+
+//====================================================================
 // OrderSend() kieu MQL4 (11 tham so) -> tra ve ticket (>=0) hoac -1
 //====================================================================
 long OrderSend(string symbol,int cmd,double volume,double price,int slippage,
@@ -308,6 +321,7 @@ long OrderSend(string symbol,int cmd,double volume,double price,int slippage,
       g_mt4_lastTicket=(long)ticket;
       return g_mt4_lastTicket;
    }
+   MT4PrintTradeReject("OrderSend",request,result);
    g_mt4_lastTicket=-1;
    return -1;
 }
@@ -354,6 +368,7 @@ bool OrderModify(long ticket,double price,double stoploss,double takeprofit,date
       g_mt4_lastError=0;
       return true;
    }
+   MT4PrintTradeReject("OrderModify",request,result);
    return false;
 }
 
@@ -401,6 +416,7 @@ bool OrderClose(long ticket,double lots,double price,int slippage,color arrow_co
       g_mt4_lastError=0;
       return true;
    }
+   MT4PrintTradeReject("OrderClose",request,result);
    return false;
 }
 
@@ -424,6 +440,7 @@ bool OrderDelete(long ticket,color arrow_color=clrNONE)
       g_mt4_lastError=0;
       return true;
    }
+   MT4PrintTradeReject("OrderDelete",request,result);
    return false;
 }
 
