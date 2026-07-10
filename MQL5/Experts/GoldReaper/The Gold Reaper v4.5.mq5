@@ -1,7 +1,6 @@
 #property copyright  "Copyright 2026 - Pham Duy Linh"
 #property link       "https://t.me/Khonglammadoicoan96"
 #property version    "4.5"
-#property description "The Gold Reaper v4.5 - converted from the original MT4 to MT5, 100% identical logic."
 #property description "- Fixed the www.worldtimeserver GMT fetch bug"
 #property description "- Fixed the OnlyUp bug"
 #property description "- Hardcoded NFP dates -> now automatic (MT5 Economic Calendar), auto-retries on error"
