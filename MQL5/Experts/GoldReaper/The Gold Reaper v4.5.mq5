@@ -80,6 +80,8 @@
 // Bien trang thai noi bo
 //====================================================================
 long g_mt4_lastTicket = -1;
+// MT5 ticket/order/deal IDs are 64-bit. Khong ep ket qua OrderSend/OrderTicket ve int.
+
 int  g_mt4_lastError  = 0;
 
 //====================================================================
@@ -691,7 +693,7 @@ int HistoryTotal()
 // OrderSelect() kieu MQL4 (3 tham so, khac chu ky voi ham OrderSelect
 // 1-tham-so co san cua MQL5 nen khong xung dot).
 //====================================================================
-bool OrderSelect(int index_or_ticket,int select,int pool=MODE_TRADES)
+bool OrderSelect(long index_or_ticket,int select,int pool=MODE_TRADES)
 {
    if(select==SELECT_BY_TICKET)
    {
@@ -768,7 +770,7 @@ bool OrderSelect(int index_or_ticket,int select,int pool=MODE_TRADES)
    {
       MT4BuildHistoryCache();
       if(index_or_ticket<0 || index_or_ticket>=g_hist_count) return false;
-      int i=index_or_ticket;
+      int i=(int)index_or_ticket; // da kiem tra nam trong [0, g_hist_count)
       g_selOrder.ticket=g_hist_ticket[i];
       g_selOrder.symbol=g_hist_symbol[i];
       g_selOrder.type=g_hist_type[i];
@@ -793,7 +795,8 @@ bool OrderSelect(int index_or_ticket,int select,int pool=MODE_TRADES)
    int posTotal=PositionsTotal();
    if(index_or_ticket>=0 && index_or_ticket<posTotal)
    {
-      ulong ticket=PositionGetTicket(index_or_ticket);
+      int posIdx=(int)index_or_ticket; // da kiem tra nam trong [0, posTotal)
+      ulong ticket=PositionGetTicket(posIdx);
       if(ticket==0) return false;
       g_selOrder.ticket=(long)ticket;
       g_selOrder.symbol=PositionGetString(POSITION_SYMBOL);
@@ -813,10 +816,11 @@ bool OrderSelect(int index_or_ticket,int select,int pool=MODE_TRADES)
       g_selOrder.magic=(int)PositionGetInteger(POSITION_MAGIC);
       return true;
    }
-   int ordIdx=index_or_ticket-posTotal;
+   long ordIdx64=index_or_ticket-posTotal;
    int ordTotal=::OrdersTotal();
-   if(ordIdx>=0 && ordIdx<ordTotal)
+   if(ordIdx64>=0 && ordIdx64<ordTotal)
    {
+      int ordIdx=(int)ordIdx64; // da kiem tra nam trong [0, ordTotal)
       ulong ticket=::OrderGetTicket(ordIdx);
       if(ticket==0) return false;
       g_selOrder.ticket=(long)ticket;
@@ -1191,7 +1195,7 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
   double    总_227_do_1DF0 = 0.0;
   double    总_228_do_1DF8 = 0.0;
   double    总_229_do_1E00 = 0.0;
-  int       总_230_in_1E08 = 0;
+  long      总_230_in_1E08 = 0; // ticket OrderSend la 64-bit; bool OrderModify van gan duoc 0/1
   bool      总_231_bo_1E0C = false;
   double    总_232_do_1E10 = 0.0;
   double    总_233_do_1E18 = 0.0;
@@ -1368,6 +1372,7 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
   datetime  g_nfpCalendarBuiltDay = 0;      // ngay (00:00, GMT) lan gan nhat da thu lam moi tu Lich MQL5
   int       g_nfpStatus = 0;                // trang thai lay tin NFP cho panel: 0 = binh thuong (dung 总_391_da_5DFC_si300[]), 2 = loi lay tin (Lich MQL5 khong doc duoc). mq5 dung Lich (khong co link) nen khong co trang thai thieu link (=1)
   long      g_onlyUpRunId = 0;              // ma rieng cho moi lan chay Strategy Tester, dung de tach biet dinh OnlyUp giua cac lan backtest (xem OnlyUpPeakGVName)
+  long      g_onlyUpWithdrawScannedMsc = 0;  // moc DEAL_TIME_MSC da xu ly, tranh tru lap giao dich rut tien sau khi EA khoi dong lai
 
 //+------------------------------------------------------------------+
 //| Lay ngay NFP (Non-Farm Payrolls) tu Lich kinh te (Economic       |
@@ -1429,6 +1434,65 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  }
 //BuildNFPDatesFromCalendar <<==--------   --------
 
+//+------------------------------------------------------------------+
+//| Dieu chinh dinh OnlyUp khi tai khoan co giao dich rut tien.       |
+//| Trong MT5, nap/rut tien duoc ghi thanh DEAL_TYPE_BALANCE; rut     |
+//| tien co DEAL_PROFIT am. Dinh cu phai giam dung bang so tien rut,  |
+//| nhung khong duoc thap hon balance/equity hien tai.                |
+//+------------------------------------------------------------------+
+ void ApplyOnlyUpWithdrawal(double amount)
+ {
+  if ( !(OnlyUp) || ManualBalance>0.0 || amount>=0.0 )   return;
+  总_402_do_6AD8 = 总_402_do_6AD8 + amount ; // amount am => tru tien rut khoi dinh
+  double 临_current = AccountInfoDouble(ACCOUNT_BALANCE) ;
+  if ( UseEquity )   临_current = AccountInfoDouble(ACCOUNT_EQUITY) ;
+  if ( 总_402_do_6AD8<临_current )   总_402_do_6AD8 = 临_current ;
+  if ( 总_402_do_6AD8<0.0 )   总_402_do_6AD8 = 0.0 ;
+  GlobalVariableSet(OnlyUpPeakGVName(),总_402_do_6AD8) ;
+ }
+//ApplyOnlyUpWithdrawal <<==--------   --------
+
+//+------------------------------------------------------------------+
+//| Doc cac giao dich rut tien bi bo lo khi EA/MT5 khong chay.        |
+//| Moc quet luu theo mili-giay vi GlobalVariable kieu double van luu |
+//| chinh xac DEAL_TIME_MSC (~10^12), dong thoi tranh xu ly lap.      |
+//+------------------------------------------------------------------+
+ void ReconcileOnlyUpWithdrawals()
+ {
+  if ( !(OnlyUp) || ManualBalance>0.0 )   return;
+  long 临_nowMsc = (long)TimeCurrent() * 1000 ;
+  if ( g_onlyUpWithdrawScannedMsc<=0 )
+  {
+    g_onlyUpWithdrawScannedMsc = 临_nowMsc ;
+    GlobalVariableSet(OnlyUpWithdrawGVName(),(double)g_onlyUpWithdrawScannedMsc) ;
+    return;
+  }
+  datetime 临_from = (datetime)(g_onlyUpWithdrawScannedMsc / 1000) ;
+  datetime 临_to = TimeCurrent() ;
+  if ( 临_from>临_to )   临_from = 临_to ;
+  if ( !(HistorySelect(临_from,临_to)) )   return;
+  int 临_total = HistoryDealsTotal() ;
+  double 临_withdrawals = 0.0 ;
+  long 临_latestMsc = g_onlyUpWithdrawScannedMsc ;
+  for (int 临_i = 0 ; 临_i < 临_total ; 临_i ++)
+  {
+    ulong 临_ticket = HistoryDealGetTicket(临_i) ;
+    if ( 临_ticket==0 )   continue;
+    long 临_dealMsc = (long)HistoryDealGetInteger(临_ticket,DEAL_TIME_MSC) ;
+    if ( 临_dealMsc<=g_onlyUpWithdrawScannedMsc )   continue;
+    if ( 临_dealMsc>临_latestMsc )   临_latestMsc = 临_dealMsc ;
+    ENUM_DEAL_TYPE 临_type = (ENUM_DEAL_TYPE)HistoryDealGetInteger(临_ticket,DEAL_TYPE) ;
+    if ( 临_type!=DEAL_TYPE_BALANCE )   continue;
+    double 临_amount = HistoryDealGetDouble(临_ticket,DEAL_PROFIT) ;
+    if ( 临_amount<0.0 )   临_withdrawals = 临_withdrawals + 临_amount ;
+  }
+  if ( 临_withdrawals<0.0 )   ApplyOnlyUpWithdrawal(临_withdrawals) ;
+  if ( 临_nowMsc>临_latestMsc )   临_latestMsc = 临_nowMsc ;
+  g_onlyUpWithdrawScannedMsc = 临_latestMsc ;
+  GlobalVariableSet(OnlyUpWithdrawGVName(),(double)g_onlyUpWithdrawScannedMsc) ;
+ }
+//ReconcileOnlyUpWithdrawals <<==--------   --------
+
  int OnInit()
  {
 g_startLots_rw=StartLots;
@@ -1471,21 +1535,50 @@ g_startLots_rw=StartLots;
  // cua terminal (ton tai xuyen suot restart EA/MT5), thay vi luon reset ve
  // so du hien tai moi lan khoi dong nhu truoc - tranh mat muc dinh cao da
  // dat duoc truoc do.
- // ResetHighestBalance: xoa dinh OnlyUp da luu, bat dau lai tu balance hien tai
- if ( ResetHighestBalance )   GlobalVariableDel(OnlyUpPeakGVName()) ;
- if ( OnlyUp && GlobalVariableCheck(OnlyUpPeakGVName()) )
+ // ResetHighestBalance: xoa ca dinh va moc quet rut tien, bat dau lai tu
+ // balance/equity hien tai va khong tru lai cac lan rut tien cu.
+ if ( ResetHighestBalance )
+ {
+   GlobalVariableDel(OnlyUpPeakGVName()) ;
+   GlobalVariableDel(OnlyUpWithdrawGVName()) ;
+ }
+ bool 临_hadStoredPeak = (OnlyUp && GlobalVariableCheck(OnlyUpPeakGVName())) ;
+ datetime 临_peakSavedTime = 0 ;
+ if ( 临_hadStoredPeak )   临_peakSavedTime = GlobalVariableTime(OnlyUpPeakGVName()) ;
+ if ( 临_hadStoredPeak )
  {
    总_402_do_6AD8 = GlobalVariableGet(OnlyUpPeakGVName()) ;
-   if ( 总_401_do_6AD0>总_402_do_6AD8 )   总_402_do_6AD8 = 总_401_do_6AD0 ;
  }
  else
  {
    总_402_do_6AD8 = 总_401_do_6AD0 ;
  }
- // Chi ghi GlobalVariable khi OnlyUp dang bat - 2 diem ghi con lai (OnTick,
- // lizong_10) da lam dung dieu nay, sua lai cho khop de khong tao GlobalVariable
- // vo ich khi tinh nang OnlyUp dang tat.
- if ( OnlyUp )   GlobalVariableSet(OnlyUpPeakGVName(),总_402_do_6AD8) ;
+ if ( OnlyUp )
+ {
+   // Ban moi da co moc quet rieng. Khi nang cap tu ban cu, dung thoi diem dinh
+   // da duoc luu lam moc dau de co the bu lai cac lan rut tien xay ra sau do.
+   if ( GlobalVariableCheck(OnlyUpWithdrawGVName()) )
+   {
+     g_onlyUpWithdrawScannedMsc = (long)GlobalVariableGet(OnlyUpWithdrawGVName()) ;
+   }
+   else
+   {
+     if ( 临_hadStoredPeak && 临_peakSavedTime>0 )
+       g_onlyUpWithdrawScannedMsc = (long)临_peakSavedTime * 1000 ;
+     else
+       g_onlyUpWithdrawScannedMsc = (long)TimeCurrent() * 1000 ;
+   }
+   ReconcileOnlyUpWithdrawals() ;
+   // Neu balance/equity hien tai da tao dinh moi (vi du sau loi nhuan hoac nap
+   // tien), dinh moi van phai duoc uu tien sau khi da bu cac khoan rut.
+   if ( 总_401_do_6AD0>总_402_do_6AD8 )   总_402_do_6AD8 = 总_401_do_6AD0 ;
+   GlobalVariableSet(OnlyUpPeakGVName(),总_402_do_6AD8) ;
+   GlobalVariableSet(OnlyUpWithdrawGVName(),(double)g_onlyUpWithdrawScannedMsc) ;
+ }
+ else
+ {
+   总_402_do_6AD8 = 总_401_do_6AD0 ;
+ }
  总_392_bo_675C = false ;
  总_393_bo_675D = false ;
  总_391_da_5DFC_si300[0] = D'2026.12.04 12:30';
@@ -2835,6 +2928,28 @@ g_startLots_rw=StartLots;
  lizong_26(); 
  }
 //deinit <<==--------   --------
+
+//+------------------------------------------------------------------+
+//| Xu ly ngay giao dich nap/rut tien khi EA dang chay.               |
+//+------------------------------------------------------------------+
+ void OnTradeTransaction(const MqlTradeTransaction &trans,
+                         const MqlTradeRequest &request,
+                         const MqlTradeResult &result)
+ {
+  if ( !(OnlyUp) || ManualBalance>0.0 )   return;
+  if ( trans.type!=TRADE_TRANSACTION_DEAL_ADD || trans.deal==0 )   return;
+  if ( !(HistoryDealSelect(trans.deal)) )   return;
+  ENUM_DEAL_TYPE 临_type = (ENUM_DEAL_TYPE)HistoryDealGetInteger(trans.deal,DEAL_TYPE) ;
+  if ( 临_type!=DEAL_TYPE_BALANCE )   return;
+  long 临_dealMsc = (long)HistoryDealGetInteger(trans.deal,DEAL_TIME_MSC) ;
+  // Giao dich da duoc ReconcileOnlyUpWithdrawals() xu ly luc khoi dong.
+  if ( 临_dealMsc<=g_onlyUpWithdrawScannedMsc )   return;
+  double 临_amount = HistoryDealGetDouble(trans.deal,DEAL_PROFIT) ;
+  if ( 临_amount<0.0 )   ApplyOnlyUpWithdrawal(临_amount) ;
+  g_onlyUpWithdrawScannedMsc = 临_dealMsc ;
+  GlobalVariableSet(OnlyUpWithdrawGVName(),(double)g_onlyUpWithdrawScannedMsc) ;
+ }
+//OnTradeTransaction <<==--------   --------
  void lizong_6( int 木_0_in)
  {
  总_328_in_3100 = 木_0_in ;
@@ -3913,7 +4028,7 @@ g_startLots_rw=StartLots;
    if ( 总_197_do_6DC_si100si3[子_1_in][1]==4.0 && MarketInfo(总_336_st_3130,MODE_ASK)<总_197_do_6DC_si100si3[子_1_in][0] - 总_221_do_1A80 )
    {
      Print("Restoring pending buy-order"); 
-     总_230_in_1E08 = (int)OrderSend(总_336_st_3130,4,总_197_do_6DC_si100si3[子_1_in][2],总_197_do_6DC_si100si3[子_1_in][0],int(总_38_do_C0 * 总_229_do_1E00),总_197_do_6DC_si100si3[子_1_in][0] - (总_100_do_230 + 总_64_do_148) * 总_229_do_1E00,总_101_do_238 * 总_229_do_1E00 + 总_197_do_6DC_si100si3[子_1_in][0],总_334_st_3120,总_93_in_1F0,总_302_da_2870 + 0x2A300,Green) ;
+     总_230_in_1E08 = OrderSend(总_336_st_3130,4,总_197_do_6DC_si100si3[子_1_in][2],总_197_do_6DC_si100si3[子_1_in][0],int(总_38_do_C0 * 总_229_do_1E00),总_197_do_6DC_si100si3[子_1_in][0] - (总_100_do_230 + 总_64_do_148) * 总_229_do_1E00,总_101_do_238 * 总_229_do_1E00 + 总_197_do_6DC_si100si3[子_1_in][0],总_334_st_3120,总_93_in_1F0,总_302_da_2870 + 0x2A300,Green) ;
      总_280_bo_25FA = false ;
      临_do_1 = 总_197_do_6DC_si100si3[子_1_in][0];
      临_lo_2 = 总_230_in_1E08;
@@ -3935,7 +4050,7 @@ g_startLots_rw=StartLots;
            do
            {
              Sleep(2500); 
-             总_230_in_1E08 = (int)OrderSend(总_336_st_3130,4,总_197_do_6DC_si100si3[子_1_in][2],总_197_do_6DC_si100si3[子_1_in][0],int(总_38_do_C0 * 总_229_do_1E00),总_197_do_6DC_si100si3[子_1_in][0] - (总_100_do_230 + 总_64_do_148) * 总_229_do_1E00,总_101_do_238 * 总_229_do_1E00 + 总_197_do_6DC_si100si3[子_1_in][0],总_334_st_3120,总_93_in_1F0,总_302_da_2870 + 0x2A300,Green) ;
+             总_230_in_1E08 = OrderSend(总_336_st_3130,4,总_197_do_6DC_si100si3[子_1_in][2],总_197_do_6DC_si100si3[子_1_in][0],int(总_38_do_C0 * 总_229_do_1E00),总_197_do_6DC_si100si3[子_1_in][0] - (总_100_do_230 + 总_64_do_148) * 总_229_do_1E00,总_101_do_238 * 总_229_do_1E00 + 总_197_do_6DC_si100si3[子_1_in][0],总_334_st_3120,总_93_in_1F0,总_302_da_2870 + 0x2A300,Green) ;
              总_280_bo_25FA = false ;
              临_do_4 = 总_197_do_6DC_si100si3[子_1_in][0];
              临_lo_5 = 总_230_in_1E08;
@@ -3957,7 +4072,7 @@ g_startLots_rw=StartLots;
    }
    if ( !(总_197_do_6DC_si100si3[子_1_in][1]==5.0) || !(MarketInfo(总_336_st_3130,MODE_BID)>总_197_do_6DC_si100si3[子_1_in][0] + 总_221_do_1A80) )   continue;
    Print("Restoring pending sell-order"); 
-   总_230_in_1E08 = (int)OrderSend(总_336_st_3130,5,总_197_do_6DC_si100si3[子_1_in][2],总_197_do_6DC_si100si3[子_1_in][0],int(总_38_do_C0 * 总_229_do_1E00),(总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 + 总_197_do_6DC_si100si3[子_1_in][0],总_197_do_6DC_si100si3[子_1_in][0] - 总_101_do_238 * 总_229_do_1E00,总_334_st_3120,总_93_in_1F0,总_302_da_2870 + 0x2A300,Green) ;
+   总_230_in_1E08 = OrderSend(总_336_st_3130,5,总_197_do_6DC_si100si3[子_1_in][2],总_197_do_6DC_si100si3[子_1_in][0],int(总_38_do_C0 * 总_229_do_1E00),(总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 + 总_197_do_6DC_si100si3[子_1_in][0],总_197_do_6DC_si100si3[子_1_in][0] - 总_101_do_238 * 总_229_do_1E00,总_334_st_3120,总_93_in_1F0,总_302_da_2870 + 0x2A300,Green) ;
    总_281_bo_25FB = false ;
    临_do_7 = 总_197_do_6DC_si100si3[子_1_in][0];
    临_lo_8 = 总_230_in_1E08;
@@ -3979,7 +4094,7 @@ g_startLots_rw=StartLots;
        do
        {
          Sleep(2500); 
-         总_230_in_1E08 = (int)OrderSend(总_336_st_3130,5,总_197_do_6DC_si100si3[子_1_in][2],总_197_do_6DC_si100si3[子_1_in][0],int(总_38_do_C0 * 总_229_do_1E00),(总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 + 总_197_do_6DC_si100si3[子_1_in][0],总_197_do_6DC_si100si3[子_1_in][0] - 总_101_do_238 * 总_229_do_1E00,总_334_st_3120,总_93_in_1F0,总_302_da_2870 + 0x2A300,Green) ;
+         总_230_in_1E08 = OrderSend(总_336_st_3130,5,总_197_do_6DC_si100si3[子_1_in][2],总_197_do_6DC_si100si3[子_1_in][0],int(总_38_do_C0 * 总_229_do_1E00),(总_100_do_230 + 总_64_do_148) * 总_229_do_1E00 + 总_197_do_6DC_si100si3[子_1_in][0],总_197_do_6DC_si100si3[子_1_in][0] - 总_101_do_238 * 总_229_do_1E00,总_334_st_3120,总_93_in_1F0,总_302_da_2870 + 0x2A300,Green) ;
          总_281_bo_25FB = false ;
          临_do_10 = 总_197_do_6DC_si100si3[子_1_in][0];
          临_lo_11 = 总_230_in_1E08;
@@ -4824,11 +4939,11 @@ g_startLots_rw=StartLots;
        {
          if ( !(setSL_TP_After_Entry) )
          {
-           总_230_in_1E08 = (int)OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),子_5_do,子_6_do,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Green) ;
+           总_230_in_1E08 = OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),子_5_do,子_6_do,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Green) ;
          }
          else
          {
-           总_230_in_1E08 = (int)OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),0.0,0.0,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Green) ;
+           总_230_in_1E08 = OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),0.0,0.0,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Green) ;
          }
          总_280_bo_25FA = false ;
          if ( 总_230_in_1E08 <= 0 )
@@ -4845,11 +4960,11 @@ g_startLots_rw=StartLots;
                  if ( !(setSL_TP_After_Entry) )
                  {
                    临_in_16 = (int)(总_38_do_C0 * 总_229_do_1E00);
-                   总_230_in_1E08 = (int)OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,临_in_16,子_5_do,子_6_do,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Green) ;
+                   总_230_in_1E08 = OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,临_in_16,子_5_do,子_6_do,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Green) ;
                  }
                  else
                  {
-                   总_230_in_1E08 = (int)OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),0.0,0.0,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Green) ;
+                   总_230_in_1E08 = OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),0.0,0.0,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Green) ;
                  }
                  总_280_bo_25FA = false ;
                }
@@ -5050,11 +5165,11 @@ g_startLots_rw=StartLots;
        {
          if ( !(setSL_TP_After_Entry) )
          {
-           总_230_in_1E08 = (int)OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),子_5_do,子_6_do,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Red) ;
+           总_230_in_1E08 = OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),子_5_do,子_6_do,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Red) ;
          }
          else
          {
-           总_230_in_1E08 = (int)OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),0.0,0.0,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Red) ;
+           总_230_in_1E08 = OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),0.0,0.0,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Red) ;
          }
          总_281_bo_25FB = false ;
          if ( 总_230_in_1E08 <= 0 )
@@ -5071,11 +5186,11 @@ g_startLots_rw=StartLots;
                  if ( !(setSL_TP_After_Entry) )
                  {
                    临_in_16 = (int)(总_38_do_C0 * 总_229_do_1E00);
-                   总_230_in_1E08 = (int)OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,临_in_16,子_5_do,子_6_do,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Red) ;
+                   总_230_in_1E08 = OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,临_in_16,子_5_do,子_6_do,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Red) ;
                  }
                  else
                  {
-                   总_230_in_1E08 = (int)OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),0.0,0.0,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Red) ;
+                   总_230_in_1E08 = OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_4_do,int(总_38_do_C0 * 总_229_do_1E00),0.0,0.0,总_334_st_3120,总_93_in_1F0,总_302_da_2870,Red) ;
                  }
                  总_281_bo_25FB = false ;
                }
@@ -7064,14 +7179,14 @@ g_startLots_rw=StartLots;
   double    子_7_do;
   datetime  子_8_da;
   string    子_9_st;
-  int       子_10_in;
+  long      子_10_in; // ticket 64-bit
   double    子_11_do;
   long      子_12_lo;
   double    子_13_do;
   double    子_14_do;
   datetime  子_15_da;
   string    子_16_st;
-  int       子_17_in;
+  long      子_17_in; // ticket 64-bit
 //----- -----
  long       临_lo_1;
  long       临_lo_2;
@@ -7099,7 +7214,7 @@ g_startLots_rw=StartLots;
      子_8_da = OrderExpiration() ;
      子_9_st = OrderComment() ;
      OrderDelete(子_5_lo,Red); 
-     子_10_in = (int)OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_7_do,(int)总_38_do_C0,子_4_do,子_6_do,子_9_st,总_93_in_1F0,子_8_da,Green) ;
+     子_10_in = OrderSend(总_336_st_3130,4,总_223_do_1AC4_si99[总_328_in_3100],子_7_do,(int)总_38_do_C0,子_4_do,子_6_do,子_9_st,总_93_in_1F0,子_8_da,Green) ;
      临_lo_1 = 子_10_in;
      临_lo_2 = 子_5_lo;
      for (临_in_3 = 0 ; 临_in_3 < 100 ; 临_in_3=临_in_3 + 1)
@@ -7120,7 +7235,7 @@ g_startLots_rw=StartLots;
    子_15_da = OrderExpiration() ;
    子_16_st = OrderComment() ;
    OrderDelete(子_12_lo,Red); 
-   子_17_in = (int)OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_14_do,(int)总_38_do_C0,子_11_do,子_13_do,子_16_st,总_93_in_1F0,子_15_da,Green) ;
+   子_17_in = OrderSend(总_336_st_3130,5,总_223_do_1AC4_si99[总_328_in_3100],子_14_do,(int)总_38_do_C0,子_11_do,子_13_do,子_16_st,总_93_in_1F0,子_15_da,Green) ;
    临_lo_4 = 子_17_in;
    临_lo_5 = 子_12_lo;
    for (临_in_6 = 0 ; 临_in_6 < 100 ; 临_in_6=临_in_6 + 1)
@@ -7483,6 +7598,17 @@ g_startLots_rw=StartLots;
  return("GR_OnlyUpPeak_" + Symbol() + "_" + IntegerToString(ST1_MagicNumber) + "_" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)));
  }
 //OnlyUpPeakGVName <<==--------   --------
+ string OnlyUpWithdrawGVName()
+ {
+ // Ten ngan hon gioi han 63 ky tu cua Global Variable, nhung van tach theo
+ // phien tester / symbol / magic / tai khoan giong dinh OnlyUp.
+ if ( MQLInfoInteger(MQL_TESTER) == 1 )
+ {
+   return("GR_OUWD_T_" + Symbol() + "_" + IntegerToString(ST1_MagicNumber) + "_" + IntegerToString(g_onlyUpRunId));
+ }
+ return("GR_OUWD_" + Symbol() + "_" + IntegerToString(ST1_MagicNumber) + "_" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)));
+ }
+//OnlyUpWithdrawGVName <<==--------   --------
  string GetNextNFPText()
  {
   datetime  临_da_best = 0;
