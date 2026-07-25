@@ -1,9 +1,9 @@
-#property copyright  "Copyright 2026 - Pham Duy Linh"
+﻿#property copyright  "Copyright 2026 - Pham Duy Linh"
 #property link       "https://t.me/Khonglamdoicoan96"
 #property version    "4.5"
 #property description "- Fixed the www.worldtimeserver GMT fetch bug"
 #property description "- Fixed the OnlyUp bug"
-#property description "- Hardcoded NFP dates -> now automatic (Forex Factory), auto-retries on error"
+#property description "- NFP dates -> FRED Employment Situation calendar, built-in fallback"
 #property description "- Added input to close trades at end of Friday session"
 #property description "- Highest Balance shown on panel"
 #property description "- Warns the exact missing allowed URL"
@@ -517,10 +517,11 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
                                       // chua bao gio quan tam ket qua) ma khong doi hanh vi.
   int       g_discardResultInt = 0;  // tuong tu nhung cho OrderSend (tra ve int, khong phai bool)
   long      g_onlyUpRunId = 0;       // ma rieng cho moi lan chay Strategy Tester, dung de tach biet dinh OnlyUp giua cac lan backtest (xem OnlyUpPeakGVName)
-  datetime  g_nfpFFBuiltDay = 0;     // ngay (00:00, GMT) lan gan nhat da thu lam moi tu Forex Factory JSON feed (xem RefreshNFPFromForexFactory)
-  datetime  g_nfpFFDate = 0;         // ngay/gio NFP (GMT) da xac nhan that tu Forex Factory cho tuan hien tai; 0 = chua co xac nhan, dong Next NFP se hien "-"
-  int       g_nfpStatus = 0;         // trang thai lay tin NFP cho panel: 0 = binh thuong (dung g_nfpFFDate), 1 = thieu allowed URL (4060), 2 = loi lay tin (mang/parse)
-  datetime  g_nfpRetryAfter = 0;     // thoi diem som nhat duoc thu lay tin NFP lai sau khi loi server (mang/parse): cu 5 phut thu lai 1 lan cho toi khi thanh cong (KHONG ap dung cho loi 4060 thieu URL)
+  int       g_lastHistoryTotalForPeak = -1; // FIX: so lenh trong history da xu ly lan gan nhat, dung de phat hien nap/rut tien moi (xem AdjustPeakForBalanceOps)
+  datetime  g_nfpBuiltDay = 0;       // ngay gan nhat da tai lich NFP qua FRED
+  datetime  g_nfpDate = 0;           // ngay/gio NFP tiep theo theo GMT, tu FRED hoac fallback
+  int       g_nfpStatus = 0;         // 0=OK, 1=thieu allowed URL, 2=loi, 3=dung lich du phong
+  datetime  g_nfpRetryAfter = 0;     // moc thu lai WebRequest sau khi loi
 
 
  int init()
@@ -566,7 +567,13 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  // so du hien tai moi lan khoi dong nhu truoc - tranh mat muc dinh cao da
  // dat duoc truoc do.
  // ResetHighestBalance: xoa dinh OnlyUp da luu, bat dau lai tu balance hien tai
- if ( ResetHighestBalance )   GlobalVariableDel(OnlyUpPeakGVName()) ;
+ // (xoa ca moc quet nap/rut - xem OnlyUpWithdrawGVName - de khong hoi to
+ // nhung lan nap/rut da xay ra truoc khi reset).
+ if ( ResetHighestBalance )
+ {
+   GlobalVariableDel(OnlyUpPeakGVName()) ;
+   GlobalVariableDel(OnlyUpWithdrawGVName()) ;
+ }
  if ( OnlyUp && GlobalVariableCheck(OnlyUpPeakGVName()) )
  {
    总_402_do_6AD8 = GlobalVariableGet(OnlyUpPeakGVName()) ;
@@ -580,6 +587,24 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  // lizong_10) da lam dung dieu nay, sua lai cho khop de khong tao GlobalVariable
  // vo ich khi tinh nang OnlyUp dang tat.
  if ( OnlyUp )   GlobalVariableSet(OnlyUpPeakGVName(),总_402_do_6AD8) ;
+ // FIX (giong co che ReconcileOnlyUpWithdrawals ben ban MQ5): thay vi luon
+ // dat moc quet ve OrdersHistoryTotal() hien tai (bo qua moi nap/rut da xay
+ // ra trong luc EA khong chay tren chart), doc lai moc da luu tu lan chay
+ // truoc trong OnlyUpWithdrawGVName. Nho vay AdjustPeakForBalanceOps() ngay
+ // sau day se quet va bu lai duoc CA nhung lenh OP_BALANCE/OP_CREDIT phat
+ // sinh khi EA/MT4 dang tat (vi du go EA ra roi gan lai, hoac tat terminal).
+ // Neu chua tung co moc luu (lan dau tien gan EA) thi dat moc = tong lenh
+ // lich su hien tai nhu cu, KHONG hoi to nguoc ve qua khu that xa.
+ if ( OnlyUp && GlobalVariableCheck(OnlyUpWithdrawGVName()) )
+ {
+   g_lastHistoryTotalForPeak = (int)GlobalVariableGet(OnlyUpWithdrawGVName()) ;
+ }
+ else
+ {
+   g_lastHistoryTotalForPeak = OrdersHistoryTotal() ;
+   if ( OnlyUp )   GlobalVariableSet(OnlyUpWithdrawGVName(),(double)g_lastHistoryTotalForPeak) ;
+ }
+ AdjustPeakForBalanceOps() ; // FIX: xu ly ngay cac lenh nap/rut bi bo lo tu lan chay truoc, truoc khi tick dau tien toi
  总_392_bo_675C = false ;
  总_393_bo_675D = false ;
  总_391_da_5DFC_si300[0] = D'2026.12.04 12:30';
@@ -1277,6 +1302,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  double     临_do_27;
  int        临_in_28;
 
+ AdjustPeakForBalanceOps() ; // FIX: cap nhat dinh OnlyUp neu vua co nap/rut tien
  总_401_do_6AD0 = AccountInfoDouble(ACCOUNT_BALANCE) ;
  if ( UseEquity )
  {
@@ -1442,14 +1468,13 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  {
    总_390_da_5DC0=TimeCurrent() - 总_395_in_6760 * 3600;
  }
- // Lam moi 1 lan/ngay tu Forex Factory (xem RefreshNFPFromForexFactory), chi khi
- // dang chay live/demo that de ket qua backtest luon dung mang cung, on dinh.
- // Lay 1 lan/ngay khi thanh cong (g_nfpFFBuiltDay = hom nay se dong gate toi mai).
- // Neu loi server thi g_nfpFFBuiltDay KHONG duoc dat -> gate van mo, nhung
- // g_nfpRetryAfter chan lai 5 phut de thu lai (khong spam moi tick).
- if ( EnableNFP_Filter && MQLInfoInteger(MQL_TESTER) != 1 && TimeCurrent() - TimeCurrent() % 86400 > g_nfpFFBuiltDay && TimeCurrent() >= g_nfpRetryAfter )
+ // Tai lich Employment Situation/NFP tu FRED 1 lan/ngay, trong khoang hien tai den 62 ngay sau.
+ // FRED khong can API key; neu trang khong kha dung thi dung lich du phong.
+ // Backtest van dung mang ngay co san de ket qua on dinh va khong phu thuoc mang.
+ // Neu loi server/parse thi thu lai sau 5 phut, khong spam moi tick.
+ if ( EnableNFP_Filter && MQLInfoInteger(MQL_TESTER) != 1 && TimeCurrent() - TimeCurrent() % 86400 > g_nfpBuiltDay && TimeCurrent() >= g_nfpRetryAfter )
  {
-   RefreshNFPFromForexFactory();
+   RefreshNFPFromFRED();
  }
  if ( TradeFrequency == 5 && Risk == 1234 )
  {
@@ -2291,23 +2316,30 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  }
  if ( EnableNFP_Filter )
  {
-   if ( Year() <= 2026 )
+   // Live/demo: dung ngay Employment Situation tu FRED; neu loi se dung lich du phong (GMT).
+   // Strategy Tester: giu mang ngay co san de backtest khong phu thuoc WebRequest.
+   if ( Year() <= 2026 || MQLInfoInteger(MQL_TESTER) != 1 )
    {
      子_3_lo = 0 ;
-     for (子_4_in = 0 ; 子_4_in < 300 ; 子_4_in ++)
+     子_5_in = 0 ;
+     if ( MQLInfoInteger(MQL_TESTER) != 1 )
      {
-       临_in_15 = TimeYear(总_391_da_5DFC_si300[子_4_in]);
-       if ( 临_in_15 != Year() )   continue;
-       临_in_16 = TimeMonth(总_391_da_5DFC_si300[子_4_in]);
-       if ( 临_in_16 != Month() )   continue;
-       子_3_lo = 总_391_da_5DFC_si300[子_4_in] ;
-       break;
-       
+       子_3_lo = g_nfpDate ;
      }
-     子_5_in = 60 ;
-     if ( lizong_48() )
+     else
      {
-       子_5_in = 0 ;
+       for (子_4_in = 0 ; 子_4_in < 300 ; 子_4_in ++)
+       {
+         临_in_15 = TimeYear(总_391_da_5DFC_si300[子_4_in]);
+         if ( 临_in_15 != Year() )   continue;
+         临_in_16 = TimeMonth(总_391_da_5DFC_si300[子_4_in]);
+         if ( 临_in_16 != Month() )   continue;
+         子_3_lo = 总_391_da_5DFC_si300[子_4_in] ;
+         break;
+       }
+       // Mang hardcoded cu luu theo 12:30/13:30 GMT tuy DST.
+       子_5_in = 60 ;
+       if ( lizong_48() )   子_5_in = 0 ;
      }
      if ( 总_390_da_5DC0 >= 子_3_lo - NFP_MinutesBefore * 60 + 子_5_in * 60 && 总_390_da_5DC0 <= 子_3_lo + NFP_MinutesAfter * 60 + 子_5_in * 60 )
      {
@@ -3217,6 +3249,7 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
   double    子_7_do;
 //----- -----
 
+  AdjustPeakForBalanceOps() ; // FIX: cap nhat dinh OnlyUp neu vua co nap/rut tien
  子_1_do = 总_223_do_1AC4_si99[总_328_in_3100] ;
  子_2_do = 总_223_do_1AC4_si99[总_328_in_3100] ;
  总_401_do_6AD0 = AccountInfoDouble(ACCOUNT_BALANCE) ;
@@ -6569,108 +6602,420 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  return("GR_OnlyUpPeak_" + Symbol() + "_" + IntegerToString(ST1_MagicNumber) + "_" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)));
  }
 //OnlyUpPeakGVName <<==--------   --------
+// FIX: ten GlobalVariable rieng de luu MOC QUET nap/rut (so lenh lich su da
+// xu ly qua AdjustPeakForBalanceOps), tach biet voi GlobalVariable luu dinh
+// OnlyUp o tren. Nho ton tai xuyen suot restart EA/MT4/terminal ma khi EA
+// duoc gan lai, EA biet chinh xac phai quet tiep tu dau, khong bo lo nhung
+// lan nap/rut da xay ra trong luc EA khong chay (giong ReconcileOnlyUpWithdrawals
+// ben ban MQ5).
+ string OnlyUpWithdrawGVName()
+ {
+ return(OnlyUpPeakGVName() + "_WD");
+ }
+//OnlyUpWithdrawGVName <<==--------   --------
+//AdjustPeakForBalanceOps <<==--------   --------
+// FIX: "Highest Balance" (dinh OnlyUp, bien 总_402_do_6AD8) truoc day CHI TANG,
+// khong bao gio giam - ke ca khi nguoi dung RUT TIEN that ra khoi tai khoan.
+// Ham nay quet cac lenh moi xuat hien trong lich su tu lan kiem tra truoc,
+// tim cac giao dich loai OP_BALANCE (nap/rut tien thu cong tu broker) va
+// OP_CREDIT (credit/bonus), roi CONG THEM chinh gia tri do vao dinh da luu:
+//   - Rut tien -> OrderProfit() am -> dinh giam dung bang so tien da rut.
+//   - Nap tien -> OrderProfit() duong -> dinh tang tuong ung (khop voi logic
+//     OnlyUp goc, vi nap tien lam so du thuc te tang len).
+// Nho vay dinh OnlyUp phan anh dung "hieu suat giao dich thuc te", khong bi
+// "dong bang" o muc cao chi vi truoc do da rut bot loi nhuan ra ngoai.
+ void AdjustPeakForBalanceOps()
+ {
+ int 总_hist_total = OrdersHistoryTotal() ;
+ // Lan chay dau tien (hoac sau khi EA vua duoc gan vao chart, KHONG co moc
+ // luu tu truoc): chi ghi nhan moc hien tai, KHONG hoi to cac lenh nap/rut
+ // da xay ra truoc do - tranh dinh bi giam/tang sai ngay khi EA moi khoi
+ // dong lan dau. Tu lan sau, moc nay da duoc phuc hoi tu GlobalVariable
+ // OnlyUpWithdrawGVName ngay trong init() nen nhanh nay hau nhu khong con
+ // gap nua (xem FIX trong init()).
+ if ( g_lastHistoryTotalForPeak < 0 )
+ {
+   g_lastHistoryTotalForPeak = 总_hist_total ;
+   if ( OnlyUp )   GlobalVariableSet(OnlyUpWithdrawGVName(),(double)g_lastHistoryTotalForPeak) ;
+   return;
+ }
+ if ( 总_hist_total <= g_lastHistoryTotalForPeak )
+ {
+   g_lastHistoryTotalForPeak = 总_hist_total ;
+   return;
+ }
+ double 总_peak_adjust = 0.0 ;
+ int 总_i ;
+ for ( 总_i = g_lastHistoryTotalForPeak ; 总_i < 总_hist_total ; 总_i ++ )
+ {
+   if ( OrderSelect(总_i,SELECT_BY_POS,MODE_HISTORY) != true )   continue;
+   if ( OrderType() == 6 || OrderType() == 7 )   // 6 = OP_BALANCE (nap/rut tien), 7 = OP_CREDIT (credit/bonus)
+   {
+     总_peak_adjust = 总_peak_adjust + OrderProfit() ;
+   }
+ }
+ g_lastHistoryTotalForPeak = 总_hist_total ;
+ // FIX: luon ghi lai moc quet moi nhat vao GlobalVariable rieng (bat ke co
+ // phat sinh nap/rut hay khong), de neu EA bi tat/go ra giua chung thi lan
+ // gan lai sau se biet chinh xac da quet toi dau, khong bo lo giao dich nao.
+ if ( OnlyUp )   GlobalVariableSet(OnlyUpWithdrawGVName(),(double)g_lastHistoryTotalForPeak) ;
+ if ( 总_peak_adjust != 0.0 )
+ {
+   总_402_do_6AD8 = 总_402_do_6AD8 + 总_peak_adjust ;
+   // San sau: dinh khong duoc thap hon so du/equity hien tai (tranh am/lech
+   // do lam tron hoac do OP_CREDIT dac biet cua mot so broker).
+   double 总_bal_now = AccountInfoDouble(ACCOUNT_BALANCE) ;
+   if ( UseEquity )   总_bal_now = AccountInfoDouble(ACCOUNT_EQUITY) ;
+   if ( 总_402_do_6AD8 < 总_bal_now )   总_402_do_6AD8 = 总_bal_now ;
+   if ( OnlyUp )   GlobalVariableSet(OnlyUpPeakGVName(),总_402_do_6AD8) ;
+ }
+ }
+//AdjustPeakForBalanceOps <<==--------   --------
  string GetNextNFPText()
  {
 //----- -----
- // Theo trang thai lay tin (g_nfpStatus):
+ // Theo trang thai lay lich NFP FRED (g_nfpStatus):
  //  1 = thieu allowed URL (loi 4060) -> yeu cau them link (tieng Anh)
- //  2 = loi lay tin (mang/parse)     -> bao loi lay tin
- // Neu binh thuong (0) thi giu nguyen nhu cu: co NFP -> "Next NFP: ...";
- // khong co / chua co -> "No News Coming Up".
- if ( g_nfpStatus == 1 )   return("NFP: add URL to allowed list");
+ //  2 = loi lay tin va khong co fallback -> bao loi lay tin
+ //  3 = dang dung lich du phong san co trong EA
+ // Neu binh thuong (0): co lich NFP tiep theo -> "Next NFP: ...";
+ // khong co lich tuong lai trong feed -> "No News Coming Up".
+ if ( g_nfpStatus == 1 )   return("NFP: add FRED URL");
  if ( g_nfpStatus == 2 )   return("NFP: news fetch error");
- if ( g_nfpFFDate > 0 && g_nfpFFDate >= 总_390_da_5DC0 )
+ if ( g_nfpDate > 0 && g_nfpDate >= 总_390_da_5DC0 )
  {
-   return("Next NFP: " + TimeToString(g_nfpFFDate + 总_395_in_6760 * 3600,TIME_DATE|TIME_SECONDS));
+   return("Next NFP: " + TimeToString(g_nfpDate + 总_395_in_6760 * 3600,TIME_DATE|TIME_SECONDS));
  }
  return("No News Coming Up");
  }
 //GetNextNFPText <<==--------   --------
 //+------------------------------------------------------------------+
-//| MQL4 khong co API Lich kinh te nhu MQL5, nen lay ngay NFP tu feed |
-//| JSON cong khai cua Forex Factory (khong yeu cau header dac biet, |
-//| khong bi chan bot - da kiem chung bang curl truoc khi dung). Feed |
-//| nay CHI co du lieu trong pham vi 1 tuan (khong co tuy chon lay ca |
-//| thang/nam nhu Lich MQL5). Theo yeu cau: dong "Next NFP" CHI hien  |
-//| thi khi tuan hien tai co xac nhan that su la co NFP - neu tuan   |
-//| nay khong co NFP (hau het cac tuan trong thang) thi KHONG hien   |
-//| thi gi ca, khong dung mang 总_391_da_5DFC_si300[] ma hoa cung de   |
-//| doan/uoc luong nua. Loi mang (khong ket noi duoc) thi giu nguyen |
-//| gia tri cu (khong xoa) - chi xoa khi kiem tra THANH CONG va xac  |
-//| nhan ro rang tuan nay khong co NFP.                              |
+//| Lay lich NFP tu iCalendar chinh thuc cua U.S. BLS.               |
+//| URL nay khong can API key va thuong co lich nhieu thang toi.      |
+//| BLS ghi gio theo Eastern Time; code tu dong doi EST/EDT sang GMT. |
 //+------------------------------------------------------------------+
- void RefreshNFPFromForexFactory()
+ string NFP2Digits( int 木_value )
  {
-  char      临_data[];
-  char      临_result[];
-  string    临_headers;
-  string    临_json;
-  int       临_pos;
-  int       临_datePos;
-  string    临_iso;
+  if ( 木_value < 10 )   return("0" + IntegerToString(木_value,0,32));
+  return(IntegerToString(木_value,0,32));
+ }
+//NFP2Digits <<==--------   --------
+ bool NFPIsUSEasternDST( datetime 木_etLocal )
+ {
+  int       临_year;
+  datetime  临_mar1;
+  datetime  临_nov1;
+  int       临_secondSundayMarch;
+  int       临_firstSundayNovember;
+  datetime  临_dstStart;
+  datetime  临_dstEnd;
+//----- -----
+ 临_year = TimeYear(木_etLocal) ;
+ 临_mar1 = StringToTime(IntegerToString(临_year,0,32) + ".03.01 02:00:00") ;
+ 临_nov1 = StringToTime(IntegerToString(临_year,0,32) + ".11.01 02:00:00") ;
+ 临_secondSundayMarch = 1 + ((7 - TimeDayOfWeek(临_mar1)) % 7) + 7 ;
+ 临_firstSundayNovember = 1 + ((7 - TimeDayOfWeek(临_nov1)) % 7) ;
+ 临_dstStart = StringToTime(IntegerToString(临_year,0,32) + ".03." + NFP2Digits(临_secondSundayMarch) + " 02:00:00") ;
+ 临_dstEnd = StringToTime(IntegerToString(临_year,0,32) + ".11." + NFP2Digits(临_firstSundayNovember) + " 02:00:00") ;
+ return(木_etLocal >= 临_dstStart && 木_etLocal < 临_dstEnd);
+ }
+//NFPIsUSEasternDST <<==--------   --------
+ datetime NFPParseICalDate( string 木_linePrefix,string 木_value )
+ {
+  string    临_digits;
+  int       临_i;
+  int       临_ch;
   int       临_year;
   int       临_month;
   int       临_day;
   int       临_hour;
   int       临_minute;
-  string    临_tzSign;
-  int       临_tzH;
-  int       临_tzM;
-  datetime  临_local;
-  int       临_offsetSec;
+  int       临_second;
+  datetime  临_value;
+  bool      临_isUTC;
 //----- -----
- // KHONG danh dau "da lay hom nay" o dau ham nua: chi danh dau khi lay THANH
- // CONG (hoac loi 4060) de khoa toi mai; con loi server thi de gate mo cho
- // lan thu lai. ResetLastError truoc khi goi de doc dung ma loi.
- ResetLastError();
- if ( WebRequest("GET","https://nfs.faireconomy.media/ff_calendar_thisweek.json",NULL,NULL,5000,临_data,0,临_result,临_headers) == -1 )
+ 临_digits = "" ;
+ for (临_i = 0 ; 临_i < StringLen(木_value) ; 临_i ++)
  {
-   int 临_nfpErr = GetLastError();
-   Print("Error when reading Forex Factory NFP URL. Error code  =",临_nfpErr);
-   // Chi khi loi 4060 (URL chua add allowlist) -> canh bao them link, va GIU
-   // NGUYEN: khoa toi mai, KHONG thu lai. Con loi server (mang/tra ve loi) ->
-   // KHONG khoa ca ngay, hen thu lai sau 5 phut (300s) cho toi khi thanh cong.
-   if ( 临_nfpErr == 4060 )
-   {
-     g_nfpStatus = 1 ; // thieu allowed URL -> panel yeu cau them link
-     g_nfpFFBuiltDay = TimeCurrent() - TimeCurrent() % 86400 ; // giu nguyen: khoa toi mai
-     MessageBox("Add the address \'https://nfs.faireconomy.media/\' in the list of allowed URLs on tab \'Expert Advisors\'","Error",64);
-   }
-   else
-   {
-     g_nfpStatus = 2 ; // loi server -> panel bao loi lay tin
-     g_nfpRetryAfter = TimeCurrent() + 300 ; // thu lai sau 5 phut
-   }
-   return; // loi: giu nguyen gia tri cu
+   临_ch = StringGetCharacter(木_value,临_i) ;
+   if ( 临_ch >= 48 && 临_ch <= 57 )   临_digits = 临_digits + StringSubstr(木_value,临_i,1) ;
  }
- 临_json = CharArrayToString(临_result,0,0,0) ;
- 临_pos = StringFind(临_json,"\"title\":\"Non-Farm Employment Change\"",0) ;
- if ( 临_pos < 0 )
+ if ( StringLen(临_digits) < 12 )   return(0);
+ 临_year = (int)StringToInteger(StringSubstr(临_digits,0,4)) ;
+ 临_month = (int)StringToInteger(StringSubstr(临_digits,4,2)) ;
+ 临_day = (int)StringToInteger(StringSubstr(临_digits,6,2)) ;
+ 临_hour = (int)StringToInteger(StringSubstr(临_digits,8,2)) ;
+ 临_minute = (int)StringToInteger(StringSubstr(临_digits,10,2)) ;
+ 临_second = 0 ;
+ if ( StringLen(临_digits) >= 14 )   临_second = (int)StringToInteger(StringSubstr(临_digits,12,2)) ;
+ 临_value = StringToTime(IntegerToString(临_year,0,32) + "." + NFP2Digits(临_month) + "." + NFP2Digits(临_day) + " " + NFP2Digits(临_hour) + ":" + NFP2Digits(临_minute) + ":" + NFP2Digits(临_second)) ;
+ 临_isUTC = (StringFind(木_value,"Z",0) >= 0 || StringFind(木_linePrefix,"UTC",0) >= 0) ;
+ if ( 临_isUTC )   return(临_value);
+ // BLS calendar uses America/New_York local time when DTSTART is not UTC.
+ return(临_value + (NFPIsUSEasternDST(临_value) ? 4 : 5) * 3600);
+ }
+//NFPParseICalDate <<==--------   --------
+//+------------------------------------------------------------------+
+//| Du phong: chon ngay NFP tiep theo tu mang lich san co trong EA.   |
+//| Mang luu moc 12:30 GMT; ngoai DST cua My can cong them 1 gio.     |
+//+------------------------------------------------------------------+
+ datetime NFPGetBuiltInFallback()
  {
-   g_nfpStatus = 0 ; // lay tin thanh cong, xac nhan tuan nay khong co NFP
-   g_nfpFFDate = 0 ; // da kiem tra thanh cong, xac nhan tuan nay khong co NFP -> xoa hien thi
-   g_nfpFFBuiltDay = TimeCurrent() - TimeCurrent() % 86400 ; // thanh cong -> khoa toi mai
+  datetime  临_nowGMT;
+  datetime  临_next;
+  datetime  临_candidate;
+  int       临_i;
+//----- -----
+ 临_nowGMT = TimeGMT() ;
+ 临_next = 0 ;
+ for (临_i = 0 ; 临_i < 300 ; 临_i ++)
+ {
+   临_candidate = 总_391_da_5DFC_si300[临_i] ;
+   if ( 临_candidate <= 0 )   continue;
+   // Cac moc trong mang duoc luu theo gio mua he 12:30 GMT.
+   // Khi My o gio chuan (EST), NFP 08:30 ET tuong ung 13:30 GMT.
+   if ( !(NFPIsUSEasternDST(临_candidate)) )   临_candidate = 临_candidate + 3600 ;
+   if ( 临_candidate < 临_nowGMT )   continue;
+   if ( 临_next == 0 || 临_candidate < 临_next )   临_next = 临_candidate ;
+ }
+ return(临_next);
+ }
+//NFPGetBuiltInFallback <<==--------   --------
+ void NFPUseBuiltInFallback( string 木_reason )
+ {
+  datetime 临_backup;
+//----- -----
+ 临_backup = NFPGetBuiltInFallback() ;
+ if ( 临_backup > 0 )
+ {
+   g_nfpDate = 临_backup ;
+   g_nfpStatus = 3 ; // Dang dung lich du phong; bo loc van hoat dong.
+   g_nfpRetryAfter = TimeCurrent() + 21600 ; // Thu lai WebRequest sau 6 gio.
+   Print("NFP WebRequest unavailable (",木_reason,"). Using built-in NFP date (GMT) = ",TimeToString(g_nfpDate,TIME_DATE|TIME_SECONDS));
    return;
  }
- 临_datePos = StringFind(临_json,"\"date\":\"",临_pos) ;
- if ( 临_datePos < 0 )   { g_nfpStatus = 2 ; g_nfpRetryAfter = TimeCurrent() + 300 ; return; } // du lieu bat thuong -> loi lay tin, thu lai sau 5 phut
- 临_iso = StringSubstr(临_json,临_datePos + 8,25) ;
- if ( StringLen(临_iso) < 25 )   { g_nfpStatus = 2 ; g_nfpRetryAfter = TimeCurrent() + 300 ; return; } // du lieu bat thuong -> loi lay tin, thu lai sau 5 phut
- 临_year = (int)StringSubstr(临_iso,0,4) ;
- 临_month = (int)StringSubstr(临_iso,5,2) ;
- 临_day = (int)StringSubstr(临_iso,8,2) ;
- 临_hour = (int)StringSubstr(临_iso,11,2) ;
- 临_minute = (int)StringSubstr(临_iso,14,2) ;
- 临_tzSign = StringSubstr(临_iso,19,1) ;
- 临_tzH = (int)StringSubstr(临_iso,20,2) ;
- 临_tzM = (int)StringSubstr(临_iso,23,2) ;
- 临_local = StringToTime(IntegerToString(临_year,0,32) + "." + IntegerToString(临_month,0,32) + "." + IntegerToString(临_day,0,32) + " " + IntegerToString(临_hour,0,32) + ":" + IntegerToString(临_minute,0,32)) ;
- 临_offsetSec = (临_tzSign == "-" ? -1 : 1) * (临_tzH * 3600 + 临_tzM * 60) ;
- g_nfpFFDate = 临_local - 临_offsetSec ;
- g_nfpStatus = 0 ; // lay tin thanh cong, co NFP tuan nay -> panel hien "Next NFP"
- g_nfpFFBuiltDay = TimeCurrent() - TimeCurrent() % 86400 ; // thanh cong -> khoa toi mai
+ g_nfpStatus = 2 ;
+ g_nfpRetryAfter = TimeCurrent() + 300 ;
  }
-//RefreshNFPFromForexFactory <<==--------   --------
+//NFPUseBuiltInFallback <<==--------   --------
+//+------------------------------------------------------------------+
+//| Dinh dang ngay yyyy-mm-dd cho URL cua FRED.                       |
+//+------------------------------------------------------------------+
+ string NFPFormatISODate( datetime value )
+ {
+  string result = TimeToString(value,TIME_DATE);
+  StringReplace(result,".","-");
+  return(result);
+ }
+//NFPFormatISODate <<==--------   --------
+//+------------------------------------------------------------------+
+//| Chuyen HTML thanh van ban don gian de doc lich FRED.              |
+//+------------------------------------------------------------------+
+ string NFPHtmlToText( string html )
+ {
+  string result;
+  int    i;
+  int    ch;
+  bool   insideTag;
+//----- -----
+  result = "";
+  insideTag = false;
+  for ( i = 0 ; i < StringLen(html) ; i ++ )
+  {
+    ch = StringGetCharacter(html,i);
+    if ( ch == 60 ) // <
+    {
+      insideTag = true;
+      result = result + " ";
+      continue;
+    }
+    if ( ch == 62 ) // >
+    {
+      insideTag = false;
+      result = result + " ";
+      continue;
+    }
+    if ( !(insideTag) )   result = result + StringSubstr(html,i,1);
+  }
+  StringReplace(result,"&nbsp;"," ");
+  StringReplace(result,"&#160;"," ");
+  StringReplace(result,"&amp;","&");
+  StringReplace(result,"&quot;","\"");
+  StringReplace(result,"&#39;","'");
+  StringReplace(result,"\r"," ");
+  StringReplace(result,"\n"," ");
+  StringReplace(result,"\t"," ");
+  while ( StringFind(result,"  ",0) >= 0 )   StringReplace(result,"  "," ");
+  return(result);
+ }
+//NFPHtmlToText <<==--------   --------
+//+------------------------------------------------------------------+
+//| Doc ngay FRED gan nhat nam truoc chu "Employment Situation".     |
+//| FRED hien thi 07:30 US Central; tuong duong 08:30 US Eastern.     |
+//+------------------------------------------------------------------+
+ datetime NFPParseFREDDateBefore( string htmlText,int eventPos )
+ {
+  string    months[12];
+  int       scanStart;
+  string    htmlContext;
+  string    context;
+  int       i;
+  int       pos;
+  int       bestPos;
+  int       bestMonth;
+  int       cursor;
+  int       dayStart;
+  int       dayValue;
+  int       commaPos;
+  int       yearValue;
+  int       textLen;
+  int       ch;
+  datetime  easternLocal;
+//----- -----
+  // Chi xu ly mot doan ngan truoc ten su kien, tranh quet/ket noi toan bo HTML lon.
+  scanStart = eventPos - 1800;
+  if ( scanStart < 0 )   scanStart = 0;
+  htmlContext = StringSubstr(htmlText,scanStart,eventPos - scanStart);
+  context = NFPHtmlToText(htmlContext);
+  // Loai bo "Employment Situation" trong danh sach chon o dau trang.
+  // NFP tren FRED duoc hien thi luc 07:30 US Central.
+  if ( StringFind(context,"7:30 am",0) < 0 && StringFind(context,"07:30 am",0) < 0 )   return(0);
+  months[0] = "January";
+  months[1] = "February";
+  months[2] = "March";
+  months[3] = "April";
+  months[4] = "May";
+  months[5] = "June";
+  months[6] = "July";
+  months[7] = "August";
+  months[8] = "September";
+  months[9] = "October";
+  months[10] = "November";
+  months[11] = "December";
+  bestPos = -1;
+  bestMonth = 0;
+  for ( i = 0 ; i < 12 ; i ++ )
+  {
+    pos = 0;
+    while ( true )
+    {
+      pos = StringFind(context,months[i],pos);
+      if ( pos < 0 )   break;
+      if ( pos > bestPos )
+      {
+        bestPos = pos;
+        bestMonth = i + 1;
+      }
+      pos = pos + StringLen(months[i]);
+    }
+  }
+  if ( bestPos < 0 || bestMonth <= 0 )   return(0);
+  cursor = bestPos + StringLen(months[bestMonth - 1]);
+  textLen = StringLen(context);
+  while ( cursor < textLen && StringGetCharacter(context,cursor) == 32 )   cursor++;
+  dayStart = cursor;
+  while ( cursor < textLen )
+  {
+    ch = StringGetCharacter(context,cursor);
+    if ( ch < 48 || ch > 57 )   break;
+    cursor++;
+  }
+  if ( cursor <= dayStart )   return(0);
+  dayValue = (int)StringToInteger(StringSubstr(context,dayStart,cursor - dayStart));
+  commaPos = StringFind(context,",",cursor);
+  if ( commaPos < 0 || commaPos - cursor > 4 )   return(0);
+  cursor = commaPos + 1;
+  while ( cursor < textLen && StringGetCharacter(context,cursor) == 32 )   cursor++;
+  if ( cursor + 4 > textLen )   return(0);
+  yearValue = (int)StringToInteger(StringSubstr(context,cursor,4));
+  if ( yearValue < 2000 || dayValue < 1 || dayValue > 31 )   return(0);
+  easternLocal = StringToTime(IntegerToString(yearValue,0,32) + "." + NFP2Digits(bestMonth) + "." + NFP2Digits(dayValue) + " 08:30:00");
+  if ( easternLocal <= 0 )   return(0);
+  return(easternLocal + (NFPIsUSEasternDST(easternLocal) ? 4 : 5) * 3600);
+ }
+//NFPParseFREDDateBefore <<==--------   --------
+//+------------------------------------------------------------------+
+//| Lay lich NFP trong 62 ngay toi tu FRED Release Calendar.          |
+//| rid=50 la Employment Situation; FRED khong yeu cau API key.      |
+//+------------------------------------------------------------------+
+ void RefreshNFPFromFRED()
+ {
+  char      requestData[];
+  char      responseData[];
+  string    requestHeaders;
+  string    responseHeaders;
+  string    htmlText;
+  string    url;
+  string    startDate;
+  string    endDate;
+  int       httpCode;
+  int       requestError;
+  int       eventPos;
+  datetime  candidate;
+  datetime  nextNFP;
+  datetime  nowGMT;
+//----- -----
+  nowGMT = TimeGMT();
+  startDate = NFPFormatISODate(nowGMT - 86400);
+  endDate = NFPFormatISODate(nowGMT + 62 * 86400);
+  url = "https://fred.stlouisfed.org/releases/calendar?rid=50&vs=" + startDate + "&ve=" + endDate + "&view=year&od=asc";
+  requestHeaders = "Accept: text/html,application/xhtml+xml,*/*\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) MetaTrader/4\r\nAccept-Language: en-US,en;q=0.9\r\nAccept-Encoding: identity\r\nConnection: close\r\n";
+  ArrayResize(requestData,0);
+  ResetLastError();
+  httpCode = WebRequest("GET",url,requestHeaders,15000,requestData,responseData,responseHeaders);
+  if ( httpCode == -1 )
+  {
+    requestError = GetLastError();
+    Print("Error when reading FRED Employment Situation calendar. Error code = ",requestError);
+    if ( requestError == 4060 )
+    {
+      g_nfpStatus = 1;
+      g_nfpBuiltDay = TimeCurrent() - TimeCurrent() % 86400;
+      MessageBox("Add the address 'https://fred.stlouisfed.org/' in the list of allowed URLs on tab 'Expert Advisors'","Error",64);
+      return;
+    }
+    NFPUseBuiltInFallback("FRED WebRequest error " + IntegerToString(requestError,0,32));
+    return;
+  }
+  if ( httpCode < 200 || httpCode >= 300 )
+  {
+    Print("FRED Employment Situation calendar returned HTTP status ",httpCode);
+    NFPUseBuiltInFallback("FRED HTTP " + IntegerToString(httpCode,0,32));
+    return;
+  }
+  htmlText = CharArrayToString(responseData,0,ArraySize(responseData),CP_UTF8);
+  if ( StringFind(htmlText,"Employment Situation",0) < 0 || StringFind(htmlText,"Release Calendar",0) < 0 )
+  {
+    Print("FRED response did not contain the Employment Situation calendar. Response: ",StringSubstr(htmlText,0,250));
+    NFPUseBuiltInFallback("invalid FRED calendar response");
+    return;
+  }
+  nextNFP = 0;
+  eventPos = 0;
+  while ( true )
+  {
+    eventPos = StringFind(htmlText,"Employment Situation",eventPos);
+    if ( eventPos < 0 )   break;
+    candidate = NFPParseFREDDateBefore(htmlText,eventPos);
+    eventPos = eventPos + 20;
+    if ( candidate <= 0 || candidate < nowGMT )   continue;
+    // Bao ve parser: chi chap nhan moc nam trong khoang da yeu cau.
+    if ( candidate > nowGMT + 63 * 86400 )   continue;
+    if ( nextNFP == 0 || candidate < nextNFP )   nextNFP = candidate;
+  }
+  if ( nextNFP <= 0 )
+  {
+    Print("FRED calendar downloaded, but no future Employment Situation date was parsed in the next 62 days.");
+    NFPUseBuiltInFallback("FRED NFP date not found");
+    return;
+  }
+  g_nfpDate = nextNFP;
+  g_nfpStatus = 0;
+  g_nfpRetryAfter = 0;
+  g_nfpBuiltDay = TimeCurrent() - TimeCurrent() % 86400;
+  Print("Next NFP from FRED Release Calendar (GMT) = ",TimeToString(g_nfpDate,TIME_DATE|TIME_SECONDS));
+ }
+//RefreshNFPFromFRED <<==--------   --------
  void lizong_27()
  {
   string    子_1_st;
@@ -9528,11 +9873,11 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
    // Chi liet ke link nao that su CHUA duoc add vao allowlist (loi 4060 =
    // "URL khong nam trong danh sach cho phep", tra ve tuc thi khong ton mang).
    // Thieu 1 -> hien 1 link; thieu ca 2 -> gop ca 2 trong CUNG 1 thong bao.
-   // Chi nhac faireconomy khi EnableNFP_Filter dang bat (link do moi duoc dung).
+   // Chi nhac FRED khi EnableNFP_Filter dang bat.
    // Giu nguyen cau MessageBox goc.
    // Bung moi lan WebRequest that bai (spam giong ban goc, KHONG cap 1 lan).
    // Van chi liet ke link con thieu (loi 4060); thieu 1 -> 1 link, thieu ca 2
-   // -> gop 2 trong 1 thong bao. Chi nhac faireconomy khi EnableNFP_Filter bat.
+   // -> gop 2 trong 1 thong bao. Chi nhac FRED khi bo loc bat.
    string   临_urlMiss = "";
    if ( 临_urlErr == 4060 )   临_urlMiss = "\'https://www.worldtimeserver.com/\'";
    if ( EnableNFP_Filter )
@@ -9541,11 +9886,11 @@ extern bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
      char     临_ffResult[];
      string   临_ffHdr;
      ResetLastError();
-     WebRequest("GET","https://nfs.faireconomy.media/ff_calendar_thisweek.json",NULL,NULL,10000,临_ffData,0,临_ffResult,临_ffHdr);
+     WebRequest("GET","https://fred.stlouisfed.org/releases/calendar?rid=50",NULL,NULL,10000,临_ffData,0,临_ffResult,临_ffHdr);
      if ( GetLastError() == 4060 )
      {
        if ( 临_urlMiss != "" )   临_urlMiss = 临_urlMiss + " and ";
-       临_urlMiss = 临_urlMiss + "\'https://nfs.faireconomy.media/\'";
+       临_urlMiss = 临_urlMiss + "\'https://fred.stlouisfed.org/\'";
      }
    }
    if ( 临_urlMiss != "" )   MessageBox("Add the address " + 临_urlMiss + " in the list of allowed URLs on tab \'Expert Advisors\'","Error",64);
