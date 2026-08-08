@@ -1,11 +1,11 @@
 name: One-time OrderSend patch
 
 on:
-  push:
+  pull_request:
     branches:
       - main
     paths:
-      - '.github/workflows/patch-ordersend.yml'
+      - '.github/patch-trigger.txt'
 
 permissions:
   contents: write
@@ -14,9 +14,10 @@ jobs:
   patch-ordersend:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout main
         uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
 
       - name: Remove OrderCheck preflight from OrderSend wrapper
@@ -42,16 +43,16 @@ jobs:
           if keep < 0:
               raise SystemExit('OrderSend call after preflight not found')
 
-          new_data = data[:start] + data[keep:]
-          path.write_bytes(new_data)
+          path.write_bytes(data[:start] + data[keep:])
           print('Removed OrderCheck preflight; MT4TradeSessionOpen gate is unchanged.')
           PY
 
-      - name: Commit patched EA
+      - name: Commit patched EA to main
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -- 'MQL5/Experts/GoldReaper/The Gold Reaper OderSend v4.5.mq5'
+          git diff --cached --check
           if git diff --cached --quiet; then
             echo 'No change to commit.'
             exit 0
