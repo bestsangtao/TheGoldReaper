@@ -1,4 +1,4 @@
-﻿#property copyright  "Copyright 2026 - Pham Duy Linh"
+#property copyright  "Copyright 2026 - Pham Duy Linh"
 #property link       "https://t.me/Khonglamdoicoan96"
 #property version    "4.5"
 #property description "- Fixed the www.worldtimeserver GMT fetch bug"
@@ -132,7 +132,7 @@ double MarketInfo(string symbol,int mode)
       case MODE_DIGITS:        return (double)SymbolInfoInteger(symbol,SYMBOL_DIGITS);
       case MODE_STOPLEVEL:     return (double)SymbolInfoInteger(symbol,SYMBOL_TRADE_STOPS_LEVEL);
       case MODE_TICKVALUE:     return SymbolInfoDouble(symbol,SYMBOL_TRADE_TICK_VALUE);
-      case MODE_TRADEALLOWED:  return MT4TradeSessionOpen(symbol)?1.0:0.0;
+      case MODE_TRADEALLOWED:  return MT4SessionMarket(symbol)?1.0:0.0;
       case MODE_MINLOT:        return SymbolInfoDouble(symbol,SYMBOL_VOLUME_MIN);
       case MODE_LOTSTEP:       return SymbolInfoDouble(symbol,SYMBOL_VOLUME_STEP);
       case MODE_MAXLOT:        return SymbolInfoDouble(symbol,SYMBOL_VOLUME_MAX);
@@ -197,15 +197,16 @@ bool IsTesting() { return (bool)MQLInfoInteger(MQL_TESTER); }
 
 
 //====================================================================
-// Market/session gate for BOTH live/demo and Strategy Tester.
+// MT4SessionMarket: Market/session gate for BOTH live/demo and Strategy Tester.
 //
 // IMPORTANT:
-//  - Uses broker trade-session metadata, not only SYMBOL_TRADE_MODE.
+//  - This is the SINGLE Market Close gate used before OrderSend().
+//  - Uses broker trade-session metadata, not OrderCheck().
 //  - Uses TimeTradeServer() on live/demo so a stale last tick cannot make
 //    a closed weekend/session look open.
 //  - If session metadata is unavailable, fail CLOSED: no new order is sent.
 //====================================================================
-bool MT4TradeSessionOpen(string symbol,datetime when=0)
+bool MT4SessionMarket(string symbol,datetime when=0)
 {
    long trade_mode=SymbolInfoInteger(symbol,SYMBOL_TRADE_MODE);
    // Preserve the original EA rule: MODE_TRADEALLOWED was true only in FULL mode.
@@ -422,7 +423,7 @@ long OrderSend(string symbol,int cmd,double volume,double price,int slippage,
    // HARD SAFETY GATE: never place a new market/pending order while the
    // broker trade session is closed. This runs inside the common OrderSend
    // wrapper so every strategy and every restore/re-entry path is protected.
-   if(!MT4TradeSessionOpen(symbol))
+   if(!MT4SessionMarket(symbol))
    {
       g_mt4_lastError=132; // ERR_MARKET_CLOSED
       g_mt4_lastTicket=-1;
@@ -457,35 +458,6 @@ long OrderSend(string symbol,int cmd,double volume,double price,int slippage,
       request.type_time=(expiration>0)?ORDER_TIME_SPECIFIED:ORDER_TIME_GTC;
       request.expiration=expiration;
       request.type_filling=ORDER_FILLING_RETURN;
-   }
-
-   // Broker-side preflight. Weekly session metadata may still show OPEN on a
-   // holiday or temporary broker shutdown; OrderCheck can report MARKET_CLOSED
-   // without actually placing an order. Preserve all other original errors by
-   // allowing OrderSend to handle them exactly as before.
-   MqlTradeCheckResult precheck;
-   ZeroMemory(precheck);
-   ResetLastError();
-   bool precheck_ok=::OrderCheck(request,precheck);
-   if(!precheck_ok)
-   {
-      int terminal_error=GetLastError();
-      g_mt4_lastError=(precheck.retcode!=0)
-                        ? TradeRetcodeToMT4Error(precheck.retcode)
-                        : terminal_error;
-      if(g_mt4_lastError==0)
-         g_mt4_lastError=1;
-      g_mt4_lastTicket=-1;
-      PrintFormat("OrderCheck failed - OrderSend blocked for %s (cmd=%d, retcode=%u, error=%d)",
-                  symbol,cmd,precheck.retcode,terminal_error);
-      return -1;
-   }
-   if(precheck.retcode==TRADE_RETCODE_MARKET_CLOSED)
-   {
-      g_mt4_lastError=132; // ERR_MARKET_CLOSED
-      g_mt4_lastTicket=-1;
-      PrintFormat("Market closed - broker OrderCheck blocked OrderSend for %s (cmd=%d)",symbol,cmd);
-      return -1;
    }
 
    bool ok=::OrderSend(request,result);
