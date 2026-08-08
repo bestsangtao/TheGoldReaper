@@ -1,4 +1,4 @@
-#property copyright  "Copyright 2026 - Pham Duy Linh"
+﻿#property copyright  "Copyright 2026 - Pham Duy Linh"
 #property link       "https://t.me/Khonglamdoicoan96"
 #property version    "4.5"
 #property description "- Fixed the www.worldtimeserver GMT fetch bug"
@@ -132,7 +132,7 @@ double MarketInfo(string symbol,int mode)
       case MODE_DIGITS:        return (double)SymbolInfoInteger(symbol,SYMBOL_DIGITS);
       case MODE_STOPLEVEL:     return (double)SymbolInfoInteger(symbol,SYMBOL_TRADE_STOPS_LEVEL);
       case MODE_TICKVALUE:     return SymbolInfoDouble(symbol,SYMBOL_TRADE_TICK_VALUE);
-      case MODE_TRADEALLOWED:  return (SymbolInfoInteger(symbol,SYMBOL_TRADE_MODE)==SYMBOL_TRADE_MODE_FULL)?1.0:0.0;
+      case MODE_TRADEALLOWED:  return MT4TradeSessionOpen(symbol)?1.0:0.0;
       case MODE_MINLOT:        return SymbolInfoDouble(symbol,SYMBOL_VOLUME_MIN);
       case MODE_LOTSTEP:       return SymbolInfoDouble(symbol,SYMBOL_VOLUME_STEP);
       case MODE_MAXLOT:        return SymbolInfoDouble(symbol,SYMBOL_VOLUME_MAX);
@@ -197,17 +197,34 @@ bool IsTesting() { return (bool)MQLInfoInteger(MQL_TESTER); }
 
 
 //====================================================================
-// Strategy Tester session gate.
+// Market/session gate for BOTH live/demo and Strategy Tester.
 //
-// Chi ap dung trong Strategy Tester. Live/demo GIU NGUYEN hanh vi cu.
-// Muc dich: khong de cac tick dau phien khi broker van bao MARKET_CLOSED
-// lam EA danh dau bar hien tai la da xu ly, dan toi retry sang bar ke tiep
-// va lam lech Entry/SL/TP so voi ban EX5 goc.
+// IMPORTANT:
+//  - Uses broker trade-session metadata, not only SYMBOL_TRADE_MODE.
+//  - Uses TimeTradeServer() on live/demo so a stale last tick cannot make
+//    a closed weekend/session look open.
+//  - If session metadata is unavailable, fail CLOSED: no new order is sent.
 //====================================================================
-bool MT4TesterTradeSessionOpen(string symbol,datetime when)
+bool MT4TradeSessionOpen(string symbol,datetime when=0)
 {
-   if(!IsTesting())
-      return true;
+   long trade_mode=SymbolInfoInteger(symbol,SYMBOL_TRADE_MODE);
+   // Preserve the original EA rule: MODE_TRADEALLOWED was true only in FULL mode.
+   if(trade_mode!=SYMBOL_TRADE_MODE_FULL)
+      return false;
+
+   if(when<=0)
+   {
+      if(IsTesting())
+         when=TimeCurrent();
+      else
+         when=TimeTradeServer();
+
+      if(when<=0)
+         when=TimeCurrent();
+   }
+
+   if(when<=0)
+      return false;
 
    MqlDateTime now_struct;
    TimeToStruct(when,now_struct);
@@ -216,14 +233,10 @@ bool MT4TesterTradeSessionOpen(string symbol,datetime when)
 
    datetime session_from=0;
    datetime session_to=0;
-   bool have_session=false;
-
    for(uint session_index=0; session_index<64; session_index++)
    {
       if(!SymbolInfoSessionTrade(symbol,dow,session_index,session_from,session_to))
          break;
-
-      have_session=true;
 
       MqlDateTime from_struct;
       MqlDateTime to_struct;
@@ -232,6 +245,7 @@ bool MT4TesterTradeSessionOpen(string symbol,datetime when)
       int from_seconds=from_struct.hour*3600 + from_struct.min*60 + from_struct.sec;
       int to_seconds=to_struct.hour*3600 + to_struct.min*60 + to_struct.sec;
 
+      // Some brokers encode a 24-hour session as 00:00 -> 00:00.
       if(from_seconds==to_seconds)
          return true;
 
@@ -242,15 +256,14 @@ bool MT4TesterTradeSessionOpen(string symbol,datetime when)
       }
       else
       {
+         // Session crosses midnight.
          if(now_seconds>=from_seconds || now_seconds<to_seconds)
             return true;
       }
    }
 
-   // Neu tester/broker khong cung cap metadata session, khong chan EA.
-   if(!have_session)
-      return true;
-
+   // No matching session means market closed. If the broker/tester does not
+   // expose session metadata, fail closed instead of risking an unwanted order.
    return false;
 }
 
@@ -406,6 +419,24 @@ long OrderSend(string symbol,int cmd,double volume,double price,int slippage,
    request.deviation=(ulong)MathMax(slippage,0);
    request.type_filling=MT4SelectFilling(symbol);
 
+   // HARD SAFETY GATE: never place a new market/pending order while the
+   // broker trade session is closed. This runs inside the common OrderSend
+   // wrapper so every strategy and every restore/re-entry path is protected.
+   if(!MT4TradeSessionOpen(symbol))
+   {
+      g_mt4_lastError=132; // ERR_MARKET_CLOSED
+      g_mt4_lastTicket=-1;
+      static datetime last_market_closed_log=0;
+      datetime log_now=IsTesting()?TimeCurrent():TimeTradeServer();
+      if(log_now<=0) log_now=TimeCurrent();
+      if(last_market_closed_log==0 || log_now-last_market_closed_log>=60)
+      {
+         PrintFormat("Market closed - OrderSend blocked for %s (cmd=%d)",symbol,cmd);
+         last_market_closed_log=log_now;
+      }
+      return -1;
+   }
+
    if(cmd==OP_BUY || cmd==OP_SELL)
    {
       request.action=TRADE_ACTION_DEAL;
@@ -426,6 +457,35 @@ long OrderSend(string symbol,int cmd,double volume,double price,int slippage,
       request.type_time=(expiration>0)?ORDER_TIME_SPECIFIED:ORDER_TIME_GTC;
       request.expiration=expiration;
       request.type_filling=ORDER_FILLING_RETURN;
+   }
+
+   // Broker-side preflight. Weekly session metadata may still show OPEN on a
+   // holiday or temporary broker shutdown; OrderCheck can report MARKET_CLOSED
+   // without actually placing an order. Preserve all other original errors by
+   // allowing OrderSend to handle them exactly as before.
+   MqlTradeCheckResult precheck;
+   ZeroMemory(precheck);
+   ResetLastError();
+   bool precheck_ok=::OrderCheck(request,precheck);
+   if(!precheck_ok)
+   {
+      int terminal_error=GetLastError();
+      g_mt4_lastError=(precheck.retcode!=0)
+                        ? TradeRetcodeToMT4Error(precheck.retcode)
+                        : terminal_error;
+      if(g_mt4_lastError==0)
+         g_mt4_lastError=1;
+      g_mt4_lastTicket=-1;
+      PrintFormat("OrderCheck failed - OrderSend blocked for %s (cmd=%d, retcode=%u, error=%d)",
+                  symbol,cmd,precheck.retcode,terminal_error);
+      return -1;
+   }
+   if(precheck.retcode==TRADE_RETCODE_MARKET_CLOSED)
+   {
+      g_mt4_lastError=132; // ERR_MARKET_CLOSED
+      g_mt4_lastTicket=-1;
+      PrintFormat("Market closed - broker OrderCheck blocked OrderSend for %s (cmd=%d)",symbol,cmd);
+      return -1;
    }
 
    bool ok=::OrderSend(request,result);
@@ -3275,7 +3335,7 @@ if ( 总_81_do_1A0>0.0 )
    }
  }
  lizong_22(false); 
- if ( !(IsTesting()) && MarketInfo(总_336_st_3130,MODE_TRADEALLOWED)==0.0 )
+ if ( MarketInfo(总_336_st_3130,MODE_TRADEALLOWED)==0.0 )
  {
    if ( !(总_256_bo_2564) )
    {
