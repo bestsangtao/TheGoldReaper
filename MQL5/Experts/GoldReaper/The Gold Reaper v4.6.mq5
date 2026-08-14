@@ -1,4 +1,4 @@
-// ============================================================================
+﻿// ============================================================================
 // The Gold Reaper v4.6 - full dump reconstruction
 // Dump: metatester64.DMP, restored from RAR part01 through part05
 // Verified JIT base: 0x0000019AA50B0000
@@ -16,6 +16,15 @@
 #property copyright  "Copyright 2026 - Pham Duy Linh"
 #property link       "https://t.me/Khonglamdoicoan96"
 #property version    "4.6"
+#property description "- Fixed the www.worldtimeserver GMT fetch bug"
+#property description "- HighestBalance/OnlyUp restored to original V4.6 dump behavior"
+#property description "- NFP filter with MT5 Economic Calendar + hardcoded fallback"
+#property description "- Added input to close trades at end of Friday session"
+#property description "- Warns the exact missing allowed URL"
+#property description "- Full MT4-style trade logging"
+#property description "- A few handy inputs (all default to the original behavior)"
+#property description "Telegram: t.me/Khonglamdoicoan96"
+
 #include <Trade\Trade.mqh>
 CTrade trade;
 
@@ -1033,7 +1042,7 @@ input string lijntje="==========================================================
 input bool UseVariableValues=true  ;   
 input bool AdjustLotsizeToVariableValues=true  ;   
 input bool ShowInfoPanel=true  ;   
-input bool UpdateInfoTesting=false ;    //update infopanel during testing
+input bool UpdateInfoTesting=true ;    //update infopanel during testing
 input double InfoPanelSizeAdjust=1  ;    //Adjustment for Infopanel size
 input int   SetFontSize=0  ;
 input string BacktestSpeed_string="------------------------------ Backtest Speed settings ------------------------------"  ;
@@ -10631,6 +10640,216 @@ g_startLots_rw=StartLots;
  总_384_do_5DA0 = 0.0 ;
  }
 //lizong_46 <<==--------   --------
+// WorldTimeServer GMT parser.
+// Priority:
+//   1) RFC 7231 HTTP "Date:" header returned by worldtimeserver.com.
+//   2) Current WorldTimeServer page text: "UTC/GMT is HH:MM on ...".
+//   3) Legacy hidden field "serverTimeStamp" (older site layout).
+// This keeps AutoGMT dependent on WorldTimeServer while avoiding a fragile
+// dependency on one specific HTML field/layout.
+ int WTS_MonthToInt(string 月_st)
+ {
+   string 月小写_st = 月_st;
+   StringToLower(月小写_st);
+   if(StringLen(月小写_st) >= 3)
+      月小写_st = StringSubstr(月小写_st,0,3);
+   if(月小写_st == "jan") return(1);
+   if(月小写_st == "feb") return(2);
+   if(月小写_st == "mar") return(3);
+   if(月小写_st == "apr") return(4);
+   if(月小写_st == "may") return(5);
+   if(月小写_st == "jun") return(6);
+   if(月小写_st == "jul") return(7);
+   if(月小写_st == "aug") return(8);
+   if(月小写_st == "sep") return(9);
+   if(月小写_st == "oct") return(10);
+   if(月小写_st == "nov") return(11);
+   if(月小写_st == "dec") return(12);
+   return(0);
+ }
+
+ bool WTS_BuildDateTime(int 年_in,int 月_in,int 日_in,int 时_in,int 分_in,int 秒_in,datetime &输出_da)
+ {
+   if(年_in < 2000 || 年_in > 2200 || 月_in < 1 || 月_in > 12 ||
+      日_in < 1 || 日_in > 31 || 时_in < 0 || 时_in > 23 ||
+      分_in < 0 || 分_in > 59 || 秒_in < 0 || 秒_in > 59)
+      return(false);
+
+   MqlDateTime 时结构;
+   ZeroMemory(时结构);
+   时结构.year = 年_in;
+   时结构.mon  = 月_in;
+   时结构.day  = 日_in;
+   时结构.hour = 时_in;
+   时结构.min  = 分_in;
+   时结构.sec  = 秒_in;
+   输出_da = StructToTime(时结构);
+   return(输出_da > 0);
+ }
+
+ bool WTS_ParseHttpDate(string 头_st,datetime &输出_da)
+ {
+   string 小写头_st = 头_st;
+   StringToLower(小写头_st);
+
+   int 位置_in = StringFind(小写头_st,"\r\ndate:",0);
+   if(位置_in >= 0)
+      位置_in += 2;
+   else
+   {
+      位置_in = StringFind(小写头_st,"\ndate:",0);
+      if(位置_in >= 0)
+         位置_in += 1;
+      else if(StringFind(小写头_st,"date:",0) == 0)
+         位置_in = 0;
+      else
+         return(false);
+   }
+
+   int 行尾_in = StringFind(头_st,"\n",位置_in);
+   string 日期行_st;
+   if(行尾_in < 0)
+      日期行_st = StringSubstr(头_st,位置_in + 5);
+   else
+      日期行_st = StringSubstr(头_st,位置_in + 5,行尾_in - (位置_in + 5));
+   StringReplace(日期行_st,"\r","");
+   StringTrimLeft(日期行_st);
+   StringTrimRight(日期行_st);
+
+   // RFC 7231 example: Fri, 14 Aug 2026 08:27:31 GMT
+   string 项_st[];
+   int 项数_in = StringSplit(日期行_st,' ',项_st);
+   if(项数_in < 6)
+      return(false);
+
+   int 日_in = (int)StringToInteger(项_st[1]);
+   int 月_in = WTS_MonthToInt(项_st[2]);
+   int 年_in = (int)StringToInteger(项_st[3]);
+
+   string 时项_st[];
+   if(StringSplit(项_st[4],':',时项_st) < 3)
+      return(false);
+   int 时_in = (int)StringToInteger(时项_st[0]);
+   int 分_in = (int)StringToInteger(时项_st[1]);
+   int 秒_in = (int)StringToInteger(时项_st[2]);
+
+   return(WTS_BuildDateTime(年_in,月_in,日_in,时_in,分_in,秒_in,输出_da));
+ }
+
+ string WTS_StripTags(string 输入_st)
+ {
+   string 输出_st = "";
+   bool 标签内_bo = false;
+   int 长度_in = StringLen(输入_st);
+   for(int i=0;i<长度_in;i++)
+   {
+      ushort 字_ch = (ushort)StringGetCharacter(输入_st,i);
+      if(字_ch == '<')
+      {
+         标签内_bo = true;
+         输出_st += " ";
+         continue;
+      }
+      if(字_ch == '>')
+      {
+         标签内_bo = false;
+         输出_st += " ";
+         continue;
+      }
+      if(!标签内_bo)
+         输出_st += ShortToString(字_ch);
+   }
+
+   StringReplace(输出_st,"&nbsp;"," ");
+   StringReplace(输出_st,"&#160;"," ");
+   StringReplace(输出_st,"\r"," ");
+   StringReplace(输出_st,"\n"," ");
+   StringReplace(输出_st,"\t"," ");
+   while(StringFind(输出_st,"  ",0) >= 0)
+      StringReplace(输出_st,"  "," ");
+   StringTrimLeft(输出_st);
+   StringTrimRight(输出_st);
+   return(输出_st);
+ }
+
+ bool WTS_ParseHtmlTime(string 网页_st,datetime &输出_da)
+ {
+   // Old WorldTimeServer layout: Unix timestamp in a hidden field.
+   int 位置_in = StringFind(网页_st,"\"serverTimeStamp\" value=",0);
+   if(位置_in >= 0)
+   {
+      int 长度_in = StringLen(网页_st);
+      int i = 位置_in + 20;
+      while(i < 长度_in)
+      {
+         ushort c = (ushort)StringGetCharacter(网页_st,i);
+         if(c >= '0' && c <= '9')
+            break;
+         i++;
+      }
+      string 数字_st = "";
+      while(i < 长度_in && StringLen(数字_st) < 12)
+      {
+         ushort c = (ushort)StringGetCharacter(网页_st,i);
+         if(c < '0' || c > '9')
+            break;
+         数字_st += ShortToString(c);
+         i++;
+      }
+      long 时间戳_lo = (long)StringToInteger(数字_st);
+      if(时间戳_lo > 1000000000)
+      {
+         输出_da = (datetime)时间戳_lo;
+         return(true);
+      }
+   }
+
+   // Current WorldTimeServer layout (2026):
+   // "UTC/GMT is 08:27 on Friday, August 14, 2026"
+   位置_in = StringFind(网页_st,"UTC/GMT is",0);
+   if(位置_in < 0)
+      return(false);
+
+   string 片段_st = StringSubstr(网页_st,位置_in,500);
+   string 文本_st = WTS_StripTags(片段_st);
+   int 标记_in = StringFind(文本_st,"UTC/GMT is ",0);
+   if(标记_in < 0)
+      return(false);
+
+   int 时间开始_in = 标记_in + StringLen("UTC/GMT is ");
+   if(StringLen(文本_st) < 时间开始_in + 5)
+      return(false);
+   string 时分_st = StringSubstr(文本_st,时间开始_in,5);
+   string 时分项_st[];
+   if(StringSplit(时分_st,':',时分项_st) < 2)
+      return(false);
+
+   int 时_in = (int)StringToInteger(时分项_st[0]);
+   int 分_in = (int)StringToInteger(时分项_st[1]);
+
+   int on位置_in = StringFind(文本_st," on ",时间开始_in);
+   if(on位置_in < 0)
+      return(false);
+   string 日期部分_st = StringSubstr(文本_st,on位置_in + 4,80);
+   string 日期项_st[];
+   int 日期项数_in = StringSplit(日期部分_st,' ',日期项_st);
+   if(日期项数_in < 4)
+      return(false);
+
+   // tokens: Friday, August 14, 2026
+   string 日_st = 日期项_st[2];
+   string 年_st = 日期项_st[3];
+   StringReplace(日_st,",","");
+   StringReplace(年_st,",","");
+   int 月_in = WTS_MonthToInt(日期项_st[1]);
+   int 日_in = (int)StringToInteger(日_st);
+   int 年_in = (int)StringToInteger(年_st);
+
+   // The visible "UTC/GMT is" line has minute precision. This is sufficient
+   // for broker GMT offset detection and remains independent of VPS time.
+   return(WTS_BuildDateTime(年_in,月_in,日_in,时_in,分_in,0,输出_da));
+ }
+
  int lizong_47()
  {
   string    子_2_st;
@@ -10643,9 +10862,12 @@ g_startLots_rw=StartLots;
 //----- -----
  string     临_st_1;
  string     临_st_2;
+ datetime   临_da_3 = 0;
+ int        临_in_4;
 
  ResetLastError();
- if ( WebRequest("GET","https://www.worldtimeserver.com/time-zones/utc/",NULL,NULL,10000,子_7_ch_ko,0,子_8_ch_ko,临_st_1) == -1 )
+ 临_in_4 = WebRequest("GET","https://www.worldtimeserver.com/time-zones/utc/",NULL,NULL,10000,子_7_ch_ko,0,子_8_ch_ko,临_st_1);
+ if ( 临_in_4 == -1 )
  {
    Print("Error when reading GMT URL. Error code  =",GetLastError());
    MessageBox("Add the address \'https://www.worldtimeserver.com/\' in the list of allowed URLs on tab \'Expert Advisors\'","Error",64);
@@ -10653,23 +10875,31 @@ g_startLots_rw=StartLots;
  }
  else
  {
-   // MQL4 dung WHOLE_ARRAY=0 (quy uoc cu cua MQL4) de lay "toan bo mang" khi
-   // count=0; nhung MQL5 dinh nghia lai WHOLE_ARRAY=-1, con count=0 trong MQL5
-   // co nghia den la "lay 0 ky tu" -> luon ra chuoi rong du HTTP tra ve 200 va
-   // co du du lieu (day chinh la nguyen nhan that su cua loi "GMT time = 0").
-   临_st_2 = CharArrayToString(子_8_ch_ko,0,-1,0);
+   // MQL5: count=-1 means read the whole WebRequest response array.
+   临_st_2 = CharArrayToString(子_8_ch_ko,0,-1,CP_UTF8);
  }
  子_2_st = 临_st_2 ;
  if ( 子_2_st == "999" )
  {
    return(999);
  }
- 子_3_in = StringFind(子_2_st,"\"serverTimeStamp\" value=",0) ;
- 子_4_st = StringSubstr(子_2_st,子_3_in + 25,10) ;
- 子_5_lo = (long)ulong(子_4_st) ;
- Print("GMT time = ",子_5_lo); 
- Print("Broker time = ",TimeCurrent()); 
- 子_6_in=TimeHour(TimeCurrent()) - TimeHour(子_5_lo);
+
+ // Prefer WorldTimeServer's HTTP Date header. It is standardized and does
+ // not change when the site's visual HTML layout changes.
+ bool 解析成功_bo = WTS_ParseHttpDate(临_st_1,临_da_3);
+ if(!解析成功_bo)
+    解析成功_bo = WTS_ParseHtmlTime(子_2_st,临_da_3);
+
+ if(!解析成功_bo || 临_da_3 <= 0)
+ {
+   Print("Error in detecting GMT time with WorldTimeServer response");
+   return(999);
+ }
+
+ 子_5_lo = (long)临_da_3;
+ Print("GMT time = ",子_5_lo);
+ Print("Broker time = ",TimeCurrent());
+ 子_6_in=TimeHour(TimeCurrent()) - TimeHour((datetime)子_5_lo);
  if ( 子_6_in <  -12 )
  {
    子_6_in +=24;
@@ -10678,18 +10908,18 @@ g_startLots_rw=StartLots;
  {
    子_6_in -=24;
  }
- Print("GMT_Offset detected: " + string(子_6_in)); 
+ Print("GMT_Offset detected: " + string(子_6_in));
  if ( ( 子_6_in < -12 || 子_6_in >  12 ) )
  {
-   Print("Error in detecting GMT offset with URL"); 
-   return(999); 
+   Print("Error in detecting GMT offset with URL");
+   return(999);
  }
  if ( 子_5_lo <  TimeCurrent() - 0x15180 )
  {
-   Print("Error in detecting GMT time with URL"); 
-   return(999); 
+   Print("Error in detecting GMT time with URL");
+   return(999);
  }
- return(子_6_in); 
+ return(子_6_in);
  }
 //lizong_47 <<==--------   --------
  bool lizong_48()
