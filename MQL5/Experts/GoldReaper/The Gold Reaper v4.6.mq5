@@ -10853,8 +10853,6 @@ g_startLots_rw=StartLots;
  int lizong_47()
  {
   string    子_2_st;
-  int       子_3_in;
-  string    子_4_st;
   long      子_5_lo;
   int       子_6_in;
   char      子_7_ch_ko[];
