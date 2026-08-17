@@ -1,4 +1,4 @@
-// ============================================================================
+﻿// ============================================================================
 // The Gold Reaper v4.6 - full dump reconstruction
 // Dump: metatester64.DMP, restored from RAR part01 through part05
 // Verified JIT base: 0x0000019AA50B0000
@@ -1042,7 +1042,7 @@ input string lijntje="==========================================================
 input bool UseVariableValues=true  ;   
 input bool AdjustLotsizeToVariableValues=true  ;   
 input bool ShowInfoPanel=true  ;   
-input bool UpdateInfoTesting=false ;    //update infopanel during testing
+input bool UpdateInfoTesting=true ;    //update infopanel during testing
 input double InfoPanelSizeAdjust=1  ;    //Adjustment for Infopanel size
 input int   SetFontSize=0  ;
 input string BacktestSpeed_string="------------------------------ Backtest Speed settings ------------------------------"  ;
@@ -1485,7 +1485,6 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
   datetime  总_379_da_5D88 = 0;
   bool      总_380_bo_5D90 = false;
   int       总_381_in_5D94 = 0;
-  datetime  g_pendingResizeThresholdSeen_si99[99]; // EX5 sync candidate: confirm >5% resize threshold on next processing cycle
   bool      总_382_bo_5D98 = false;
   int       总_383_in_5D9C = 0;
   double    总_384_do_5DA0 = 0.0;
@@ -3010,7 +3009,7 @@ g_startLots_rw=StartLots;
  {
    return;
  }
- 总_318_do_28D8 = 总_401_do_6AD0 ; // EX5 sync: snapshot uses sizing/high-water basis (OnlyUp-aware)
+ 总_318_do_28D8 = AccountBalance() ; // JIT sync: original LastLotResizeBalance snapshots ACCOUNT_BALANCE
  总_381_in_5D94 = 0 ;
  }
 //OnTick <<==--------   --------
@@ -7368,34 +7367,17 @@ g_startLots_rw=StartLots;
  int        临_in_6;
 
  子_1_do = 总_140_do_3F0 / 100.0 + 1.0 ;
- if ( ( !(AccountBalance()!=总_318_do_28D8) && !(木_0_bo) ) )
+ // JIT compare fix: threshold uses the lot-sizing balance basis
+ // (OnlyUp / ManualBalance aware), while OnTick keeps LastLotResizeBalance
+ // as the raw account-balance snapshot.
+ if ( ( !(总_401_do_6AD0!=总_318_do_28D8) && !(木_0_bo) ) )
  {
-   if ( 总_328_in_3100>=0 && 总_328_in_3100<99 ) g_pendingResizeThresholdSeen_si99[总_328_in_3100]=0;
    return;
  }
  
- if ( ( !(AccountBalance()>总_318_do_28D8 * 子_1_do) && !(AccountBalance()<总_318_do_28D8 / 子_1_do) && !(木_0_bo) ) )
+ if ( ( !(总_401_do_6AD0>总_318_do_28D8 * 子_1_do) && !(总_401_do_6AD0<总_318_do_28D8 / 子_1_do) && !(木_0_bo) ) )
  {
-   if ( 总_328_in_3100>=0 && 总_328_in_3100<99 ) g_pendingResizeThresholdSeen_si99[总_328_in_3100]=0;
    return;
- }
-
- // EX5 sync candidate: the marketplace build confirms a >5% balance move
- // across the next admitted processing cycle before touching existing pending
- // orders.  This is state-based (per strategy), not tied to any date/time.
- if ( !(木_0_bo) && 总_328_in_3100>=0 && 总_328_in_3100<99 )
- {
-   datetime 临_resizeNow = TimeCurrent();
-   datetime 临_resizeSeen = g_pendingResizeThresholdSeen_si99[总_328_in_3100];
-   if ( 临_resizeSeen==0 )
-   {
-     g_pendingResizeThresholdSeen_si99[总_328_in_3100]=临_resizeNow;
-     return;
-   }
-   if ( 临_resizeNow<=临_resizeSeen )
-   {
-     return;
-   }
  }
 
  lizong_10(总_100_do_230,总_92_in_1EC); 
