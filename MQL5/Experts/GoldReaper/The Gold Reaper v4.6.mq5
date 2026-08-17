@@ -1,4 +1,4 @@
-﻿// ============================================================================
+// ============================================================================
 // The Gold Reaper v4.6 - full dump reconstruction
 // Dump: metatester64.DMP, restored from RAR part01 through part05
 // Verified JIT base: 0x0000019AA50B0000
@@ -1042,7 +1042,7 @@ input string lijntje="==========================================================
 input bool UseVariableValues=true  ;   
 input bool AdjustLotsizeToVariableValues=true  ;   
 input bool ShowInfoPanel=true  ;   
-input bool UpdateInfoTesting=true ;    //update infopanel during testing
+input bool UpdateInfoTesting=false ;    //update infopanel during testing
 input double InfoPanelSizeAdjust=1  ;    //Adjustment for Infopanel size
 input int   SetFontSize=0  ;
 input string BacktestSpeed_string="------------------------------ Backtest Speed settings ------------------------------"  ;
