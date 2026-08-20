@@ -34,7 +34,7 @@ CTrade trade;
 // its /exec URL below.  The access key is optional, but must match the
 // LICENSE_API_KEY script property when that property is configured.
 //==================================================================
-#define GR_LICENSE_WEB_APP_URL             ""
+#define GR_LICENSE_WEB_APP_URL             "https://script.google.com/macros/s/AKfycbx11hpDtqPoFIg0qmwk-62REH7M-JvfYAHRtzNaZVFP89yHhGCr1CB98cE1CMg2XA/exec"
 #define GR_LICENSE_ACCESS_KEY              ""
 #define GR_LICENSE_PRODUCT                 "The Gold Reaper v4.6"
 #define GR_LICENSE_HTTP_TIMEOUT_MS         5000
