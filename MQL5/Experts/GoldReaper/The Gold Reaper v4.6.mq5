@@ -29,6 +29,36 @@
 CTrade trade;
 
 //==================================================================
+// Google Sheet activation configuration.
+// Deploy GoogleSheetLicense.gs as a Google Apps Script web app, then paste
+// its /exec URL below.  The access key is optional, but must match the
+// LICENSE_API_KEY script property when that property is configured.
+//==================================================================
+#define GR_LICENSE_WEB_APP_URL             ""
+#define GR_LICENSE_ACCESS_KEY              ""
+#define GR_LICENSE_PRODUCT                 "The Gold Reaper v4.6"
+#define GR_LICENSE_HTTP_TIMEOUT_MS         5000
+#define GR_LICENSE_RECHECK_SECONDS         900
+#define GR_LICENSE_OFFLINE_GRACE_SECONDS   10800
+
+enum GRLicenseCheckResult
+{
+   GR_LICENSE_CHECK_ERROR = -1,
+   GR_LICENSE_DENIED      = 0,
+   GR_LICENSE_APPROVED    = 1
+};
+
+bool     g_grLicenseActive         = false;
+datetime g_grLicenseLastSuccess    = 0;
+datetime g_grLicenseNextCheck      = 0;
+datetime g_grLicenseLastBlockedLog = 0;
+string   g_grLicenseReason         = "not_checked";
+
+bool GRLicense_Initialize();
+void GRLicense_RefreshIfDue();
+bool GRLicense_IsTradeAuthorized();
+
+//==================================================================
 // MQL4Compat: lop tuong thich MQL4->MQL5 (truoc day la file include
 // rieng MQL4Compat.mqh) - da GOP truc tiep vao day de EA chi con 1
 // file .mq5 duy nhat, khong can copy file include rieng.
@@ -392,6 +422,16 @@ long OrderSend(string symbol,int cmd,double volume,double price,int slippage,
                double stoploss,double takeprofit,string comment="",int magic=0,
                datetime expiration=0,color arrow_color=clrNONE)
 {
+   // A revoked/expired license must not create fresh exposure.  Position and
+   // pending-order management remains available through OrderModify,
+   // OrderClose and OrderDelete so existing trades are not abandoned.
+   if(!GRLicense_IsTradeAuthorized())
+   {
+      g_mt4_lastError=133; // ERR_TRADE_DISABLED
+      g_mt4_lastTicket=-1;
+      return -1;
+   }
+
    ENUM_ORDER_TYPE type;
    switch(cmd)
    {
@@ -1517,6 +1557,553 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
   datetime  g_nfpCalendarLastRefresh = 0;
 
 //+------------------------------------------------------------------+
+//| Google Sheet activation                                           |
+//|                                                                  |
+//| Preferred endpoint response (GoogleSheetLicense.gs):             |
+//|   OK|<expiry_unix_utc_or_0>|<customer_name>                       |
+//|   DENIED|<reason>                                                  |
+//|                                                                  |
+//| A published Google Sheet CSV is also accepted. Required headers: |
+//| Account, Active. Optional: ExpiryUTC, Name, Server, Product.      |
+//+------------------------------------------------------------------+
+string GRLicense_Trim(string value)
+{
+   StringTrimLeft(value);
+   StringTrimRight(value);
+   if(StringLen(value)>0 && StringGetCharacter(value,0)==0xFEFF)
+   {
+      value=StringSubstr(value,1);
+      StringTrimLeft(value);
+   }
+   return value;
+}
+
+string GRLicense_Upper(string value)
+{
+   value=GRLicense_Trim(value);
+   StringToUpper(value);
+   return value;
+}
+
+datetime GRLicense_LocalNow()
+{
+   datetime now=TimeLocal();
+   if(now<=0) now=TimeCurrent();
+   return now;
+}
+
+datetime GRLicense_UtcNow()
+{
+   datetime now=TimeGMT();
+   if(now<=0) now=TimeTradeServer();
+   if(now<=0) now=TimeCurrent();
+   return now;
+}
+
+int GRLicense_RecheckSeconds()
+{
+   int seconds=GR_LICENSE_RECHECK_SECONDS;
+   if(seconds<60) seconds=60;
+   return seconds;
+}
+
+int GRLicense_OfflineGraceSeconds()
+{
+   int seconds=GR_LICENSE_OFFLINE_GRACE_SECONDS;
+   if(seconds<0) seconds=0;
+   return seconds;
+}
+
+string GRLicense_UrlEncode(string value)
+{
+   string encoded="";
+   int length=StringLen(value);
+   for(int i=0;i<length;i++)
+   {
+      ushort ch=(ushort)StringGetCharacter(value,i);
+      bool safe=((ch>='A' && ch<='Z') ||
+                 (ch>='a' && ch<='z') ||
+                 (ch>='0' && ch<='9') ||
+                  ch=='-' || ch=='_' || ch=='.' || ch=='~');
+      if(safe)
+         encoded+=ShortToString(ch);
+      else if(ch==' ')
+         encoded+="%20";
+      else
+         encoded+=StringFormat("%%%02X",(int)(ch&0xFF));
+   }
+   return encoded;
+}
+
+string GRLicense_BuildRequestUrl()
+{
+   string endpoint=GRLicense_Trim(GR_LICENSE_WEB_APP_URL);
+   string separator=(StringFind(endpoint,"?")<0)?"?":"&";
+   int length=StringLen(endpoint);
+   if(length>0)
+   {
+      ushort last=(ushort)StringGetCharacter(endpoint,length-1);
+      if(last=='?' || last=='&') separator="";
+   }
+
+   string url=endpoint+separator+
+              "account="+IntegerToString((long)AccountInfoInteger(ACCOUNT_LOGIN))+
+              "&server="+GRLicense_UrlEncode(AccountInfoString(ACCOUNT_SERVER))+
+              "&product="+GRLicense_UrlEncode(GR_LICENSE_PRODUCT);
+   string access_key=GRLicense_Trim(GR_LICENSE_ACCESS_KEY);
+   if(StringLen(access_key)>0)
+      url+="&key="+GRLicense_UrlEncode(access_key);
+   return url;
+}
+
+string GRLicense_HeaderValue(string headers,string requested_name)
+{
+   string requested=GRLicense_Upper(requested_name);
+   string lines[];
+   int total=StringSplit(headers,'\n',lines);
+   for(int i=0;i<total;i++)
+   {
+      string line=GRLicense_Trim(lines[i]);
+      int colon=StringFind(line,":");
+      if(colon<=0) continue;
+      string name=GRLicense_Upper(StringSubstr(line,0,colon));
+      if(name==requested)
+         return GRLicense_Trim(StringSubstr(line,colon+1));
+   }
+   return "";
+}
+
+int GRLicense_HttpGetOnce(string url,string &body,string &response_headers,string &error_text)
+{
+   char request_body[];
+   char response_body[];
+   ArrayResize(request_body,0);
+   ArrayResize(response_body,0);
+   body="";
+   response_headers="";
+   error_text="";
+
+   ResetLastError();
+   int status=WebRequest("GET",url,NULL,NULL,GR_LICENSE_HTTP_TIMEOUT_MS,
+                         request_body,0,response_body,response_headers);
+   if(status==-1)
+   {
+      error_text="WebRequest error "+IntegerToString(GetLastError());
+      return -1;
+   }
+
+   body=CharArrayToString(response_body,0,-1,CP_UTF8);
+   return status;
+}
+
+int GRLicense_HttpGet(string url,string &body,string &error_text)
+{
+   string current_url=url;
+   string response_headers="";
+   for(int redirect=0;redirect<4;redirect++)
+   {
+      int status=GRLicense_HttpGetOnce(current_url,body,response_headers,error_text);
+      if(status==-1) return -1;
+
+      if(status==301 || status==302 || status==303 || status==307 || status==308)
+      {
+         string location=GRLicense_HeaderValue(response_headers,"Location");
+         if(StringLen(location)==0)
+         {
+            error_text="HTTP "+IntegerToString(status)+" without Location header";
+            return -1;
+         }
+         current_url=location;
+         continue;
+      }
+      return status;
+   }
+
+   error_text="too many HTTP redirects";
+   return -1;
+}
+
+bool GRLicense_IsDigits(string value)
+{
+   value=GRLicense_Trim(value);
+   if(StringLen(value)==0) return false;
+   for(int i=0;i<StringLen(value);i++)
+   {
+      ushort ch=(ushort)StringGetCharacter(value,i);
+      if(ch<'0' || ch>'9') return false;
+   }
+   return true;
+}
+
+bool GRLicense_ParseExpiry(string value,datetime &expiry)
+{
+   value=GRLicense_Trim(value);
+   string upper=GRLicense_Upper(value);
+   if(StringLen(value)==0 || upper=="0" || upper=="NEVER" ||
+      upper=="PERMANENT" || upper=="UNLIMITED")
+   {
+      expiry=0;
+      return true;
+   }
+
+   if(GRLicense_IsDigits(value))
+   {
+      long unix_time=(long)StringToInteger(value);
+      if(unix_time>1000000000)
+      {
+         expiry=(datetime)unix_time;
+         return true;
+      }
+      return false;
+   }
+
+   string normalized=value;
+   StringReplace(normalized,"-",".");
+   StringReplace(normalized,"/",".");
+   StringReplace(normalized,"T"," ");
+   StringReplace(normalized,"Z","");
+   if(StringFind(normalized,":")<0)
+      normalized+=" 23:59:59";
+   expiry=StringToTime(normalized);
+   return(expiry>0);
+}
+
+bool GRLicense_StatusIsActive(string value)
+{
+   string status=GRLicense_Upper(value);
+   return(status=="ACTIVE" || status=="ENABLED" || status=="TRUE" ||
+          status=="YES" || status=="1" || status=="OK");
+}
+
+bool GRLicense_ScopeMatches(string configured,string actual)
+{
+   configured=GRLicense_Upper(configured);
+   actual=GRLicense_Upper(actual);
+   return(StringLen(configured)==0 || configured=="*" || configured==actual);
+}
+
+bool GRLicense_ParseCsvLine(string line,string &cells[])
+{
+   ArrayResize(cells,0);
+   string current="";
+   bool quoted=false;
+   int length=StringLen(line);
+   for(int i=0;i<length;i++)
+   {
+      ushort ch=(ushort)StringGetCharacter(line,i);
+      if(ch=='"')
+      {
+         if(quoted && i+1<length && StringGetCharacter(line,i+1)=='"')
+         {
+            current+="\"";
+            i++;
+         }
+         else
+            quoted=!quoted;
+      }
+      else if(ch==',' && !quoted)
+      {
+         int index=ArraySize(cells);
+         ArrayResize(cells,index+1);
+         cells[index]=GRLicense_Trim(current);
+         current="";
+      }
+      else if(ch!='\r')
+         current+=ShortToString(ch);
+   }
+
+   int index=ArraySize(cells);
+   ArrayResize(cells,index+1);
+   cells[index]=GRLicense_Trim(current);
+   return(!quoted);
+}
+
+string GRLicense_NormalizeHeader(string value)
+{
+   value=GRLicense_Upper(value);
+   StringReplace(value," ","");
+   StringReplace(value,"_","");
+   StringReplace(value,"-","");
+   return value;
+}
+
+string GRLicense_CsvCell(string &cells[],int index)
+{
+   if(index<0 || index>=ArraySize(cells)) return "";
+   return GRLicense_Trim(cells[index]);
+}
+
+GRLicenseCheckResult GRLicense_ParseCsvResponse(string body,string &reason)
+{
+   string lines[];
+   int line_count=StringSplit(body,'\n',lines);
+   int account_column=-1;
+   int status_column=-1;
+   int expiry_column=-1;
+   int name_column=-1;
+   int server_column=-1;
+   int product_column=-1;
+   int header_line=-1;
+
+   for(int line_index=0;line_index<line_count;line_index++)
+   {
+      string line=GRLicense_Trim(lines[line_index]);
+      if(StringLen(line)==0) continue;
+
+      string headers[];
+      if(!GRLicense_ParseCsvLine(line,headers))
+      {
+         reason="invalid_csv_header";
+         return GR_LICENSE_CHECK_ERROR;
+      }
+
+      for(int column=0;column<ArraySize(headers);column++)
+      {
+         string header=GRLicense_NormalizeHeader(headers[column]);
+         if(header=="ACCOUNT" || header=="ACCOUNTLOGIN" ||
+            header=="LOGIN" || header=="MT5ACCOUNT")
+            account_column=column;
+         else if(header=="ACTIVE" || header=="STATUS" || header=="ENABLED")
+            status_column=column;
+         else if(header=="EXPIRYUTC" || header=="EXPIRESUTC" ||
+                 header=="EXPIRY" || header=="EXPIRATION" || header=="EXPIRE")
+            expiry_column=column;
+         else if(header=="NAME" || header=="CUSTOMER" || header=="CLIENT")
+            name_column=column;
+         else if(header=="SERVER" || header=="BROKERSERVER")
+            server_column=column;
+         else if(header=="PRODUCT" || header=="EA")
+            product_column=column;
+      }
+      header_line=line_index;
+      break;
+   }
+
+   if(header_line<0 || account_column<0 || status_column<0)
+   {
+      reason="CSV must contain Account and Active columns";
+      return GR_LICENSE_CHECK_ERROR;
+   }
+
+   string account=IntegerToString((long)AccountInfoInteger(ACCOUNT_LOGIN));
+   string server=AccountInfoString(ACCOUNT_SERVER);
+   bool account_seen=false;
+
+   for(int line_index=header_line+1;line_index<line_count;line_index++)
+   {
+      string line=GRLicense_Trim(lines[line_index]);
+      if(StringLen(line)==0) continue;
+
+      string cells[];
+      if(!GRLicense_ParseCsvLine(line,cells)) continue;
+      if(GRLicense_CsvCell(cells,account_column)!=account) continue;
+      account_seen=true;
+
+      if(!GRLicense_ScopeMatches(GRLicense_CsvCell(cells,server_column),server))
+         continue;
+      if(!GRLicense_ScopeMatches(GRLicense_CsvCell(cells,product_column),GR_LICENSE_PRODUCT))
+         continue;
+
+      if(!GRLicense_StatusIsActive(GRLicense_CsvCell(cells,status_column)))
+      {
+         reason="license_inactive";
+         return GR_LICENSE_DENIED;
+      }
+
+      datetime expiry=0;
+      if(expiry_column>=0 &&
+         !GRLicense_ParseExpiry(GRLicense_CsvCell(cells,expiry_column),expiry))
+      {
+         reason="invalid_expiry";
+         return GR_LICENSE_CHECK_ERROR;
+      }
+      if(expiry>0 && GRLicense_UtcNow()>=expiry)
+      {
+         reason="license_expired";
+         return GR_LICENSE_DENIED;
+      }
+
+      string customer=GRLicense_CsvCell(cells,name_column);
+      reason=(StringLen(customer)>0)?"approved for "+customer:"approved";
+      return GR_LICENSE_APPROVED;
+   }
+
+   reason=account_seen?"server_or_product_not_allowed":"account_not_found";
+   return GR_LICENSE_DENIED;
+}
+
+GRLicenseCheckResult GRLicense_ParseResponse(string body,string &reason)
+{
+   body=GRLicense_Trim(body);
+   if(StringLen(body)==0)
+   {
+      reason="empty_response";
+      return GR_LICENSE_CHECK_ERROR;
+   }
+
+   int newline=StringFind(body,"\n");
+   string first_line=(newline>=0)?GRLicense_Trim(StringSubstr(body,0,newline)):body;
+   string upper=GRLicense_Upper(first_line);
+
+   if(upper=="OK" || StringFind(upper,"OK|")==0)
+   {
+      string fields[];
+      int count=StringSplit(first_line,'|',fields);
+      datetime expiry=0;
+      if(count>1 && !GRLicense_ParseExpiry(fields[1],expiry))
+      {
+         reason="invalid_expiry_from_endpoint";
+         return GR_LICENSE_CHECK_ERROR;
+      }
+      if(expiry>0 && GRLicense_UtcNow()>=expiry)
+      {
+         reason="license_expired";
+         return GR_LICENSE_DENIED;
+      }
+
+      string customer=(count>2)?GRLicense_Trim(fields[2]):"";
+      reason=(StringLen(customer)>0)?"approved for "+customer:"approved";
+      return GR_LICENSE_APPROVED;
+   }
+
+   if(upper=="DENIED" || StringFind(upper,"DENIED|")==0)
+   {
+      int separator=StringFind(first_line,"|");
+      reason=(separator>=0)?GRLicense_Trim(StringSubstr(first_line,separator+1)):"denied";
+      return GR_LICENSE_DENIED;
+   }
+
+   if(upper=="ERROR" || StringFind(upper,"ERROR|")==0)
+   {
+      int separator=StringFind(first_line,"|");
+      reason=(separator>=0)?GRLicense_Trim(StringSubstr(first_line,separator+1)):"endpoint_error";
+      return GR_LICENSE_CHECK_ERROR;
+   }
+
+   return GRLicense_ParseCsvResponse(body,reason);
+}
+
+GRLicenseCheckResult GRLicense_Check(string &reason)
+{
+   string endpoint=GRLicense_Trim(GR_LICENSE_WEB_APP_URL);
+   if(StringLen(endpoint)==0 || StringFind(endpoint,"PASTE_")>=0)
+   {
+      reason="GR_LICENSE_WEB_APP_URL is not configured";
+      return GR_LICENSE_CHECK_ERROR;
+   }
+
+   string body="";
+   string http_error="";
+   int status=GRLicense_HttpGet(GRLicense_BuildRequestUrl(),body,http_error);
+   if(status==-1)
+   {
+      reason=http_error;
+      return GR_LICENSE_CHECK_ERROR;
+   }
+   if(status<200 || status>=300)
+   {
+      reason="HTTP status "+IntegerToString(status);
+      return GR_LICENSE_CHECK_ERROR;
+   }
+   return GRLicense_ParseResponse(body,reason);
+}
+
+bool GRLicense_Initialize()
+{
+   // MetaTrader does not support WebRequest in Strategy Tester.  Licensing is
+   // enforced on live/demo terminals; tests and optimizations remain usable.
+   if(MQLInfoInteger(MQL_TESTER)==1)
+   {
+      g_grLicenseActive=true;
+      g_grLicenseReason="strategy_tester_bypass";
+      return true;
+   }
+
+   string reason="";
+   GRLicenseCheckResult result=GRLicense_Check(reason);
+   g_grLicenseReason=reason;
+   if(result!=GR_LICENSE_APPROVED)
+   {
+      g_grLicenseActive=false;
+      Print("Google Sheet activation failed: ",reason);
+      Print("Allow WebRequest for https://script.google.com and ",
+            "https://script.googleusercontent.com in MT5 Expert Advisors settings.");
+      return false;
+   }
+
+   datetime now=GRLicense_LocalNow();
+   g_grLicenseActive=true;
+   g_grLicenseLastSuccess=now;
+   g_grLicenseNextCheck=now+GRLicense_RecheckSeconds();
+   Print("Google Sheet activation approved: ",reason,
+         "; account=",AccountInfoInteger(ACCOUNT_LOGIN),
+         "; server=",AccountInfoString(ACCOUNT_SERVER));
+   return true;
+}
+
+void GRLicense_RefreshIfDue()
+{
+   if(MQLInfoInteger(MQL_TESTER)==1) return;
+
+   datetime now=GRLicense_LocalNow();
+   if(g_grLicenseNextCheck>0 && now<g_grLicenseNextCheck) return;
+   g_grLicenseNextCheck=now+GRLicense_RecheckSeconds();
+
+   string reason="";
+   GRLicenseCheckResult result=GRLicense_Check(reason);
+   if(result==GR_LICENSE_APPROVED)
+   {
+      bool restored=!g_grLicenseActive;
+      g_grLicenseActive=true;
+      g_grLicenseLastSuccess=now;
+      g_grLicenseReason=reason;
+      if(restored) Print("Google Sheet activation restored: ",reason);
+      return;
+   }
+
+   if(result==GR_LICENSE_DENIED)
+   {
+      if(g_grLicenseActive)
+         Print("Google Sheet activation revoked: ",reason,
+               ". New orders are blocked; existing trades remain managed.");
+      g_grLicenseActive=false;
+      g_grLicenseReason=reason;
+      return;
+   }
+
+   // A transient network/Google error keeps the last successful activation
+   // only inside the configured in-memory grace period.
+   int grace=GRLicense_OfflineGraceSeconds();
+   if(g_grLicenseActive && g_grLicenseLastSuccess>0 &&
+      now-g_grLicenseLastSuccess<=grace)
+   {
+      Print("Google Sheet activation check error: ",reason,
+            ". Using offline grace period.");
+      return;
+   }
+
+   if(g_grLicenseActive)
+      Print("Google Sheet activation disabled after check error: ",reason,
+            ". New orders are blocked; existing trades remain managed.");
+   g_grLicenseActive=false;
+   g_grLicenseReason=reason;
+}
+
+bool GRLicense_IsTradeAuthorized()
+{
+   if(MQLInfoInteger(MQL_TESTER)==1 || g_grLicenseActive) return true;
+
+   datetime now=GRLicense_LocalNow();
+   if(g_grLicenseLastBlockedLog==0 || now-g_grLicenseLastBlockedLog>=60)
+   {
+      g_grLicenseLastBlockedLog=now;
+      Print("Google Sheet activation inactive: blocked new order (",
+            g_grLicenseReason,").");
+   }
+   return false;
+}
+
+//+------------------------------------------------------------------+
 //| Recovered from original V4.6 JIT (0x19aa50b5170).                |
 //| CalendarEventByCurrency("USD") -> exact name substring          |
 //| "Nonfarm Payrolls" -> values in [server_now-1d, server_now+30d]|
@@ -1566,6 +2153,7 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  {
  trade.SetAsyncMode(false);
  trade.LogLevel(LOG_LEVEL_NO);
+ if ( !(GRLicense_Initialize()) )   return(INIT_FAILED);
 g_startLots_rw=StartLots;
  // Recovered from original JIT: BacktestSpeed is active only in Strategy Tester.
  g_backtestSpeedFast = false;
@@ -2366,6 +2954,9 @@ g_startLots_rw=StartLots;
  double     临_do_26;
  double     临_do_27;
  int        临_in_28;
+
+ // Refreshing can revoke new entries, but trade management continues below.
+ GRLicense_RefreshIfDue();
 
  // Original JIT exits before any trading/risk work when tester speed rejects the tick.
  if ( !(DumpBacktestSpeedAllowTick()) )   return;
