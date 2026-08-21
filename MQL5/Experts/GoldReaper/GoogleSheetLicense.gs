@@ -376,16 +376,19 @@ function formatDailyProfitSheet_(sheet) {
 }
 
 function dashboardHistoryFormula_(separator) {
-  const selectedColumns = [
-    1, 2, 4, 5, 6, 7, 8, 3, 10, 12, 11, 9, 13, 16, 17,
-  ].join(separator);
-  return '=IF($B$2=""' + separator + '""' + separator +
-    'IFERROR(LET(x' + separator +
-      'FILTER(TradeHistory!$B$2:$S' + separator +
-        'TradeHistory!$A$2:$A=VALUE($B$2))' + separator +
-      'SORT(CHOOSECOLS(x' + separator + selectedColumns + ')' +
-        separator + '1' + separator + 'FALSE))' +
-      separator + '""))';
+  const formula = '=IF($B$2="","",IFERROR(LET(' +
+    'x,FILTER(TradeHistory!$B$2:$S,' +
+      'TradeHistory!$A$2:$A=VALUE($B$2)),' +
+    'mode,$D$2,' +
+    'fromDate,IF(mode="All History",0,' +
+      'IF(mode="Last 3 Months",EDATE(TODAY(),-3),' +
+        'IF(mode="Last Month",EDATE(TODAY(),-1),$D$3))),' +
+    'toDate,IF(mode="Custom Period",$D$4+1,TODAY()+1),' +
+    'y,FILTER(x,CHOOSECOLS(x,1)>=fromDate,' +
+      'CHOOSECOLS(x,1)<toDate),' +
+    'SORT(CHOOSECOLS(y,1,2,4,5,6,7,8,3,10,12,11,9,13,16,17),' +
+      '1,FALSE)),""))';
+  return separator === ',' ? formula : formula.replace(/,/g, separator);
 }
 
 function setDashboardHistoryFormula_(cell) {
@@ -396,9 +399,52 @@ function setDashboardHistoryFormula_(cell) {
   }
 }
 
+function configureDashboardHistoryControls_(dashboard) {
+  dashboard.getRange('B2:D4').breakApart();
+  dashboard.getRange('A2:B4').copyTo(
+    dashboard.getRange('C2:D4'),
+    SpreadsheetApp.CopyPasteType.PASTE_FORMAT,
+    false);
+
+  dashboard.getRange('C2:C4')
+    .clearDataValidations()
+    .setValues([['History period'], ['From UTC'], ['To UTC']]);
+  dashboard.getRange('A2:D4').setVerticalAlignment('middle');
+
+  const modes = [
+    'All History', 'Last 3 Months', 'Last Month', 'Custom Period',
+  ];
+  const periodCell = dashboard.getRange('D2');
+  if (!modes.includes(clean_(periodCell.getDisplayValue()))) {
+    periodCell.setValue('Last Month');
+  }
+  periodCell.setDataValidation(
+    SpreadsheetApp.newDataValidation()
+      .requireValueInList(modes, true)
+      .setAllowInvalid(false)
+      .build());
+  periodCell.setBorder(
+    null, null, null, true, null, null,
+    '#d4af37', SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
+
+  const fromCell = dashboard.getRange('D3');
+  const toCell = dashboard.getRange('D4');
+  dashboard.getRange('D3:D4')
+    .clearDataValidations()
+    .setNumberFormat('yyyy-mm-dd')
+    .setHorizontalAlignment('center')
+    .setBorder(
+      null, null, null, true, null, null,
+      '#dee0e2', SpreadsheetApp.BorderStyle.SOLID);
+  if (!fromCell.getValue()) fromCell.setFormula('=EDATE(TODAY(),-1)');
+  if (!toCell.getValue()) toCell.setFormula('=TODAY()');
+}
+
 function configureDashboardWidth_(spreadsheet) {
   const dashboard = spreadsheet.getSheetByName(DASHBOARD_SHEET_NAME);
   if (!dashboard) return;
+
+  configureDashboardHistoryControls_(dashboard);
 
   const headers = [
     'Time', 'Deal', 'Symbol', 'Type', 'Direction', 'Volume', 'Price',
@@ -406,7 +452,7 @@ function configureDashboardWidth_(spreadsheet) {
     'Reason', 'Comment',
   ];
   const widths = [
-    208, 128, 156, 270, 88, 90, 100, 110, 100, 80, 90, 100, 110, 90, 260,
+    191, 191, 191, 191, 88, 90, 100, 110, 100, 80, 90, 100, 110, 90, 260,
   ];
 
   if (dashboard.getMaxColumns() < headers.length) {
@@ -418,7 +464,8 @@ function configureDashboardWidth_(spreadsheet) {
     dashboard.setColumnWidth(index + 1, width);
   });
 
-  dashboard.getRange('A33').setValue('MT5 DEAL HISTORY · NEWEST FIRST');
+  dashboard.getRange('A33')
+    .setFormula('="MT5 DEAL HISTORY · "&UPPER($D$2)&" · NEWEST FIRST"');
   dashboard.getRange(33, 1, 1, headers.length)
     .setBackground('#16181d')
     .setFontColor('#d4af37')
