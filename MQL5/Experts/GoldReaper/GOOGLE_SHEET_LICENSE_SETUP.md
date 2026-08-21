@@ -68,9 +68,11 @@ Trong MT5, mở **Tools → Options → Expert Advisors**, bật WebRequest và 
   không chặn việc dựng panel ngay sau khi license được duyệt.
 - Tab `Dashboard` cho phép chọn `Account` từ danh sách thả xuống rồi tự hiển thị
   Name, trạng thái, broker/server, Balance, Equity, lãi/lỗ thả nổi, lãi/lỗ hôm
-  nay, tổng lãi/lỗ, Margin, Free Margin, Margin Level, số vị thế/lệnh chờ và toàn
-  bộ lịch sử deal của tài khoản đó. Lịch sử dùng 15 cột kiểu tab Deals của MT5,
-  mỗi deal một dòng cao 26 px, chữ 11, có bộ lọc, màu BUY/SELL và màu lãi/lỗ.
+  nay, tổng lãi/lỗ, Margin, Free Margin, Margin Level và số vị thế/lệnh chờ.
+  Bảng lịch sử dùng `History period` giống MT5: mặc định `Last Month`, có thể
+  đổi sang `All History`, `Last 3 Months` hoặc `Custom Period` với
+  `From UTC`/`To UTC`. Lịch sử dùng 15 cột kiểu tab Deals của MT5, mỗi deal
+  một dòng cao 26 px, chữ 11, có bộ lọc, màu BUY/SELL và màu lãi/lỗ.
 - `Today P/L` và `Total P/L` chỉ cộng deal `BUY`/`SELL`, nên nạp/rút tiền không
   bị tính nhầm thành lợi nhuận. Các deal nạp/rút vẫn xuất hiện đầy đủ trong bảng
   lịch sử.
