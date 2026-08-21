@@ -4,17 +4,23 @@ EA xác thực chính xác số tài khoản MT5, trạng thái, ngày hết h�
 
 ## 1. Tạo bảng `Licenses`
 
-Tạo tab có tên chính xác `Licenses`, với hàng đầu tiên:
+Tạo tab có tên chính xác `Licenses`. Sáu cột đầu là phần quản trị:
 
-| Account | Active | ExpiryUTC | Name | Server | Product |
+| Account | Active | ExpiryUTC | CustomerName | AllowedServer | Product |
 | --- | --- | --- | --- | --- | --- |
 | 12345678 | TRUE | 2026-12-31 23:59:59 | Customer A | ICMarketsSC-MT5-6 | The Gold Reaper v4.6 |
 
+Các cột tiếp theo do EA tự cập nhật: `AccountName`, `Broker`,
+`DetectedServer`, `Currency`, `Balance`, `Equity`, `Leverage`, `TradeMode`,
+`Symbol`, `Terminal`, `TerminalBuild`, `FirstSeenUTC`, `LastSeenUTC` và
+`LastResult`.
+
 - `Account` và `Active` là bắt buộc.
-- `ExpiryUTC`, `Name`, `Server`, `Product` là tùy chọn.
+- `ExpiryUTC`, `CustomerName`, `AllowedServer`, `Product` là tùy chọn.
 - Để `ExpiryUTC` trống hoặc nhập `0` nếu không hết hạn.
-- Để `Server`/`Product` trống hoặc nhập `*` để cho phép mọi giá trị.
+- Để `AllowedServer`/`Product` trống hoặc nhập `*` để cho phép mọi giá trị.
 - Các trạng thái hợp lệ: `ACTIVE`, `ENABLED`, `TRUE`, `YES`, `1`, `OK`.
+- Tài khoản MT5 chưa có trong bảng sẽ tự được thêm với `Active = FALSE`.
 
 ## 2. Triển khai Apps Script
 
@@ -38,14 +44,19 @@ Trong `The Gold Reaper v4.6.mq5`, điền các hằng số rồi biên dịch l�
 Trong MT5, mở **Tools → Options → Expert Advisors**, bật WebRequest và thêm:
 
 - `https://script.google.com`
-- `https://script.googleusercontent.com`
 
 ## Hành vi
 
-- Live/demo phải được Sheet chấp thuận ngay trong `OnInit`.
-- EA kiểm tra lại mỗi 15 phút.
+- Khi gắn EA, thông tin tài khoản được gửi lên Sheet ngay lập tức.
+- Khi `Active = FALSE`, EA vẫn nằm trên biểu đồ nhưng không khởi tạo chiến lược,
+  không dựng panel và tự kiểm tra lại mỗi 10 giây.
+- Khi đổi `Active = TRUE`, EA tự khởi tạo và hoạt động bình thường mà không cần
+  gắn lại vào biểu đồ.
+- Sau khi kích hoạt, EA kiểm tra lại mỗi 60 giây.
 - Lỗi mạng tạm thời dùng kết quả hợp lệ gần nhất tối đa 3 giờ trong phiên chạy hiện tại.
-- Khi tài khoản bị tắt hoặc hết hạn, EA chặn lệnh mới nhưng vẫn sửa, đóng và xóa lệnh cũ để không bỏ rơi giao dịch đang mở.
+- Khi tài khoản bị tắt hoặc hết hạn, EA xóa pending, đóng vị thế mang Magic
+  Number của Gold Reaper rồi tự gỡ khỏi biểu đồ. Lệnh tay và lệnh của EA khác
+  không bị tác động.
 - Strategy Tester tự bỏ qua xác thực vì MetaTrader không hỗ trợ `WebRequest` trong Tester.
 
 EA cũng đọc được Google Sheet CSV đã publish nếu URL CSV được đặt trực tiếp vào `GR_LICENSE_WEB_APP_URL`; khi đó phải cho phép thêm `https://docs.google.com` trong WebRequest. Cách CSV làm lộ toàn bộ danh sách, vì vậy Apps Script là lựa chọn nên dùng.
