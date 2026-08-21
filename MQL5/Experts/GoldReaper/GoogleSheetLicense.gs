@@ -271,7 +271,8 @@ function setupLicenseSheet() {
   sheet.getRange(1, 1, 1, LICENSE_HEADERS.length)
     .setValues([LICENSE_HEADERS]);
   sheet.setFrozenRows(1);
-  sheet.setFrozenColumns(3);
+  sheet.setFrozenColumns(0);
+  sheet.setHiddenGridlines(true);
   try {
     sheet.getRange('C2:C1000').insertCheckboxes();
   } catch (error) {
@@ -282,30 +283,44 @@ function setupLicenseSheet() {
   sheet.getRange('K2:L1000').setNumberFormat('#,##0.00');
   sheet.getRange('R2:S1000').setNumberFormat('yyyy-mm-dd hh:mm:ss');
   sheet.getRange(1, 1, 1, LICENSE_HEADERS.length)
-    .setBackground('#e8eaed')
+    .setBackground('#16181d')
+    .setFontColor('#d4af37')
     .setFontWeight('bold')
+    .setFontFamily('Carlito')
+    .setFontSize(11)
     .setHorizontalAlignment('center')
     .setVerticalAlignment('middle')
     .setWrap(true);
+  sheet.getRange('C1')
+    .setBackground('#d4af37')
+    .setFontColor('#16181d');
+  sheet.setRowHeight(1, 38);
+  sheet.setRowHeights(2, 999, 26);
 
   const widths = [
-    170, 105, 75, 150, 175, 170, 190, 190, 175, 85,
-    105, 105, 85, 95, 105, 130, 105, 155, 155, 150,
+    150, 110, 80, 165, 175, 175, 160, 160, 175, 85,
+    110, 110, 90, 100, 100, 130, 105, 165, 165, 150,
   ];
   widths.forEach(function (width, index) {
     sheet.setColumnWidth(index + 1, width);
   });
 
   const dataRange = sheet.getRange('A2:T1000');
+  dataRange
+    .setFontFamily('Carlito')
+    .setFontSize(11)
+    .setVerticalAlignment('middle');
   const rules = [
     SpreadsheetApp.newConditionalFormatRule()
-      .whenFormulaSatisfied('=$C2=TRUE')
+      .whenFormulaSatisfied('=($B2<>"")*($C2=TRUE)')
       .setBackground('#e6f4ea')
+      .setFontColor('#137333')
       .setRanges([dataRange])
       .build(),
     SpreadsheetApp.newConditionalFormatRule()
-      .whenFormulaSatisfied('=$C2=FALSE')
+      .whenFormulaSatisfied('=($B2<>"")*($C2=FALSE)')
       .setBackground('#fce8e6')
+      .setFontColor('#a50e0e')
       .setRanges([dataRange])
       .build(),
   ];
