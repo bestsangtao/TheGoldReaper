@@ -38,7 +38,9 @@ CTrade trade;
 #define GR_LICENSE_ACCESS_KEY              ""
 #define GR_LICENSE_PRODUCT                 "The Gold Reaper v4.6"
 #define GR_LICENSE_HTTP_TIMEOUT_MS         5000
-#define GR_LICENSE_RECHECK_SECONDS         900
+#define GR_LICENSE_RECHECK_SECONDS         60
+#define GR_LICENSE_PENDING_RECHECK_SECONDS 10
+#define GR_LICENSE_TIMER_SECONDS           5
 #define GR_LICENSE_OFFLINE_GRACE_SECONDS   10800
 
 enum GRLicenseCheckResult
@@ -49,6 +51,8 @@ enum GRLicenseCheckResult
 };
 
 bool     g_grLicenseActive         = false;
+bool     g_grRuntimeStarted        = false;
+bool     g_grRemovalRequested      = false;
 datetime g_grLicenseLastSuccess    = 0;
 datetime g_grLicenseNextCheck      = 0;
 datetime g_grLicenseLastBlockedLog = 0;
@@ -57,6 +61,8 @@ string   g_grLicenseReason         = "not_checked";
 bool GRLicense_Initialize();
 void GRLicense_RefreshIfDue();
 bool GRLicense_IsTradeAuthorized();
+int  GR_StartAuthorizedEA();
+void GRLicense_RevokeAndRemove(string reason);
 
 //==================================================================
 // MQL4Compat: lop tuong thich MQL4->MQL5 (truoc day la file include
@@ -1607,6 +1613,13 @@ int GRLicense_RecheckSeconds()
    return seconds;
 }
 
+int GRLicense_PendingRecheckSeconds()
+{
+   int seconds=GR_LICENSE_PENDING_RECHECK_SECONDS;
+   if(seconds<5) seconds=5;
+   return seconds;
+}
+
 int GRLicense_OfflineGraceSeconds()
 {
    int seconds=GR_LICENSE_OFFLINE_GRACE_SECONDS;
@@ -1617,22 +1630,30 @@ int GRLicense_OfflineGraceSeconds()
 string GRLicense_UrlEncode(string value)
 {
    string encoded="";
-   int length=StringLen(value);
+   uchar bytes[];
+   int length=StringToCharArray(value,bytes,0,-1,CP_UTF8);
+   if(length>0 && bytes[length-1]==0) length--;
    for(int i=0;i<length;i++)
    {
-      ushort ch=(ushort)StringGetCharacter(value,i);
+      uchar ch=bytes[i];
       bool safe=((ch>='A' && ch<='Z') ||
                  (ch>='a' && ch<='z') ||
                  (ch>='0' && ch<='9') ||
                   ch=='-' || ch=='_' || ch=='.' || ch=='~');
       if(safe)
          encoded+=ShortToString(ch);
-      else if(ch==' ')
-         encoded+="%20";
       else
-         encoded+=StringFormat("%%%02X",(int)(ch&0xFF));
+         encoded+=StringFormat("%%%02X",(int)ch);
    }
    return encoded;
+}
+
+string GRLicense_TradeModeName()
+{
+   ENUM_ACCOUNT_TRADE_MODE mode=(ENUM_ACCOUNT_TRADE_MODE)AccountInfoInteger(ACCOUNT_TRADE_MODE);
+   if(mode==ACCOUNT_TRADE_MODE_REAL) return "REAL";
+   if(mode==ACCOUNT_TRADE_MODE_CONTEST) return "CONTEST";
+   return "DEMO";
 }
 
 string GRLicense_BuildRequestUrl()
@@ -1649,7 +1670,17 @@ string GRLicense_BuildRequestUrl()
    string url=endpoint+separator+
               "account="+IntegerToString((long)AccountInfoInteger(ACCOUNT_LOGIN))+
               "&server="+GRLicense_UrlEncode(AccountInfoString(ACCOUNT_SERVER))+
-              "&product="+GRLicense_UrlEncode(GR_LICENSE_PRODUCT);
+              "&product="+GRLicense_UrlEncode(GR_LICENSE_PRODUCT)+
+              "&account_name="+GRLicense_UrlEncode(AccountInfoString(ACCOUNT_NAME))+
+              "&broker="+GRLicense_UrlEncode(AccountInfoString(ACCOUNT_COMPANY))+
+              "&currency="+GRLicense_UrlEncode(AccountInfoString(ACCOUNT_CURRENCY))+
+              "&balance="+GRLicense_UrlEncode(DoubleToString(AccountInfoDouble(ACCOUNT_BALANCE),2))+
+              "&equity="+GRLicense_UrlEncode(DoubleToString(AccountInfoDouble(ACCOUNT_EQUITY),2))+
+              "&leverage="+IntegerToString((long)AccountInfoInteger(ACCOUNT_LEVERAGE))+
+              "&trade_mode="+GRLicense_UrlEncode(GRLicense_TradeModeName())+
+              "&symbol="+GRLicense_UrlEncode(Symbol())+
+              "&terminal="+GRLicense_UrlEncode(TerminalInfoString(TERMINAL_NAME))+
+              "&build="+IntegerToString((long)TerminalInfoInteger(TERMINAL_BUILD));
    string access_key=GRLicense_Trim(GR_LICENSE_ACCESS_KEY);
    if(StringLen(access_key)>0)
       url+="&key="+GRLicense_UrlEncode(access_key);
@@ -1698,29 +1729,10 @@ int GRLicense_HttpGetOnce(string url,string &body,string &response_headers,strin
 
 int GRLicense_HttpGet(string url,string &body,string &error_text)
 {
-   string current_url=url;
+   // MetaTrader follows the Google ContentService redirect internally.  Keep
+   // this as one WebRequest so users only need to allow script.google.com.
    string response_headers="";
-   for(int redirect=0;redirect<4;redirect++)
-   {
-      int status=GRLicense_HttpGetOnce(current_url,body,response_headers,error_text);
-      if(status==-1) return -1;
-
-      if(status==301 || status==302 || status==303 || status==307 || status==308)
-      {
-         string location=GRLicense_HeaderValue(response_headers,"Location");
-         if(StringLen(location)==0)
-         {
-            error_text="HTTP "+IntegerToString(status)+" without Location header";
-            return -1;
-         }
-         current_url=location;
-         continue;
-      }
-      return status;
-   }
-
-   error_text="too many HTTP redirects";
-   return -1;
+   return GRLicense_HttpGetOnce(url,body,response_headers,error_text);
 }
 
 bool GRLicense_IsDigits(string value)
@@ -2016,34 +2028,42 @@ bool GRLicense_Initialize()
    {
       g_grLicenseActive=true;
       g_grLicenseReason="strategy_tester_bypass";
+      g_grLicenseLastSuccess=GRLicense_LocalNow();
       return true;
    }
 
    string reason="";
    GRLicenseCheckResult result=GRLicense_Check(reason);
    g_grLicenseReason=reason;
-   if(result!=GR_LICENSE_APPROVED)
+   datetime now=GRLicense_LocalNow();
+   if(result==GR_LICENSE_APPROVED)
    {
-      g_grLicenseActive=false;
-      Print("Google Sheet activation failed: ",reason);
-      Print("Allow WebRequest for https://script.google.com and ",
-            "https://script.googleusercontent.com in MT5 Expert Advisors settings.");
-      return false;
+      g_grLicenseActive=true;
+      g_grLicenseLastSuccess=now;
+      g_grLicenseNextCheck=now+GRLicense_RecheckSeconds();
+      Print("Google Sheet activation approved: ",reason,
+            "; account=",AccountInfoInteger(ACCOUNT_LOGIN),
+            "; server=",AccountInfoString(ACCOUNT_SERVER));
+      return true;
    }
 
-   datetime now=GRLicense_LocalNow();
-   g_grLicenseActive=true;
-   g_grLicenseLastSuccess=now;
-   g_grLicenseNextCheck=now+GRLicense_RecheckSeconds();
-   Print("Google Sheet activation approved: ",reason,
-         "; account=",AccountInfoInteger(ACCOUNT_LOGIN),
-         "; server=",AccountInfoString(ACCOUNT_SERVER));
-   return true;
+   g_grLicenseActive=false;
+   g_grLicenseNextCheck=now+GRLicense_PendingRecheckSeconds();
+   if(result==GR_LICENSE_DENIED)
+      Print("Google Sheet activation pending: ",reason,
+            ". EA remains hidden until Active is TRUE.");
+   else
+   {
+      Print("Google Sheet activation check failed: ",reason,
+            ". EA remains hidden and will retry automatically.");
+      Print("Allow WebRequest for https://script.google.com in MT5 Expert Advisors settings.");
+   }
+   return false;
 }
 
 void GRLicense_RefreshIfDue()
 {
-   if(MQLInfoInteger(MQL_TESTER)==1) return;
+   if(MQLInfoInteger(MQL_TESTER)==1 || g_grRemovalRequested) return;
 
    datetime now=GRLicense_LocalNow();
    if(g_grLicenseNextCheck>0 && now<g_grLicenseNextCheck) return;
@@ -2058,16 +2078,31 @@ void GRLicense_RefreshIfDue()
       g_grLicenseLastSuccess=now;
       g_grLicenseReason=reason;
       if(restored) Print("Google Sheet activation restored: ",reason);
+      if(!g_grRuntimeStarted)
+      {
+         int init_result=GR_StartAuthorizedEA();
+         if(init_result!=INIT_SUCCEEDED)
+         {
+            Print("Gold Reaper initialization failed after activation.");
+            g_grRemovalRequested=true;
+            ExpertRemove();
+         }
+      }
       return;
    }
 
    if(result==GR_LICENSE_DENIED)
    {
-      if(g_grLicenseActive)
-         Print("Google Sheet activation revoked: ",reason,
-               ". New orders are blocked; existing trades remain managed.");
       g_grLicenseActive=false;
       g_grLicenseReason=reason;
+      if(g_grRuntimeStarted)
+         GRLicense_RevokeAndRemove(reason);
+      else
+      {
+         g_grLicenseNextCheck=now+GRLicense_PendingRecheckSeconds();
+         Print("Google Sheet activation pending: ",reason,
+               ". EA remains hidden until Active is TRUE.");
+      }
       return;
    }
 
@@ -2082,11 +2117,82 @@ void GRLicense_RefreshIfDue()
       return;
    }
 
-   if(g_grLicenseActive)
-      Print("Google Sheet activation disabled after check error: ",reason,
-            ". New orders are blocked; existing trades remain managed.");
+   if(g_grRuntimeStarted)
+   {
+      if(g_grLicenseActive)
+         Print("Google Sheet activation paused after check error: ",reason,
+               ". New orders are blocked while existing trades remain managed.");
+      g_grLicenseActive=false;
+   }
+   else
+   {
+      g_grLicenseActive=false;
+      g_grLicenseNextCheck=now+GRLicense_PendingRecheckSeconds();
+      Print("Google Sheet activation check failed: ",reason,
+            ". EA remains hidden and will retry automatically.");
+   }
+   g_grLicenseReason=reason;
+}
+
+bool GRLicense_IsOwnedMagic(long magic)
+{
+   long base=(long)ST1_MagicNumber;
+   return (magic>=base && magic<=base+15) ||
+          magic==(long)总_168_in_4A8 || magic==(long)总_169_in_4AC;
+}
+
+void GRLicense_CloseOwnedTrades()
+{
+   trade.SetAsyncMode(false);
+   for(int pass=0;pass<3;pass++)
+   {
+      bool found=false;
+
+      for(int i=::OrdersTotal()-1;i>=0;i--)
+      {
+         ulong ticket=::OrderGetTicket(i);
+         if(ticket==0 || !::OrderSelect(ticket)) continue;
+         long magic=(long)::OrderGetInteger(ORDER_MAGIC);
+         if(!GRLicense_IsOwnedMagic(magic)) continue;
+         found=true;
+         trade.SetExpertMagicNumber((ulong)magic);
+         if(!trade.OrderDelete(ticket))
+            Print("License cleanup failed to delete pending #",ticket,
+                  ": ",trade.ResultRetcodeDescription());
+      }
+
+      for(int i=PositionsTotal()-1;i>=0;i--)
+      {
+         ulong ticket=PositionGetTicket(i);
+         if(ticket==0 || !PositionSelectByTicket(ticket)) continue;
+         long magic=(long)PositionGetInteger(POSITION_MAGIC);
+         if(!GRLicense_IsOwnedMagic(magic)) continue;
+         found=true;
+         string symbol=PositionGetString(POSITION_SYMBOL);
+         trade.SetExpertMagicNumber((ulong)magic);
+         MT4ConfigureMarketFilling(symbol);
+         if(!trade.PositionClose(ticket,(ulong)MathMax((int)总_38_do_C0,0)))
+            Print("License cleanup failed to close position #",ticket,
+                  ": ",trade.ResultRetcodeDescription());
+      }
+
+      if(!found) break;
+      if(pass<2) Sleep(250);
+   }
+}
+
+void GRLicense_RevokeAndRemove(string reason)
+{
+   if(g_grRemovalRequested) return;
+   g_grRemovalRequested=true;
    g_grLicenseActive=false;
    g_grLicenseReason=reason;
+   Print("Google Sheet activation revoked: ",reason,
+         ". Closing Gold Reaper trades and removing the EA.");
+   GRLicense_CloseOwnedTrades();
+   lizong_26();
+   ChartRedraw();
+   ExpertRemove();
 }
 
 bool GRLicense_IsTradeAuthorized()
@@ -2153,7 +2259,20 @@ bool GRLicense_IsTradeAuthorized()
  {
  trade.SetAsyncMode(false);
  trade.LogLevel(LOG_LEVEL_NO);
- if ( !(GRLicense_Initialize()) )   return(INIT_FAILED);
+ g_grRuntimeStarted=false;
+ g_grRemovalRequested=false;
+ if(MQLInfoInteger(MQL_TESTER)!=1)
+    EventSetTimer(GR_LICENSE_TIMER_SECONDS);
+ if ( !(GRLicense_Initialize()) )   return(INIT_SUCCEEDED);
+ return(GR_StartAuthorizedEA());
+ }
+//init <<==--------   --------
+
+ int GR_StartAuthorizedEA()
+ {
+ if(g_grRuntimeStarted) return(INIT_SUCCEEDED);
+ trade.SetAsyncMode(false);
+ trade.LogLevel(LOG_LEVEL_NO);
 g_startLots_rw=StartLots;
  // Recovered from original JIT: BacktestSpeed is active only in Strategy Tester.
  g_backtestSpeedFast = false;
@@ -2879,9 +2998,10 @@ g_startLots_rw=StartLots;
    lizong_27(); 
    lizong_29(); 
  }
- return(0); 
+ g_grRuntimeStarted=true;
+ return(INIT_SUCCEEDED);
  }
-//init <<==--------   --------
+//GR_StartAuthorizedEA <<==--------   --------
  bool DumpBacktestSpeedAllowTick()
  {
   if ( !(g_backtestSpeedEnabled) )   return(true);
@@ -2916,6 +3036,13 @@ g_startLots_rw=StartLots;
   return(true);
  }
 //DumpBacktestSpeedAllowTick <<==--------   --------
+
+ void OnTimer()
+ {
+  if(MQLInfoInteger(MQL_TESTER)==1 || g_grRemovalRequested) return;
+  GRLicense_RefreshIfDue();
+ }
+//OnTimer <<==--------   --------
 
  void OnTick()
  {
@@ -2955,8 +3082,12 @@ g_startLots_rw=StartLots;
  double     临_do_27;
  int        临_in_28;
 
- // Refreshing can revoke new entries, but trade management continues below.
+ // Nothing is initialized or drawn until the Sheet grants access.
+ if(!g_grRuntimeStarted || g_grRemovalRequested) return;
+
+ // A FALSE/expired response closes this EA's trades and removes it.
  GRLicense_RefreshIfDue();
+ if(!g_grLicenseActive || g_grRemovalRequested) return;
 
  // Original JIT exits before any trading/risk work when tester speed rejects the tick.
  if ( !(DumpBacktestSpeedAllowTick()) )   return;
@@ -3606,7 +3737,8 @@ g_startLots_rw=StartLots;
 //OnTick <<==--------   --------
  void OnDeinit(const int reason)
  {
- lizong_26(); 
+ EventKillTimer();
+ if(g_grRuntimeStarted) lizong_26();
  }
 //deinit <<==--------   --------
 
