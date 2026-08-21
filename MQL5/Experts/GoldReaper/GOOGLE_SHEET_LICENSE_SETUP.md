@@ -27,7 +27,7 @@ Các cột tiếp theo do EA tự cập nhật: `AccountName`, `Broker`,
 
 1. Trong Google Sheet, mở **Extensions → Apps Script**.
 2. Dán nội dung file `GoogleSheetLicense.gs`.
-3. Chạy hàm `setupLicenseSheet()` một lần và cấp quyền khi Google yêu cầu. Hàm này chuẩn hóa `Licenses`, tạo `TradeHistory`/`DailyProfit` và đặt Dashboard rộng gấp 2 lần.
+3. Chạy hàm `setupLicenseSheet()` một lần và cấp quyền khi Google yêu cầu. Hàm này chuẩn hóa `Licenses`, tạo `TradeHistory`/`DailyProfit` và định dạng lịch sử trên Dashboard theo kiểu MT5 Terminal.
 4. Chọn **Deploy → New deployment → Web app**.
 5. Chọn **Execute as: Me** và **Who has access: Anyone**.
 6. Sao chép URL kết thúc bằng `/exec`.
@@ -54,21 +54,23 @@ Trong MT5, mở **Tools → Options → Expert Advisors**, bật WebRequest và 
 
 - Khi gắn EA, thông tin tài khoản được gửi lên Sheet ngay lập tức.
 - Khi `Active = FALSE`, EA vẫn nằm trên biểu đồ nhưng không khởi tạo chiến lược,
-  không dựng panel và tự kiểm tra lại mỗi 10 giây.
+  không dựng panel và tự kiểm tra lại mỗi 2 giây.
 - Khi đổi `Active = TRUE`, EA tự khởi tạo và hoạt động bình thường mà không cần
   gắn lại vào biểu đồ.
-- Sau khi kích hoạt, EA kiểm tra lại mỗi 60 giây.
+- Sau khi kích hoạt, EA kiểm tra lại mỗi 10 giây. WebRequest chỉ chạy trong
+  `OnTimer`, không chạy trên luồng xử lý tick.
 - EA đồng bộ toàn bộ deal mà terminal MT5 cung cấp, gồm lệnh mua/bán, nạp/rút,
   credit, phí, commission và các điều chỉnh khác. Lịch sử được gửi theo từng lô
-  50 deal, chống trùng bằng cặp `Account + DealTicket`.
-- Khi còn dữ liệu cũ, EA gửi tiếp một lô khoảng mỗi 5 giây. Lịch sử rất dài có
-  thể cần một lúc để hoàn tất. `HistorySync = COMPLETE` nghĩa là đã bắt kịp lịch
-  sử hiện có; sau đó EA kiểm tra deal mới mỗi 60 giây.
+  100 deal, chống trùng bằng cặp `Account + DealTicket`.
+- Khi còn dữ liệu cũ, EA gửi tiếp một lô khoảng mỗi 1 giây; nếu lỗi thì thử lại
+  sau 3 giây. `HistorySync = COMPLETE` nghĩa là đã bắt kịp lịch sử hiện có; sau
+  đó EA kiểm tra deal mới mỗi 5 giây. Đồng bộ lịch sử được hoãn sang timer nên
+  không chặn việc dựng panel ngay sau khi license được duyệt.
 - Tab `Dashboard` cho phép chọn `Account` từ danh sách thả xuống rồi tự hiển thị
   Name, trạng thái, broker/server, Balance, Equity, lãi/lỗ thả nổi, lãi/lỗ hôm
   nay, tổng lãi/lỗ, Margin, Free Margin, Margin Level, số vị thế/lệnh chờ và toàn
-  bộ lịch sử deal của tài khoản đó. Dashboard giữ bố cục dọc 4 cột và ô `Details`
-  nhiều dòng, nhưng tổng bề rộng A:D đã tăng đúng gấp 2 lần, từ 381 px lên 762 px.
+  bộ lịch sử deal của tài khoản đó. Lịch sử dùng 15 cột kiểu tab Deals của MT5,
+  mỗi deal một dòng cao 26 px, chữ 11, có bộ lọc, màu BUY/SELL và màu lãi/lỗ.
 - `Today P/L` và `Total P/L` chỉ cộng deal `BUY`/`SELL`, nên nạp/rút tiền không
   bị tính nhầm thành lợi nhuận. Các deal nạp/rút vẫn xuất hiện đầy đủ trong bảng
   lịch sử.
