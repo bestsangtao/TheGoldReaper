@@ -10,10 +10,10 @@
  */
 const LICENSE_SHEET_NAME = 'Licenses';
 const LICENSE_HEADERS = [
+  'Name',
   'Account',
   'Active',
   'ExpiryUTC',
-  'CustomerName',
   'AllowedServer',
   'Product',
   'AccountName',
@@ -111,9 +111,9 @@ function doGet(e) {
 
       writeTelemetry_(sheet, matchingRow + 1, row, columns, params,
         'APPROVED');
-      const customer = safeField_(
-        cell_(row, columns.customerName) || clean_(params.account_name));
-      return text_('OK|' + expiry + '|' + customer);
+      const displayName = safeField_(
+        cell_(row, columns.name) || clean_(params.account_name));
+      return text_('OK|' + expiry + '|' + displayName);
     } finally {
       lock.releaseLock();
     }
@@ -149,7 +149,7 @@ function appendPendingAccount_(sheet, columns, params) {
   setCell_(row, columns.account, clean_(params.account));
   setCell_(row, columns.active, false);
   setCell_(row, columns.expiry, '');
-  setCell_(row, columns.customerName, clean_(params.account_name));
+  setCell_(row, columns.name, clean_(params.account_name));
   setCell_(row, columns.allowedServer, clean_(params.server) || '*');
   setCell_(row, columns.product, clean_(params.product));
   setTelemetryValues_(row, columns, params, now, now, 'WAITING APPROVAL');
@@ -193,7 +193,7 @@ function mapColumns_(headerRow) {
     account: -1,
     active: -1,
     expiry: -1,
-    customerName: -1,
+    name: -1,
     allowedServer: -1,
     product: -1,
     accountName: -1,
@@ -220,8 +220,8 @@ function mapColumns_(headerRow) {
       result.active = index;
     } else if (['expiryutc', 'expiresutc', 'expiry', 'expiration', 'expire'].includes(header)) {
       result.expiry = index;
-    } else if (['customername', 'name', 'customer', 'client'].includes(header)) {
-      result.customerName = index;
+    } else if (['name', 'customername', 'customname', 'customer', 'client'].includes(header)) {
+      result.name = index;
     } else if (['allowedserver', 'server', 'serverscope'].includes(header)) {
       result.allowedServer = index;
     } else if (['product', 'ea'].includes(header)) {
@@ -271,14 +271,14 @@ function setupLicenseSheet() {
   sheet.getRange(1, 1, 1, LICENSE_HEADERS.length)
     .setValues([LICENSE_HEADERS]);
   sheet.setFrozenRows(1);
-  sheet.setFrozenColumns(2);
+  sheet.setFrozenColumns(3);
   try {
-    sheet.getRange('B2:B1000').insertCheckboxes();
+    sheet.getRange('C2:C1000').insertCheckboxes();
   } catch (error) {
     // The supplied native table already renders its BOOLEAN column as checks.
     console.log('Active checkbox setup skipped: ' + error.message);
   }
-  sheet.getRange('C2:C1000').setNumberFormat('yyyy-mm-dd hh:mm:ss');
+  sheet.getRange('D2:D1000').setNumberFormat('yyyy-mm-dd hh:mm:ss');
   sheet.getRange('K2:L1000').setNumberFormat('#,##0.00');
   sheet.getRange('R2:S1000').setNumberFormat('yyyy-mm-dd hh:mm:ss');
   sheet.getRange(1, 1, 1, LICENSE_HEADERS.length)
@@ -289,7 +289,7 @@ function setupLicenseSheet() {
     .setWrap(true);
 
   const widths = [
-    105, 75, 150, 170, 175, 170, 190, 190, 175, 85,
+    170, 105, 75, 150, 175, 170, 190, 190, 175, 85,
     105, 105, 85, 95, 105, 130, 105, 155, 155, 150,
   ];
   widths.forEach(function (width, index) {
@@ -299,12 +299,12 @@ function setupLicenseSheet() {
   const dataRange = sheet.getRange('A2:T1000');
   const rules = [
     SpreadsheetApp.newConditionalFormatRule()
-      .whenFormulaSatisfied('=$B2=TRUE')
+      .whenFormulaSatisfied('=$C2=TRUE')
       .setBackground('#e6f4ea')
       .setRanges([dataRange])
       .build(),
     SpreadsheetApp.newConditionalFormatRule()
-      .whenFormulaSatisfied('=$B2=FALSE')
+      .whenFormulaSatisfied('=$C2=FALSE')
       .setBackground('#fce8e6')
       .setRanges([dataRange])
       .build(),
