@@ -10,6 +10,8 @@
  */
 const LICENSE_SHEET_NAME = 'Licenses';
 const TRADE_HISTORY_SHEET_NAME = 'TradeHistory';
+const DAILY_PROFIT_SHEET_NAME = 'DailyProfit';
+const DASHBOARD_SHEET_NAME = 'Dashboard';
 const LICENSE_HEADERS = [
   'Name',
   'Account',
@@ -206,6 +208,7 @@ function doPost(e) {
         '' : String(params.payload);
       const records = parseDealPayload_(rawPayload, account);
       const inserted = appendUniqueDeals_(history, records);
+      ensureDailyProfitSheet_(spreadsheet, history);
       writeHistorySync_(licenses, match + 1, columns,
         'SYNCING · +' + inserted + ' deals');
       return text_('OK|' + inserted);
@@ -249,6 +252,132 @@ function ensureTradeHistorySheet_(spreadsheet) {
     }
   }
   return sheet;
+}
+
+
+function ensureDailyProfitSheet_(spreadsheet, history) {
+  let sheet = spreadsheet.getSheetByName(DAILY_PROFIT_SHEET_NAME);
+  const created = !sheet;
+  if (!sheet) sheet = spreadsheet.insertSheet(DAILY_PROFIT_SHEET_NAME, 1);
+
+  if (sheet.getMaxColumns() < 3) {
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), 3 - sheet.getMaxColumns());
+  }
+
+  const source = history || ensureTradeHistorySheet_(spreadsheet);
+  const requiredRows = Math.max(source.getMaxRows(), 2);
+  if (sheet.getMaxRows() < requiredRows) {
+    const firstNewRow = sheet.getMaxRows() + 1;
+    const rowsToAdd = requiredRows - sheet.getMaxRows();
+    sheet.insertRowsAfter(sheet.getMaxRows(), rowsToAdd);
+    formatDailyProfitDataRows_(sheet, firstNewRow, rowsToAdd);
+  }
+
+  const formulaCell = sheet.getRange('A1');
+  if (!formulaCell.getFormula()) {
+    const lastRow = sheet.getLastRow();
+    if (lastRow > 0) {
+      sheet.getRange(1, 1, lastRow, Math.min(sheet.getLastColumn(), 3))
+        .clearContent();
+    }
+    setDailyProfitFormula_(formulaCell);
+  }
+
+  if (created) {
+    formatDailyProfitSheet_(sheet);
+    configureDashboardWidth_(spreadsheet);
+  }
+  return sheet;
+}
+
+function dailyProfitFormula_(separator) {
+  return '=IF(' +
+    'COUNTIF(TradeHistory!F2:F' + separator + '"BUY")+' +
+    'COUNTIF(TradeHistory!F2:F' + separator + '"SELL")=0' + separator +
+    'HSTACK("Date UTC"' + separator + '"Account"' + separator +
+      '"Net P/L")' + separator +
+    'QUERY(HSTACK(' +
+      'IF(TradeHistory!B2:B=""' + separator + '""' + separator +
+        'INT(TradeHistory!B2:B))' + separator +
+      'TradeHistory!A2:A' + separator +
+      'TradeHistory!N2:N' + separator +
+      'TradeHistory!F2:F)' + separator +
+      "\"select Col1,Col2,sum(Col3) where Col1 is not null and " +
+        "(Col4 = 'BUY' or Col4 = 'SELL') group by Col1,Col2 " +
+        "order by Col1 desc,Col2 label Col1 'Date UTC'," +
+        "Col2 'Account',sum(Col3) 'Net P/L'\"" + separator +
+      '0))';
+}
+
+function setDailyProfitFormula_(cell) {
+  try {
+    cell.setFormula(dailyProfitFormula_(','));
+  } catch (error) {
+    cell.setFormula(dailyProfitFormula_(';'));
+  }
+}
+
+function formatDailyProfitDataRows_(sheet, firstRow, rowCount) {
+  if (rowCount <= 0) return;
+  sheet.getRange(firstRow, 1, rowCount, 3)
+    .setFontFamily('Carlito')
+    .setFontSize(11)
+    .setVerticalAlignment('middle');
+  sheet.getRange(firstRow, 1, rowCount, 1)
+    .setNumberFormat('yyyy-mm-dd')
+    .setHorizontalAlignment('center');
+  sheet.getRange(firstRow, 2, rowCount, 1)
+    .setHorizontalAlignment('center');
+  sheet.getRange(firstRow, 3, rowCount, 1)
+    .setNumberFormat('#,##0.00;[Red]-#,##0.00')
+    .setHorizontalAlignment('right');
+  sheet.setRowHeights(firstRow, rowCount, 26);
+}
+
+function formatDailyProfitSheet_(sheet) {
+  sheet.setFrozenRows(1);
+  sheet.setHiddenGridlines(true);
+  sheet.setTabColor('#d4af37');
+  sheet.getRange('A1:C1')
+    .setBackground('#16181d')
+    .setFontColor('#d4af37')
+    .setFontWeight('bold')
+    .setFontFamily('Carlito')
+    .setFontSize(11)
+    .setHorizontalAlignment('center')
+    .setVerticalAlignment('middle')
+    .setWrap(true);
+  sheet.setRowHeight(1, 38);
+  sheet.setColumnWidth(1, 130);
+  sheet.setColumnWidth(2, 120);
+  sheet.setColumnWidth(3, 150);
+  formatDailyProfitDataRows_(sheet, 2, Math.max(sheet.getMaxRows() - 1, 1));
+
+  const profitRange = sheet.getRange(
+    2, 3, Math.max(sheet.getMaxRows() - 1, 1), 1);
+  const rules = [
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenNumberGreaterThan(0)
+      .setFontColor('#127333')
+      .setBold(true)
+      .setRanges([profitRange])
+      .build(),
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenNumberLessThan(0)
+      .setFontColor('#a50e0e')
+      .setBold(true)
+      .setRanges([profitRange])
+      .build(),
+  ];
+  sheet.setConditionalFormatRules(rules);
+}
+
+function configureDashboardWidth_(spreadsheet) {
+  const dashboard = spreadsheet.getSheetByName(DASHBOARD_SHEET_NAME);
+  if (!dashboard) return;
+  [208, 128, 156, 270].forEach(function (width, index) {
+    dashboard.setColumnWidth(index + 1, width);
+  });
 }
 
 function parseDealPayload_(payload, account) {
@@ -571,7 +700,8 @@ function setupLicenseSheet() {
   ];
   sheet.setConditionalFormatRules(rules);
 
-  const history = ensureTradeHistorySheet_(SpreadsheetApp.getActiveSpreadsheet());
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const history = ensureTradeHistorySheet_(spreadsheet);
   history.setFrozenRows(1);
   history.setFrozenColumns(0);
   history.setHiddenGridlines(true);
@@ -585,6 +715,10 @@ function setupLicenseSheet() {
   history.getRange('B2:B').setNumberFormat('yyyy-mm-dd hh:mm:ss.000');
   history.getRange('H2:N').setNumberFormat('#,##0.00########');
   history.getRange('T2:T').setNumberFormat('yyyy-mm-dd hh:mm:ss');
+
+  const dailyProfit = ensureDailyProfitSheet_(spreadsheet, history);
+  formatDailyProfitSheet_(dailyProfit);
+  configureDashboardWidth_(spreadsheet);
 }
 
 function normalizeHeader_(value) {
