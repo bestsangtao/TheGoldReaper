@@ -27,9 +27,10 @@ Các cột tiếp theo do EA tự cập nhật: `AccountName`, `Broker`,
 
 1. Trong Google Sheet, mở **Extensions → Apps Script**.
 2. Dán nội dung file `GoogleSheetLicense.gs`.
-3. Chọn **Deploy → New deployment → Web app**.
-4. Chọn **Execute as: Me** và **Who has access: Anyone**.
-5. Sao chép URL kết thúc bằng `/exec`.
+3. Chạy hàm `setupLicenseSheet()` một lần và cấp quyền khi Google yêu cầu. Hàm này chuẩn hóa `Licenses`, tạo `TradeHistory`/`DailyProfit` và đặt Dashboard rộng gấp 2 lần.
+4. Chọn **Deploy → New deployment → Web app**.
+5. Chọn **Execute as: Me** và **Who has access: Anyone**.
+6. Sao chép URL kết thúc bằng `/exec`.
 
 Sau khi cập nhật mã Apps Script đã triển khai trước đó, vào **Deploy → Manage
 deployments → Edit → New version → Deploy**. URL `/exec` cũ được giữ nguyên.
@@ -66,14 +67,17 @@ Trong MT5, mở **Tools → Options → Expert Advisors**, bật WebRequest và 
 - Tab `Dashboard` cho phép chọn `Account` từ danh sách thả xuống rồi tự hiển thị
   Name, trạng thái, broker/server, Balance, Equity, lãi/lỗ thả nổi, lãi/lỗ hôm
   nay, tổng lãi/lỗ, Margin, Free Margin, Margin Level, số vị thế/lệnh chờ và toàn
-  bộ lịch sử deal của tài khoản đó. Dashboard dùng bố cục dọc 4 cột để vừa màn
-  hình điện thoại; mỗi deal gom thông tin phụ vào ô `Details` nhiều dòng để không
-  phải kéo ngang.
+  bộ lịch sử deal của tài khoản đó. Dashboard giữ bố cục dọc 4 cột và ô `Details`
+  nhiều dòng, nhưng tổng bề rộng A:D đã tăng đúng gấp 2 lần, từ 381 px lên 762 px.
 - `Today P/L` và `Total P/L` chỉ cộng deal `BUY`/`SELL`, nên nạp/rút tiền không
   bị tính nhầm thành lợi nhuận. Các deal nạp/rút vẫn xuất hiện đầy đủ trong bảng
   lịch sử.
-- Tab `TradeHistory` là dữ liệu nguồn cho Dashboard; có thể ẩn tab này để giao
-  diện gọn hơn mà không ảnh hưởng đồng bộ.
+- Tab `DailyProfit` tự nhóm `Net P/L` theo `Date UTC` và `Account`. Chỉ deal
+  `BUY`/`SELL` được cộng nên nạp/rút không làm sai lợi nhuận. Công thức dùng toàn
+  bộ cột và Apps Script tự tăng số hàng theo `TradeHistory`, không có giới hạn
+  ngày hoặc số dòng cố định.
+- Tab `TradeHistory` là dữ liệu nguồn cho Dashboard và DailyProfit; có thể ẩn tab
+  này để giao diện gọn hơn mà không ảnh hưởng đồng bộ.
 - Phần kiểm tra/kích hoạt Google Sheet chạy im lặng, không ghi log duyệt, chờ
   duyệt, mất mạng hay bị từ chối vào Journal/Experts. Chỉ lỗi thật sự khi đóng
   vị thế hoặc xóa pending trong quá trình thu hồi quyền vẫn được ghi lại.
