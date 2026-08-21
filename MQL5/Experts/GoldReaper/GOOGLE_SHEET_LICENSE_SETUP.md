@@ -6,9 +6,9 @@ EA xác thực chính xác số tài khoản MT5, trạng thái, ngày hết h�
 
 Tạo tab có tên chính xác `Licenses`. Sáu cột đầu là phần quản trị:
 
-| Account | Active | ExpiryUTC | CustomerName | AllowedServer | Product |
+| Name | Account | Active | ExpiryUTC | AllowedServer | Product |
 | --- | --- | --- | --- | --- | --- |
-| 12345678 | TRUE | 2026-12-31 23:59:59 | Customer A | ICMarketsSC-MT5-6 | The Gold Reaper v4.6 |
+| Customer A | 12345678 | TRUE | 2026-12-31 23:59:59 | ICMarketsSC-MT5-6 | The Gold Reaper v4.6 |
 
 Các cột tiếp theo do EA tự cập nhật: `AccountName`, `Broker`,
 `DetectedServer`, `Currency`, `Balance`, `Equity`, `Leverage`, `TradeMode`,
@@ -16,7 +16,7 @@ Các cột tiếp theo do EA tự cập nhật: `AccountName`, `Broker`,
 `LastResult`.
 
 - `Account` và `Active` là bắt buộc.
-- `ExpiryUTC`, `CustomerName`, `AllowedServer`, `Product` là tùy chọn.
+- `Name`, `ExpiryUTC`, `AllowedServer`, `Product` là tùy chọn.
 - Để `ExpiryUTC` trống hoặc nhập `0` nếu không hết hạn.
 - Để `AllowedServer`/`Product` trống hoặc nhập `*` để cho phép mọi giá trị.
 - Các trạng thái hợp lệ: `ACTIVE`, `ENABLED`, `TRUE`, `YES`, `1`, `OK`.
