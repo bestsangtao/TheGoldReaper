@@ -38,11 +38,14 @@ CTrade trade;
 #define GR_LICENSE_ACCESS_KEY              ""
 #define GR_LICENSE_PRODUCT                 "The Gold Reaper v4.6"
 #define GR_LICENSE_HTTP_TIMEOUT_MS         5000
-#define GR_LICENSE_RECHECK_SECONDS         60
-#define GR_LICENSE_PENDING_RECHECK_SECONDS 10
-#define GR_LICENSE_TIMER_SECONDS           5
+#define GR_LICENSE_RECHECK_SECONDS         10
+#define GR_LICENSE_PENDING_RECHECK_SECONDS 2
+#define GR_LICENSE_TIMER_SECONDS           1
 #define GR_LICENSE_OFFLINE_GRACE_SECONDS   10800
-#define GR_HISTORY_BATCH_SIZE              50
+#define GR_HISTORY_BATCH_SIZE              100
+#define GR_HISTORY_BATCH_INTERVAL_SECONDS  1
+#define GR_HISTORY_RETRY_SECONDS           3
+#define GR_HISTORY_IDLE_SECONDS            5
 
 enum GRLicenseCheckResult
 {
@@ -1612,14 +1615,14 @@ datetime GRLicense_UtcNow()
 int GRLicense_RecheckSeconds()
 {
    int seconds=GR_LICENSE_RECHECK_SECONDS;
-   if(seconds<60) seconds=60;
+   if(seconds<10) seconds=10;
    return seconds;
 }
 
 int GRLicense_PendingRecheckSeconds()
 {
    int seconds=GR_LICENSE_PENDING_RECHECK_SECONDS;
-   if(seconds<5) seconds=5;
+   if(seconds<2) seconds=2;
    return seconds;
 }
 
@@ -1838,7 +1841,7 @@ void GRHistory_SyncBatch()
 
    datetime sync_now=GRLicense_LocalNow();
    if(g_grHistoryNextSync>0 && sync_now<g_grHistoryNextSync) return;
-   g_grHistoryNextSync=sync_now+60;
+   g_grHistoryNextSync=sync_now+GR_HISTORY_RETRY_SECONDS;
 
    long cursor_time_msc=0;
    ulong cursor_ticket=0;
@@ -1894,7 +1897,7 @@ void GRHistory_SyncBatch()
    if(selected==0)
    {
       g_grHistorySyncComplete=true;
-      g_grHistoryNextSync=sync_now+GRLicense_RecheckSeconds();
+      g_grHistoryNextSync=sync_now+GR_HISTORY_IDLE_SECONDS;
       return;
    }
    g_grHistorySyncComplete=false;
@@ -1916,7 +1919,7 @@ void GRHistory_SyncBatch()
        StringFind(GRLicense_Upper(GRLicense_Trim(body)),"OK|")==0))
    {
       GRHistory_SaveCursor(last_time_msc,last_ticket);
-      g_grHistoryNextSync=sync_now+GR_LICENSE_TIMER_SECONDS;
+      g_grHistoryNextSync=sync_now+GR_HISTORY_BATCH_INTERVAL_SECONDS;
    }
 }
 
@@ -2226,7 +2229,7 @@ bool GRLicense_Initialize()
       g_grLicenseActive=true;
       g_grLicenseLastSuccess=now;
       g_grLicenseNextCheck=now+GRLicense_RecheckSeconds();
-      GRHistory_SyncBatch();
+      g_grHistoryNextSync=now+GR_HISTORY_BATCH_INTERVAL_SECONDS;
       return true;
    }
 
@@ -2250,7 +2253,6 @@ void GRLicense_RefreshIfDue()
       g_grLicenseActive=true;
       g_grLicenseLastSuccess=now;
       g_grLicenseReason=reason;
-      GRHistory_SyncBatch();
       if(!g_grRuntimeStarted)
       {
          int init_result=GR_StartAuthorizedEA();
@@ -2259,8 +2261,11 @@ void GRLicense_RefreshIfDue()
             Print("Gold Reaper initialization failed.");
             g_grRemovalRequested=true;
             ExpertRemove();
+            return;
          }
       }
+      if(g_grHistoryNextSync<=0)
+         g_grHistoryNextSync=now+GR_HISTORY_BATCH_INTERVAL_SECONDS;
       return;
    }
 
@@ -3236,8 +3241,7 @@ g_startLots_rw=StartLots;
  // Nothing is initialized or drawn until the Sheet grants access.
  if(!g_grRuntimeStarted || g_grRemovalRequested) return;
 
- // A FALSE/expired response closes this EA's trades and removes it.
- GRLicense_RefreshIfDue();
+ // License HTTP checks run from OnTimer, never from the trading tick path.
  if(!g_grLicenseActive || g_grRemovalRequested) return;
 
  // Original JIT exits before any trading/risk work when tester speed rejects the tick.
