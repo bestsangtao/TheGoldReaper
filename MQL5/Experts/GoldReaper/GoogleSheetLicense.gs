@@ -375,21 +375,155 @@ function formatDailyProfitSheet_(sheet) {
   sheet.setConditionalFormatRules(rules);
 }
 
+function dashboardHistoryFormula_(separator) {
+  const selectedColumns = [
+    1, 2, 4, 5, 6, 7, 8, 3, 10, 12, 11, 9, 13, 16, 17,
+  ].join(separator);
+  return '=IF($B$2=""' + separator + '""' + separator +
+    'IFERROR(LET(x' + separator +
+      'FILTER(TradeHistory!$B$2:$S' + separator +
+        'TradeHistory!$A$2:$A=VALUE($B$2))' + separator +
+      'SORT(CHOOSECOLS(x' + separator + selectedColumns + ')' +
+        separator + '1' + separator + 'FALSE))' +
+      separator + '""))';
+}
+
+function setDashboardHistoryFormula_(cell) {
+  try {
+    cell.setFormula(dashboardHistoryFormula_(','));
+  } catch (error) {
+    cell.setFormula(dashboardHistoryFormula_(';'));
+  }
+}
+
 function configureDashboardWidth_(spreadsheet) {
   const dashboard = spreadsheet.getSheetByName(DASHBOARD_SHEET_NAME);
   if (!dashboard) return;
-  [208, 128, 156, 270].forEach(function (width, index) {
+
+  const headers = [
+    'Time', 'Deal', 'Symbol', 'Type', 'Direction', 'Volume', 'Price',
+    'Order', 'Commission', 'Fee', 'Swap', 'Profit', 'Net P/L',
+    'Reason', 'Comment',
+  ];
+  const widths = [
+    208, 128, 156, 270, 88, 90, 100, 110, 100, 80, 90, 100, 110, 90, 260,
+  ];
+
+  if (dashboard.getMaxColumns() < headers.length) {
+    dashboard.insertColumnsAfter(
+      dashboard.getMaxColumns(), headers.length - dashboard.getMaxColumns());
+  }
+  dashboard.showColumns(5, headers.length - 4);
+  widths.forEach(function (width, index) {
     dashboard.setColumnWidth(index + 1, width);
   });
 
-  const historyFormulaCell = dashboard.getRange('A35');
-  const formula = historyFormulaCell.getFormula();
-  const oldAccountMatch = 'TradeHistory!$A$2:$A=$B$2';
-  if (formula && formula.indexOf(oldAccountMatch) >= 0) {
-    historyFormulaCell.setFormula(formula.replace(
-      oldAccountMatch,
-      'TradeHistory!$A$2:$A=VALUE($B$2)'));
-  }
+  dashboard.getRange('A33').setValue('MT5 DEAL HISTORY · NEWEST FIRST');
+  dashboard.getRange(33, 1, 1, headers.length)
+    .setBackground('#16181d')
+    .setFontColor('#d4af37')
+    .setFontFamily('Carlito')
+    .setFontSize(11)
+    .setFontWeight('bold')
+    .setHorizontalAlignment('left')
+    .setVerticalAlignment('middle')
+    .setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP)
+    .setBorder(null, null, true, null, null, null,
+      '#d4af37', SpreadsheetApp.BorderStyle.SOLID);
+
+  dashboard.getRange(34, 1, 1, headers.length)
+    .setValues([headers])
+    .setBackground('#16181d')
+    .setFontColor('#d4af37')
+    .setFontFamily('Carlito')
+    .setFontSize(11)
+    .setFontWeight('bold')
+    .setHorizontalAlignment('center')
+    .setVerticalAlignment('middle')
+    .setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP)
+    .setBorder(null, null, true, null, null, null,
+      '#d4af37', SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
+
+  const dataRowCount = Math.max(dashboard.getMaxRows() - 34, 1);
+  const dataRange = dashboard.getRange(35, 1, dataRowCount, headers.length);
+  dataRange
+    .setBackground('#ffffff')
+    .setFontColor('#202024')
+    .setFontFamily('Carlito')
+    .setFontSize(11)
+    .setFontWeight('normal')
+    .setVerticalAlignment('middle')
+    .setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP)
+    .setBorder(null, null, true, null, null, true,
+      '#dee0e2', SpreadsheetApp.BorderStyle.SOLID);
+
+  dashboard.getRange(35, 1, dataRowCount, 1)
+    .setNumberFormat('yyyy-mm-dd hh:mm:ss')
+    .setHorizontalAlignment('center');
+  dashboard.getRange(35, 2, dataRowCount, 1)
+    .setNumberFormat('0')
+    .setHorizontalAlignment('right');
+  dashboard.getRange(35, 3, dataRowCount, 1)
+    .setHorizontalAlignment('left');
+  dashboard.getRange(35, 4, dataRowCount, 2)
+    .setHorizontalAlignment('center');
+  dashboard.getRange(35, 6, dataRowCount, 2)
+    .setNumberFormat('0.00########')
+    .setHorizontalAlignment('right');
+  dashboard.getRange(35, 8, dataRowCount, 1)
+    .setNumberFormat('0')
+    .setHorizontalAlignment('right');
+  dashboard.getRange(35, 9, dataRowCount, 5)
+    .setNumberFormat('#,##0.00;[Red]-#,##0.00')
+    .setHorizontalAlignment('right');
+  dashboard.getRange(35, 14, dataRowCount, 1)
+    .setHorizontalAlignment('center');
+  dashboard.getRange(35, 15, dataRowCount, 1)
+    .setHorizontalAlignment('left');
+
+  dashboard.setRowHeight(33, 30);
+  dashboard.setRowHeight(34, 32);
+  dashboard.setRowHeights(35, dataRowCount, 26);
+  setDashboardHistoryFormula_(dashboard.getRange('A35'));
+
+  const rules = dashboard.getConditionalFormatRules().filter(function (rule) {
+    return !rule.getRanges().some(function (range) {
+      return range.getRow() >= 35;
+    });
+  });
+  const typeRange = dashboard.getRange(35, 4, dataRowCount, 1);
+  const profitRange = dashboard.getRange(35, 13, dataRowCount, 1);
+  rules.push(
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('BUY')
+      .setFontColor('#1a53b8')
+      .setBold(true)
+      .setRanges([typeRange])
+      .build(),
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('SELL')
+      .setFontColor('#d93025')
+      .setBold(true)
+      .setRanges([typeRange])
+      .build(),
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenNumberGreaterThan(0)
+      .setFontColor('#127333')
+      .setBold(true)
+      .setRanges([profitRange])
+      .build(),
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenNumberLessThan(0)
+      .setFontColor('#a50e0e')
+      .setBold(true)
+      .setRanges([profitRange])
+      .build());
+  dashboard.setConditionalFormatRules(rules);
+
+  const filter = dashboard.getFilter();
+  if (filter) filter.remove();
+  dashboard.getRange(34, 1, dashboard.getMaxRows() - 33, headers.length)
+    .createFilter();
 }
 
 function parseDealPayload_(payload, account) {
