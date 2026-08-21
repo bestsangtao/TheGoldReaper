@@ -12,8 +12,9 @@ Tạo tab có tên chính xác `Licenses`. Sáu cột đầu là phần quản t
 
 Các cột tiếp theo do EA tự cập nhật: `AccountName`, `Broker`,
 `DetectedServer`, `Currency`, `Balance`, `Equity`, `Leverage`, `TradeMode`,
-`Symbol`, `Terminal`, `TerminalBuild`, `FirstSeenUTC`, `LastSeenUTC` và
-`LastResult`.
+`Symbol`, `Terminal`, `TerminalBuild`, `FirstSeenUTC`, `LastSeenUTC`,
+`LastResult`, `FloatingProfit`, `Credit`, `Margin`, `FreeMargin`,
+`MarginLevel`, `OpenPositions`, `PendingOrders` và `HistorySync`.
 
 - `Account` và `Active` là bắt buộc.
 - `Name`, `ExpiryUTC`, `AllowedServer`, `Product` là tùy chọn.
@@ -29,6 +30,9 @@ Các cột tiếp theo do EA tự cập nhật: `AccountName`, `Broker`,
 3. Chọn **Deploy → New deployment → Web app**.
 4. Chọn **Execute as: Me** và **Who has access: Anyone**.
 5. Sao chép URL kết thúc bằng `/exec`.
+
+Sau khi cập nhật mã Apps Script đã triển khai trước đó, vào **Deploy → Manage
+deployments → Edit → New version → Deploy**. URL `/exec` cũ được giữ nguyên.
 
 Tùy chọn: vào **Project Settings → Script properties**, tạo `LICENSE_API_KEY`. Nếu dùng khóa này, giá trị trong `GR_LICENSE_ACCESS_KEY` của EA phải giống hệt.
 
@@ -53,6 +57,26 @@ Trong MT5, mở **Tools → Options → Expert Advisors**, bật WebRequest và 
 - Khi đổi `Active = TRUE`, EA tự khởi tạo và hoạt động bình thường mà không cần
   gắn lại vào biểu đồ.
 - Sau khi kích hoạt, EA kiểm tra lại mỗi 60 giây.
+- EA đồng bộ toàn bộ deal mà terminal MT5 cung cấp, gồm lệnh mua/bán, nạp/rút,
+  credit, phí, commission và các điều chỉnh khác. Lịch sử được gửi theo từng lô
+  50 deal, chống trùng bằng cặp `Account + DealTicket`.
+- Khi còn dữ liệu cũ, EA gửi tiếp một lô khoảng mỗi 5 giây. Lịch sử rất dài có
+  thể cần một lúc để hoàn tất. `HistorySync = COMPLETE` nghĩa là đã bắt kịp lịch
+  sử hiện có; sau đó EA kiểm tra deal mới mỗi 60 giây.
+- Tab `Dashboard` cho phép chọn `Account` từ danh sách thả xuống rồi tự hiển thị
+  Name, trạng thái, broker/server, Balance, Equity, lãi/lỗ thả nổi, lãi/lỗ hôm
+  nay, tổng lãi/lỗ, Margin, Free Margin, Margin Level, số vị thế/lệnh chờ và toàn
+  bộ lịch sử deal của tài khoản đó. Dashboard dùng bố cục dọc 4 cột để vừa màn
+  hình điện thoại; mỗi deal gom thông tin phụ vào ô `Details` nhiều dòng để không
+  phải kéo ngang.
+- `Today P/L` và `Total P/L` chỉ cộng deal `BUY`/`SELL`, nên nạp/rút tiền không
+  bị tính nhầm thành lợi nhuận. Các deal nạp/rút vẫn xuất hiện đầy đủ trong bảng
+  lịch sử.
+- Tab `TradeHistory` là dữ liệu nguồn cho Dashboard; có thể ẩn tab này để giao
+  diện gọn hơn mà không ảnh hưởng đồng bộ.
+- Phần kiểm tra/kích hoạt Google Sheet chạy im lặng, không ghi log duyệt, chờ
+  duyệt, mất mạng hay bị từ chối vào Journal/Experts. Chỉ lỗi thật sự khi đóng
+  vị thế hoặc xóa pending trong quá trình thu hồi quyền vẫn được ghi lại.
 - Lỗi mạng tạm thời dùng kết quả hợp lệ gần nhất tối đa 3 giờ trong phiên chạy hiện tại.
 - Khi tài khoản bị tắt hoặc hết hạn, EA xóa pending, đóng vị thế mang Magic
   Number của Gold Reaper rồi tự gỡ khỏi biểu đồ. Lệnh tay và lệnh của EA khác
