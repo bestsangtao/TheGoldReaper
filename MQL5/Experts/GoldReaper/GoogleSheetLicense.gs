@@ -274,12 +274,15 @@ function ensureDailyProfitSheet_(spreadsheet, history) {
   }
 
   const formulaCell = sheet.getRange('A1');
-  if (!formulaCell.getFormula()) {
+  const currentFormula = formulaCell.getFormula();
+  if (!currentFormula) {
     const lastRow = sheet.getLastRow();
     if (lastRow > 0) {
       sheet.getRange(1, 1, lastRow, Math.min(sheet.getLastColumn(), 3))
         .clearContent();
     }
+    setDailyProfitFormula_(formulaCell);
+  } else if (currentFormula.indexOf('ARRAYFORMULA(') < 0) {
     setDailyProfitFormula_(formulaCell);
   }
 
@@ -296,9 +299,9 @@ function dailyProfitFormula_(separator) {
     'COUNTIF(TradeHistory!F2:F' + separator + '"SELL")=0' + separator +
     'HSTACK("Date UTC"' + separator + '"Account"' + separator +
       '"Net P/L")' + separator +
-    'QUERY(HSTACK(' +
+    'QUERY(HSTACK(ARRAYFORMULA(' +
       'IF(TradeHistory!B2:B=""' + separator + '""' + separator +
-        'INT(TradeHistory!B2:B))' + separator +
+        'INT(TradeHistory!B2:B)))' + separator +
       'TradeHistory!A2:A' + separator +
       'TradeHistory!N2:N' + separator +
       'TradeHistory!F2:F)' + separator +
@@ -378,6 +381,15 @@ function configureDashboardWidth_(spreadsheet) {
   [208, 128, 156, 270].forEach(function (width, index) {
     dashboard.setColumnWidth(index + 1, width);
   });
+
+  const historyFormulaCell = dashboard.getRange('A35');
+  const formula = historyFormulaCell.getFormula();
+  const oldAccountMatch = 'TradeHistory!$A$2:$A=$B$2';
+  if (formula && formula.indexOf(oldAccountMatch) >= 0) {
+    historyFormulaCell.setFormula(formula.replace(
+      oldAccountMatch,
+      'TradeHistory!$A$2:$A=VALUE($B$2)'));
+  }
 }
 
 function parseDealPayload_(payload, account) {
