@@ -16,14 +16,6 @@
 #property copyright  "Copyright 2026 - Pham Duy Linh"
 #property link       "https://t.me/Khonglamdoicoan96"
 #property version    "4.6"
-#property description "- Fixed the www.worldtimeserver GMT fetch bug"
-#property description "- HighestBalance/OnlyUp restored to original V4.6 dump behavior"
-#property description "- NFP filter with MT5 Economic Calendar + hardcoded fallback"
-#property description "- Added input to close trades at end of Friday session"
-#property description "- Warns the exact missing allowed URL"
-#property description "- Full MT4-style trade logging"
-#property description "- A few handy inputs (all default to the original behavior)"
-#property description "Telegram: t.me/Khonglamdoicoan96"
 
 #include <Trade\Trade.mqh>
 CTrade trade;
