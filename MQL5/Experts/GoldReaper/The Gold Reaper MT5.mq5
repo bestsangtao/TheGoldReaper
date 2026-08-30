@@ -1163,7 +1163,6 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
   int       总_65_in_150 = 99;
   int       总_66_in_154 = 5;
   bool      总_67_bo_158 = false;
-  int       总_68_in_15C = 5;
   int       总_69_in_160 = 1;
   string    总_70_st_168 = "------------------------------ Trade Entry management ------------------------------";
   int       总_71_in_174 = 0;
@@ -1351,7 +1350,6 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
   string    总_253_st_2538;
   string    总_254_st_2548;
   string    总_255_st_2558;
-  bool      总_256_bo_2564 = false;
   bool      总_257_bo_2565 = false;
   int       总_258_in_2568 = 0;
   int       总_259_in_256C = 0;
@@ -2173,7 +2171,6 @@ g_startLots_rw=StartLots;
  总_188_do_508 = NormalizeDouble(总_262_do_2580,总_190_in_518) ;
  总_189_do_510 = NormalizeDouble(总_261_do_2578,总_190_in_518) ;
  总_250_in_2518 = 0 ;
- 总_256_bo_2564 = false ;
  总_304_in_287C = (int)(总_125_do_2F8 * 60.0) ;
  总_139_bo_3EC = false ;
  总_303_bo_2878 = true ;
@@ -3375,19 +3372,8 @@ g_startLots_rw=StartLots;
  lizong_22(false); 
  if ( MarketInfo(总_336_st_3130,MODE_TRADEALLOWED)==0.0 )
  {
-   总_256_bo_2564 = true ;
    return(0); 
  }
- if ( 总_68_in_15C >  0 && ( ( Hour() == 0 && Minute() < 总_68_in_15C ) || (Hour() == 23 && 总_68_in_15C >  60 - 总_68_in_15C) ) )
- {
-   if ( !(总_256_bo_2564) )
-   {
-     Print("DAYSWITCH -> Market might be closed... waiting " + string(总_68_in_15C) + " minutes before setting order.."); 
-   }
-   总_256_bo_2564 = true ;
-   return(0); 
- }
- 总_256_bo_2564 = false ;
  if ( 总_171_bo_4BC )
  {
    if ( lizong_20() && 总_303_bo_2878 )
