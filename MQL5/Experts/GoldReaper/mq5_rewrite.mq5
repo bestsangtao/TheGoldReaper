@@ -1568,9 +1568,6 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
   datetime  g_backtestSpeedLastTime = 0;
   datetime  g_backtestSpeedLastM1 = 0;
   datetime  g_backtestSpeedLastProbeMinute = 0;
-  int       g_cached_lot_frequency = -1;
-  bool      g_fixed_lot_frequency_changed = false;
-  double    g_lot_resize_trigger_balance = 0.0;
   double    g_MaxSpread_rw = 0.0;
   // Original V4.6 keeps one calendar-derived NFP timestamp, not a rebuilt
   // 300-element calendar array.  The hardcoded array remains intact as fallback.
@@ -1976,14 +1973,6 @@ g_startLots_rw=StartLots;
  else
  {
    总_19_in_9C = TradeFrequency ;
- }
- if ( !(UseVariableValues) && g_cached_lot_frequency!=总_19_in_9C )
- {
-   // Auto TradeFrequency changes the drawdown divisor and therefore every
-   // strategy's fixed-value lot target.  Invalidate all per-strategy targets
-   // so each newly active strategy is recalculated once with the new tier.
-   ArrayInitialize(总_223_do_1AC4_si99,0.0);
-   g_cached_lot_frequency = 总_19_in_9C;
  }
  if ( 总_19_in_9C == 0 )
  {
@@ -2435,7 +2424,6 @@ g_startLots_rw=StartLots;
 
  if(!(DumpBacktestSpeedAllowTick())) return;
  g_live_valid=false;
- g_fixed_lot_frequency_changed=false;
 
  总_401_do_6AD0 = AccountInfoDouble(ACCOUNT_BALANCE) ;
  if ( UseEquity )
@@ -2455,7 +2443,6 @@ g_startLots_rw=StartLots;
  {
    总_401_do_6AD0 = ManualBalance ;
  }
- g_lot_resize_trigger_balance = 总_401_do_6AD0;
  if ( FakeOutFilter == 0 )
  {
    总_53_bo_11C = false ;
@@ -2644,19 +2631,6 @@ g_startLots_rw=StartLots;
  else
  {
    总_19_in_9C = TradeFrequency ;
- }
- if ( !(UseVariableValues) && g_cached_lot_frequency!=总_19_in_9C )
- {
-   // Auto TradeFrequency changes the drawdown divisor and therefore every
-   // strategy's fixed-value lot target.  Invalidate all per-strategy targets
-   // so each newly active strategy is recalculated once with the new tier.
-   // A downward Auto-Frequency transition immediately refreshes existing
-   // pending orders; an upward transition only invalidates targets for the
-   // strategies that become active.
-   g_fixed_lot_frequency_changed = (g_cached_lot_frequency>=0 &&
-                                    总_19_in_9C<g_cached_lot_frequency);
-   ArrayInitialize(总_223_do_1AC4_si99,0.0);
-   g_cached_lot_frequency = 总_19_in_9C;
  }
  if ( 总_19_in_9C == 0 )
  {
@@ -3389,7 +3363,7 @@ g_startLots_rw=StartLots;
      }
    }
  }
- lizong_22(g_fixed_lot_frequency_changed); 
+ lizong_22(false); 
  if ( MarketInfo(总_336_st_3130,MODE_TRADEALLOWED)==0.0 )
  {
    return(0); 
@@ -4430,7 +4404,7 @@ g_startLots_rw=StartLots;
  {
    总_401_do_6AD0 = AccountInfoDouble(ACCOUNT_EQUITY) ;
  }
- if ( OnlyUp && UseVariableValues && 总_402_do_6AD8>总_401_do_6AD0 )
+ if ( OnlyUp && 总_402_do_6AD8>总_401_do_6AD0 )
  {
    总_401_do_6AD0 = 总_402_do_6AD8 ;
  }
@@ -4915,13 +4889,7 @@ g_startLots_rw=StartLots;
    总_268_do_25A8 = iMA(总_336_st_3130,0,总_214_in_1714,0,1,0,1) ;
    总_269_do_25B0 = iMA(总_336_st_3130,0,总_217_in_1A70,0,1,0,1) ;
  }
- // Fixed-value mode keeps the per-strategy lot target until lizong_22()
- // detects a sufficiently large balance move.  Recomputing it for every new
- // pending order makes lots step up before the Market EX5 does.
- if ( UseVariableValues || 总_223_do_1AC4_si99[总_328_in_3100]<=0.0 )
- {
-   lizong_10(总_100_do_230,总_92_in_1EC); 
- }
+ lizong_10(总_100_do_230,总_92_in_1EC); 
  if ( 总_223_do_1AC4_si99[总_328_in_3100]>总_141_do_3F8 )
  {
    总_223_do_1AC4_si99[总_328_in_3100] = 总_141_do_3F8;
@@ -7431,7 +7399,6 @@ g_startLots_rw=StartLots;
  long       临_lo_4;
  long       临_lo_5;
  int        临_in_6;
- bool       临_resizeOutside;
 
  子_1_do = 总_140_do_3F0 / 100.0 + 1.0 ;
  // JIT compare fix: threshold uses the lot-sizing balance basis
@@ -7442,16 +7409,8 @@ g_startLots_rw=StartLots;
    return;
  }
  
- 临_resizeOutside = (g_lot_resize_trigger_balance>总_318_do_28D8 * 子_1_do ||
-                     g_lot_resize_trigger_balance<总_318_do_28D8 / 子_1_do) ;
- if ( !(UseVariableValues) )
- {
-   // The fixed-value branch also requires a minimum $10 balance displacement.
-   // This constant is stored next to the original lot-resize settings.
-   临_resizeOutside = (g_lot_resize_trigger_balance>总_318_do_28D8 * 子_1_do + 总_147_do_418 ||
-                       g_lot_resize_trigger_balance<总_318_do_28D8 / 子_1_do - 总_147_do_418) ;
- }
- if ( !(临_resizeOutside) && !(木_0_bo) )
+ if ( ( !(总_401_do_6AD0>总_318_do_28D8 * 子_1_do) &&
+        !(总_401_do_6AD0<总_318_do_28D8 / 子_1_do) && !(木_0_bo) ) )
  {
    return;
  }
@@ -9451,7 +9410,10 @@ g_startLots_rw=StartLots;
    总_334_st_3120=ST1_Comment + "_XAUUSD_4";
  }
  总_93_in_1F0=ST1_MagicNumber + 2;
- 总_397_do_6768 = lizong_35(57.0) ;
+ // The Market EX5 uses the 52-point DD weight before the fixed-value return
+ // as well.  Keeping the reconstructed 57-point value rounds strategy 2 down
+ // by one lot step once the sizing balance crosses the 0.03 threshold.
+ 总_397_do_6768 = lizong_35(52.0) ;
  if ( !(UseVariableValues) )   return;
  总_7_do_50 = 1600.0 ;
  总_397_do_6768 = lizong_35(52.0) ;
@@ -9778,7 +9740,10 @@ g_startLots_rw=StartLots;
    总_334_st_3120=ST1_Comment + "_XAUUSD_3";
  }
  总_93_in_1F0=ST1_MagicNumber + 8;
- 总_397_do_6768 = lizong_35(32.0) ;
+ // The Market EX5 uses the 35-point historical DD weight in both fixed and
+ // variable-value modes.  The reconstructed 32-point pre-return value caused
+ // strategy 3 lots to round one step too high around the 0.025 boundary.
+ 总_397_do_6768 = lizong_35(35.0) ;
  if ( !(UseVariableValues) )   return;
  总_7_do_50 = 2000.0 ;
  总_397_do_6768 = lizong_35(35.0) ;
