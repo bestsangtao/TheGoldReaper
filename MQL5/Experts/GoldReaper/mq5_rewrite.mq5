@@ -1104,7 +1104,7 @@ input bool ShowInfoPanel=true  ;
 input bool UpdateInfoTesting=false ;    //update infopanel during testing
 input double InfoPanelSizeAdjust=1  ;    //Adjustment for Infopanel size
 input int   SetFontSize=0  ;
-input string BacktestSpeed_string="------------------------------ Backtest Speed settings ------------------------------"  ;
+input string BacktestSpeed_string="------------------------------ Backtest Speed settings ------------------------------"  ;  //- - -
 input BacktestSpeedOptions BacktestSpeed=speed_normal  ;
 input string spreadfilter="------------------------------ settings ------------------------------"  ;   //- - -
 input bool AllowBuyTrades=true  ;    //Allow Buy Trades
@@ -1122,7 +1122,7 @@ input  FakeoutFilters  FakeOutFilter=2  ;    //Fake Breakout Filter
 input int   ST1_MagicNumber=8000  ;    //BaseMagicnumber
 input string ST1_Comment="The Gold Reaper"  ;   //Comment for trades
 input bool RemoveCommentSuffix=false ;   
-input string NFP_FILTER="----------------------- NFP Filter -----------------------"  ;  
+input string NFP_FILTER="----------------------- NFP Filter -----------------------"  ;  //- - -
 input bool EnableNFP_Filter=true  ;
 input bool UseMQL5Calendar=true  ;
 input bool AutoGMT=true  ;
@@ -1568,6 +1568,9 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
   datetime  g_backtestSpeedLastTime = 0;
   datetime  g_backtestSpeedLastM1 = 0;
   datetime  g_backtestSpeedLastProbeMinute = 0;
+  int       g_cached_lot_frequency = -1;
+  bool      g_fixed_lot_frequency_changed = false;
+  double    g_lot_resize_trigger_balance = 0.0;
   double    g_MaxSpread_rw = 0.0;
   // Original V4.6 keeps one calendar-derived NFP timestamp, not a rebuilt
   // 300-element calendar array.  The hardcoded array remains intact as fallback.
@@ -1973,6 +1976,14 @@ g_startLots_rw=StartLots;
  else
  {
    总_19_in_9C = TradeFrequency ;
+ }
+ if ( !(UseVariableValues) && g_cached_lot_frequency!=总_19_in_9C )
+ {
+   // Auto TradeFrequency changes the drawdown divisor and therefore every
+   // strategy's fixed-value lot target.  Invalidate all per-strategy targets
+   // so each newly active strategy is recalculated once with the new tier.
+   ArrayInitialize(总_223_do_1AC4_si99,0.0);
+   g_cached_lot_frequency = 总_19_in_9C;
  }
  if ( 总_19_in_9C == 0 )
  {
@@ -2424,6 +2435,7 @@ g_startLots_rw=StartLots;
 
  if(!(DumpBacktestSpeedAllowTick())) return;
  g_live_valid=false;
+ g_fixed_lot_frequency_changed=false;
 
  总_401_do_6AD0 = AccountInfoDouble(ACCOUNT_BALANCE) ;
  if ( UseEquity )
@@ -2443,6 +2455,7 @@ g_startLots_rw=StartLots;
  {
    总_401_do_6AD0 = ManualBalance ;
  }
+ g_lot_resize_trigger_balance = 总_401_do_6AD0;
  if ( FakeOutFilter == 0 )
  {
    总_53_bo_11C = false ;
@@ -2631,6 +2644,19 @@ g_startLots_rw=StartLots;
  else
  {
    总_19_in_9C = TradeFrequency ;
+ }
+ if ( !(UseVariableValues) && g_cached_lot_frequency!=总_19_in_9C )
+ {
+   // Auto TradeFrequency changes the drawdown divisor and therefore every
+   // strategy's fixed-value lot target.  Invalidate all per-strategy targets
+   // so each newly active strategy is recalculated once with the new tier.
+   // A downward Auto-Frequency transition immediately refreshes existing
+   // pending orders; an upward transition only invalidates targets for the
+   // strategies that become active.
+   g_fixed_lot_frequency_changed = (g_cached_lot_frequency>=0 &&
+                                    总_19_in_9C<g_cached_lot_frequency);
+   ArrayInitialize(总_223_do_1AC4_si99,0.0);
+   g_cached_lot_frequency = 总_19_in_9C;
  }
  if ( 总_19_in_9C == 0 )
  {
@@ -3363,7 +3389,7 @@ g_startLots_rw=StartLots;
      }
    }
  }
- lizong_22(false); 
+ lizong_22(g_fixed_lot_frequency_changed); 
  if ( MarketInfo(总_336_st_3130,MODE_TRADEALLOWED)==0.0 )
  {
    return(0); 
@@ -4392,9 +4418,9 @@ g_startLots_rw=StartLots;
   double    子_2_do;
   double    子_3_do;
   double    子_4_do;
-  double    子_5_do;
-  double    子_6_do;
-  double    子_7_do;
+ double    子_5_do;
+ double    子_6_do;
+ double    子_7_do;
 //----- -----
 
  子_1_do = 总_223_do_1AC4_si99[总_328_in_3100] ;
@@ -4404,7 +4430,7 @@ g_startLots_rw=StartLots;
  {
    总_401_do_6AD0 = AccountInfoDouble(ACCOUNT_EQUITY) ;
  }
- if ( OnlyUp && 总_402_do_6AD8>总_401_do_6AD0 )
+ if ( OnlyUp && UseVariableValues && 总_402_do_6AD8>总_401_do_6AD0 )
  {
    总_401_do_6AD0 = 总_402_do_6AD8 ;
  }
@@ -4889,7 +4915,13 @@ g_startLots_rw=StartLots;
    总_268_do_25A8 = iMA(总_336_st_3130,0,总_214_in_1714,0,1,0,1) ;
    总_269_do_25B0 = iMA(总_336_st_3130,0,总_217_in_1A70,0,1,0,1) ;
  }
- lizong_10(总_100_do_230,总_92_in_1EC); 
+ // Fixed-value mode keeps the per-strategy lot target until lizong_22()
+ // detects a sufficiently large balance move.  Recomputing it for every new
+ // pending order makes lots step up before the Market EX5 does.
+ if ( UseVariableValues || 总_223_do_1AC4_si99[总_328_in_3100]<=0.0 )
+ {
+   lizong_10(总_100_do_230,总_92_in_1EC); 
+ }
  if ( 总_223_do_1AC4_si99[总_328_in_3100]>总_141_do_3F8 )
  {
    总_223_do_1AC4_si99[总_328_in_3100] = 总_141_do_3F8;
@@ -7399,6 +7431,7 @@ g_startLots_rw=StartLots;
  long       临_lo_4;
  long       临_lo_5;
  int        临_in_6;
+ bool       临_resizeOutside;
 
  子_1_do = 总_140_do_3F0 / 100.0 + 1.0 ;
  // JIT compare fix: threshold uses the lot-sizing balance basis
@@ -7409,7 +7442,16 @@ g_startLots_rw=StartLots;
    return;
  }
  
- if ( ( !(总_401_do_6AD0>总_318_do_28D8 * 子_1_do) && !(总_401_do_6AD0<总_318_do_28D8 / 子_1_do) && !(木_0_bo) ) )
+ 临_resizeOutside = (g_lot_resize_trigger_balance>总_318_do_28D8 * 子_1_do ||
+                     g_lot_resize_trigger_balance<总_318_do_28D8 / 子_1_do) ;
+ if ( !(UseVariableValues) )
+ {
+   // The fixed-value branch also requires a minimum $10 balance displacement.
+   // This constant is stored next to the original lot-resize settings.
+   临_resizeOutside = (g_lot_resize_trigger_balance>总_318_do_28D8 * 子_1_do + 总_147_do_418 ||
+                       g_lot_resize_trigger_balance<总_318_do_28D8 / 子_1_do - 总_147_do_418) ;
+ }
+ if ( !(临_resizeOutside) && !(木_0_bo) )
  {
    return;
  }
