@@ -1723,9 +1723,10 @@ g_startLots_rw=StartLots;
      g_backtestSpeedEnabled = true;
    }
  }
-  double    子_2_do;
-  double    子_3_do;
-  int       子_5_in;
+   double    子_2_do;
+   double    子_3_do;
+   int       子_4_in;
+   int       子_5_in;
   int       子_6_in;
   int       子_7_in;
   int       子_8_in;
@@ -3272,7 +3273,6 @@ g_startLots_rw=StartLots;
  {
   bool      子_2_bo;
   datetime  子_3_lo;
-  int       子_4_in;
   int       子_5_in;
   string    子_6_st;
   datetime  子_7_da;
