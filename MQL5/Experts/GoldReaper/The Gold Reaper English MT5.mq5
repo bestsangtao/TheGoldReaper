@@ -533,6 +533,9 @@ long OrderSend(string symbol,int cmd,double volume,double price,int slippage,
       ulong ticket=trade.ResultOrder();
       if(ticket==0) ticket=trade.ResultDeal();
       g_mt4_lastTicket=(long)ticket;
+      PrintFormat("open #%I64d %s %.2f %s at %.5f sl: %.5f tp: %.5f ok",
+                  g_mt4_lastTicket,MT4OrderTypeName((int)type),volume,
+                  symbol,executionPrice,stoploss,takeprofit);
       MT4InvalidateHistoryCache();
       return g_mt4_lastTicket;
    }
@@ -578,6 +581,8 @@ bool OrderModify(long ticket,double price,double stoploss,double takeprofit,date
    if(accepted && (retcode==TRADE_RETCODE_DONE || retcode==TRADE_RETCODE_DONE_PARTIAL))
    {
       g_mt4_lastError=0;
+      PrintFormat("modify #%I64d %s price: %.5f sl: %.5f tp: %.5f ok",
+                  ticket,symbol,logPrice,stoploss,takeprofit);
       MT4InvalidateHistoryCache();
       return true;
    }
@@ -615,6 +620,9 @@ bool OrderClose(long ticket,double lots,double price,int slippage,color arrow_co
    if(accepted && (retcode==TRADE_RETCODE_DONE || retcode==TRADE_RETCODE_DONE_PARTIAL))
    {
       g_mt4_lastError=0;
+      PrintFormat("close #%I64d %s %.2f %s at %.5f ok",ticket,
+                  (positionType==POSITION_TYPE_BUY)?"buy":"sell",
+                  closeVolume,symbol,trade.ResultPrice());
       MT4InvalidateHistoryCache();
       return true;
    }
@@ -648,6 +656,8 @@ bool OrderDelete(long ticket,color arrow_color=clrNONE)
    if(accepted && retcode==TRADE_RETCODE_DONE)
    {
       g_mt4_lastError=0;
+      PrintFormat("delete #%I64d %s %.2f %s at %.5f ok",
+                  ticket,orderName,orderVolume,symbol,orderPrice);
       MT4InvalidateHistoryCache();
       return true;
    }
