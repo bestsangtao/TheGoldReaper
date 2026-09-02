@@ -1200,6 +1200,7 @@ input double ManualBalance=0.0  ;    //manually set balance to use (if > 0)
 input  e_Risk  Risk=1234  ;    //Lotsize Calculation method
 input double StartLots=0.01  ;   
 double g_startLots_rw=0.0;
+bool g_initialLegacyRiskLotPending=true;
 input double MaxAllowedDD=30  ;    //Max Allowed TOTAL Drawdown
 input bool UseWeightedLots=true  ;    //Weighted Lotsize
 input double MaxRiskPerStrategy_=1  ;    //Max Risk Per Strat
@@ -1704,6 +1705,7 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
  trade.SetAsyncMode(false);
  trade.LogLevel(LOG_LEVEL_NO);
 g_startLots_rw=StartLots;
+g_initialLegacyRiskLotPending=true;
  // Recovered from original JIT: BacktestSpeed is active only in Strategy Tester.
  g_backtestSpeedFast = false;
  g_backtestSpeedEnabled = false;
@@ -2822,6 +2824,18 @@ g_startLots_rw=StartLots;
      LoadStrategy1Settings(); 
      LoadStrategyRuntimeSettings(0); 
      ProcessStrategy(0); 
+     if ( g_initialLegacyRiskLotPending )
+     {
+       for (int temp_initialLotOrder = MT4OrdersTotal(); temp_initialLotOrder >= 0; temp_initialLotOrder--)
+       {
+         if ( OrderSelect(temp_initialLotOrder,0,0) && OrderSymbol() == global_336_string_3130 &&
+              OrderMagicNumber() == ST1_MagicNumber + 1 )
+         {
+           g_initialLegacyRiskLotPending=false;
+           break;
+         }
+       }
+     }
      if ( local_4_bool )
      {
        if ( MQLInfoInteger(MQL_TESTER) == 1 && !(UpdateInfoTesting) )
@@ -4609,6 +4623,14 @@ g_startLots_rw=StartLots;
    {
      local_2_double = NormalizeDouble(MaxRiskPerStrategy_ / global_397_double_6768 * global_401_double_6AD0 / 100.0 * 0.01,2) ;
    }
+ }
+ // Legacy hidden Risk values 1/2 preserve strategy 1's manual lot until its
+ // first pending order exists.  With no variable lot adjustment they retain
+ // StartLots for strategy 1, while the remaining strategies use dynamic risk.
+ if ( global_328_int_3100 == 0 && (Risk == 1 || Risk == 2) &&
+      (g_initialLegacyRiskLotPending || MathAbs(global_9_double_60 - 1.0) < 0.0000001) )
+ {
+   local_2_double = g_startLots_rw ;
  }
  local_2_double = local_2_double * global_9_double_60 ;
  if ( local_2_double<MarketInfo(global_336_string_3130,MODE_LOTSTEP) )
