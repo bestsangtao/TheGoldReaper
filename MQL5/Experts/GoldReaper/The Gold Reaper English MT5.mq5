@@ -1169,7 +1169,7 @@ input bool AdjustLotsizeToVariableValues=true  ;
 input bool ShowInfoPanel=true  ;   
 input bool UpdateInfoTesting=false ;    //update infopanel during testing
 input double InfoPanelSizeAdjust=1  ;    //Adjustment for Infopanel size
-input int   SetFontSize=0  ;
+input int   SetFontSize=0  ;    //Force Font Size (0=disabled)
 input string BacktestSpeed_string="------------------------------ Backtest Speed settings ------------------------------"  ;  //- - -
 input BacktestSpeedOptions BacktestSpeed=speed_normal  ;
 input string spreadfilter="------------------------------ settings ------------------------------"  ;   //- - -
