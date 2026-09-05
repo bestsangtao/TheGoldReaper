@@ -1712,10 +1712,53 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
     g_hardcoded_nfp_value=event_time;
     break;
   }
-  return(g_hardcoded_nfp_value);
+   return(g_hardcoded_nfp_value);
+  }
+
+ // The original runtime closes NFP positions in two stable groups: BUY first,
+ // then SELL. Within each group the newest (highest) position ticket is closed
+ // first. A single reverse SELECT_BY_POS pass on MT5 interleaves the two sides
+ // and changes the tester trade-event order when both sides are open.
+ bool IsNfpManagedMagic(const int magic)
+ {
+   return(magic >= ST1_MagicNumber + 1 && magic <= ST1_MagicNumber + 15);
  }
 
-// Original V4.6 dump has no withdrawal-reconciliation layer here.
+ void CloseNfpPositionsByType(const int order_type)
+ {
+   long tickets[];
+   int ticket_count=0;
+   int total=MT4OrdersTotal();
+   for(int index=0; index<total; index++)
+   {
+     if(OrderSelect(index,SELECT_BY_POS,MODE_TRADES) != true) continue;
+     if(OrderSymbol() != global_336_string_3130) continue;
+     if(OrderType() != order_type) continue;
+     if(!IsNfpManagedMagic(OrderMagicNumber())) continue;
+     ArrayResize(tickets,ticket_count+1);
+     tickets[ticket_count++]=OrderTicket();
+   }
+
+   ArraySort(tickets);
+   for(int index=ticket_count-1; index>=0; index--)
+   {
+     if(OrderSelect(tickets[index],SELECT_BY_TICKET,MODE_TRADES) != true) continue;
+     if(OrderSymbol() != global_336_string_3130 || OrderType() != order_type) continue;
+     if(!IsNfpManagedMagic(OrderMagicNumber())) continue;
+     double close_price=(order_type==OP_BUY)
+                        ? MarketInfo(global_336_string_3130,MODE_BID)
+                        : MarketInfo(global_336_string_3130,MODE_ASK);
+     OrderClose(OrderTicket(),OrderLots(),close_price,99999,Red);
+   }
+ }
+
+ void CloseNfpOpenTradesInOriginalOrder()
+ {
+   CloseNfpPositionsByType(OP_BUY);
+   CloseNfpPositionsByType(OP_SELL);
+ }
+
+ // Original V4.6 dump has no withdrawal-reconciliation layer here.
 
  int OnInit()
  {
@@ -3334,23 +3377,6 @@ g_initialLegacyRiskLotPending=true;
  int        temp_int_24;
  int        temp_int_25;
  int        temp_int_26;
- int        temp_int_27;
- int        temp_int_28;
- int        temp_int_29;
- int        temp_int_30;
- int        temp_int_31;
- int        temp_int_32;
- int        temp_int_33;
- int        temp_int_34;
- int        temp_int_35;
- int        temp_int_36;
- int        temp_int_37;
- int        temp_int_38;
- int        temp_int_39;
- int        temp_int_40;
- int        temp_int_41;
- int        temp_int_42;
- int        temp_int_43;
  int        temp_int_44;
  int        temp_int_45;
  int        temp_int_46;
@@ -3361,23 +3387,6 @@ g_initialLegacyRiskLotPending=true;
  int        temp_int_51;
  int        temp_int_52;
  int        temp_int_53;
- int        temp_int_54;
- int        temp_int_55;
- int        temp_int_56;
- int        temp_int_57;
- int        temp_int_58;
- int        temp_int_59;
- int        temp_int_60;
- int        temp_int_61;
- int        temp_int_62;
- int        temp_int_63;
- int        temp_int_64;
- int        temp_int_65;
- int        temp_int_66;
- int        temp_int_67;
- int        temp_int_68;
- int        temp_int_69;
- int        temp_int_70;
  int        temp_int_71;
  int        temp_int_72;
  int        temp_int_73;
@@ -3695,90 +3704,7 @@ g_initialLegacyRiskLotPending=true;
        }
        if ( NFP_CloseOpenTrades )
        {
-         for (temp_int_27 = MT4OrdersTotal() ; temp_int_27 >= 0 ; temp_int_27=temp_int_27 - 1)
-         {
-           if ( OrderSelect(temp_int_27,0,0) != true || OrderSymbol() != global_336_string_3130 )   continue;
-           temp_int_28 = OrderMagicNumber();
-           temp_int_29=ST1_MagicNumber + 1;
-           if ( temp_int_28 != temp_int_29 )
-           {
-             temp_int_29 = OrderMagicNumber();
-             temp_int_30=ST1_MagicNumber + 2;
-             if ( temp_int_29 != temp_int_30 )
-             {
-               temp_int_30 = OrderMagicNumber();
-               temp_int_31=ST1_MagicNumber + 3;
-               if ( temp_int_30 != temp_int_31 )
-               {
-                 temp_int_31 = OrderMagicNumber();
-                 temp_int_32=ST1_MagicNumber + 4;
-                 if ( temp_int_31 != temp_int_32 )
-                 {
-                   temp_int_32 = OrderMagicNumber();
-                   temp_int_33=ST1_MagicNumber + 5;
-                   if ( temp_int_32 != temp_int_33 )
-                   {
-                     temp_int_33 = OrderMagicNumber();
-                     temp_int_34=ST1_MagicNumber + 6;
-                     if ( temp_int_33 != temp_int_34 )
-                     {
-                       temp_int_34 = OrderMagicNumber();
-                       temp_int_35=ST1_MagicNumber + 7;
-                       if ( temp_int_34 != temp_int_35 )
-                       {
-                         temp_int_35 = OrderMagicNumber();
-                         temp_int_36=ST1_MagicNumber + 8;
-                         if ( temp_int_35 != temp_int_36 )
-                         {
-                           temp_int_36 = OrderMagicNumber();
-                           temp_int_37=ST1_MagicNumber + 9;
-                           if ( temp_int_36 != temp_int_37 )
-                           {
-                             temp_int_37 = OrderMagicNumber();
-                             temp_int_38=ST1_MagicNumber + 10;
-                             if ( temp_int_37 != temp_int_38 )
-                             {
-                               temp_int_38 = OrderMagicNumber();
-                               temp_int_39=ST1_MagicNumber + 11;
-                               if ( temp_int_38 != temp_int_39 )
-                               {
-                                 temp_int_39 = OrderMagicNumber();
-                                 temp_int_40=ST1_MagicNumber + 12;
-                                 if ( temp_int_39 != temp_int_40 )
-                                 {
-                                   temp_int_40 = OrderMagicNumber();
-                                   temp_int_41=ST1_MagicNumber + 13;
-                                   if ( temp_int_40 != temp_int_41 )
-                                   {
-                                     temp_int_41 = OrderMagicNumber();
-                                     temp_int_42=ST1_MagicNumber + 14;
-                                     if ( temp_int_41 != temp_int_42 )
-                                     {
-                                       temp_int_42 = OrderMagicNumber();
-                                       temp_int_43=ST1_MagicNumber + 15;
-                                     if ( temp_int_42 != temp_int_43 )   continue;
-                                     }
-                                   }
-                                 }
-                               }
-                             }
-                           }
-                         }
-                       }
-                     }
-                   }
-                 }
-               }
-             }
-           }
-           if ( OrderType() == 0 )
-           {
-             OrderClose(OrderTicket(),OrderLots(),MarketInfo(global_336_string_3130,MODE_BID),99999,Red); 
-           }
-           if ( OrderType() != 1 )   continue;
-           OrderClose(OrderTicket(),OrderLots(),MarketInfo(global_336_string_3130,MODE_ASK),99999,Red); 
-           
-         }
+         CloseNfpOpenTradesInOriginalOrder();
        }
        if ( !(global_320_bool_28E8) )
        {
@@ -3878,90 +3804,7 @@ g_initialLegacyRiskLotPending=true;
          }
          if ( NFP_CloseOpenTrades )
          {
-           for (temp_int_54 = MT4OrdersTotal() ; temp_int_54 >= 0 ; temp_int_54=temp_int_54 - 1)
-           {
-             if ( OrderSelect(temp_int_54,0,0) != true || OrderSymbol() != global_336_string_3130 )   continue;
-             temp_int_55 = OrderMagicNumber();
-             temp_int_56=ST1_MagicNumber + 1;
-             if ( temp_int_55 != temp_int_56 )
-             {
-               temp_int_56 = OrderMagicNumber();
-               temp_int_57=ST1_MagicNumber + 2;
-               if ( temp_int_56 != temp_int_57 )
-               {
-                 temp_int_57 = OrderMagicNumber();
-                 temp_int_58=ST1_MagicNumber + 3;
-                 if ( temp_int_57 != temp_int_58 )
-                 {
-                   temp_int_58 = OrderMagicNumber();
-                   temp_int_59=ST1_MagicNumber + 4;
-                   if ( temp_int_58 != temp_int_59 )
-                   {
-                     temp_int_59 = OrderMagicNumber();
-                     temp_int_60=ST1_MagicNumber + 5;
-                     if ( temp_int_59 != temp_int_60 )
-                     {
-                       temp_int_60 = OrderMagicNumber();
-                       temp_int_61=ST1_MagicNumber + 6;
-                       if ( temp_int_60 != temp_int_61 )
-                       {
-                         temp_int_61 = OrderMagicNumber();
-                         temp_int_62=ST1_MagicNumber + 7;
-                         if ( temp_int_61 != temp_int_62 )
-                         {
-                           temp_int_62 = OrderMagicNumber();
-                           temp_int_63=ST1_MagicNumber + 8;
-                           if ( temp_int_62 != temp_int_63 )
-                           {
-                             temp_int_63 = OrderMagicNumber();
-                             temp_int_64=ST1_MagicNumber + 9;
-                             if ( temp_int_63 != temp_int_64 )
-                             {
-                               temp_int_64 = OrderMagicNumber();
-                               temp_int_65=ST1_MagicNumber + 10;
-                               if ( temp_int_64 != temp_int_65 )
-                               {
-                                 temp_int_65 = OrderMagicNumber();
-                                 temp_int_66=ST1_MagicNumber + 11;
-                                 if ( temp_int_65 != temp_int_66 )
-                                 {
-                                   temp_int_66 = OrderMagicNumber();
-                                   temp_int_67=ST1_MagicNumber + 12;
-                                   if ( temp_int_66 != temp_int_67 )
-                                   {
-                                     temp_int_67 = OrderMagicNumber();
-                                     temp_int_68=ST1_MagicNumber + 13;
-                                     if ( temp_int_67 != temp_int_68 )
-                                     {
-                                       temp_int_68 = OrderMagicNumber();
-                                       temp_int_69=ST1_MagicNumber + 14;
-                                       if ( temp_int_68 != temp_int_69 )
-                                       {
-                                         temp_int_69 = OrderMagicNumber();
-                                         temp_int_70=ST1_MagicNumber + 15;
-                                       if ( temp_int_69 != temp_int_70 )   continue;
-                                       }
-                                     }
-                                   }
-                                 }
-                               }
-                             }
-                           }
-                         }
-                       }
-                     }
-                   }
-                 }
-               }
-             }
-             if ( OrderType() == 0 )
-             {
-               OrderClose(OrderTicket(),OrderLots(),MarketInfo(global_336_string_3130,MODE_BID),99999,Red); 
-             }
-             if ( OrderType() != 1 )   continue;
-             OrderClose(OrderTicket(),OrderLots(),MarketInfo(global_336_string_3130,MODE_ASK),99999,Red); 
-             
-           }
+           CloseNfpOpenTradesInOriginalOrder();
          }
          if ( !(global_320_bool_28E8) )
          {
@@ -3984,6 +3827,38 @@ g_initialLegacyRiskLotPending=true;
  {
    if ( DayOfWeek() == 5 && Hour() >= FridayStopHour && !(global_305_bool_2880) )
    {
+     // The original MT4 trade pool visits live positions before pending orders
+     // during the reverse Friday-cleanup pass.  The MQL5 compatibility cache
+     // stores positions before orders, so its reverse pass would otherwise
+     // cancel pending orders first.  Close managed positions explicitly in
+     // newest-ticket-first order, then let the legacy pass delete pendings.
+     if ( FridayCloseOpen )
+     {
+       long friday_position_tickets[];
+       int friday_position_count=0;
+       int friday_live_total=MT4OrdersTotal();
+       for (int friday_scan=0; friday_scan<friday_live_total; friday_scan++)
+       {
+         if ( OrderSelect(friday_scan,SELECT_BY_POS,MODE_TRADES) != true ||
+              OrderSymbol() != global_336_string_3130 ||
+              (OrderType() != OP_BUY && OrderType() != OP_SELL) ||
+              !IsNfpManagedMagic(OrderMagicNumber()) )
+           continue;
+         ArrayResize(friday_position_tickets,friday_position_count+1);
+         friday_position_tickets[friday_position_count++]=OrderTicket();
+       }
+       ArraySort(friday_position_tickets);
+       for (int friday_close=friday_position_count-1; friday_close>=0; friday_close--)
+       {
+         if ( OrderSelect(friday_position_tickets[friday_close],SELECT_BY_TICKET,MODE_TRADES) != true )
+           continue;
+         int friday_type=OrderType();
+         double friday_price=(friday_type==OP_BUY)
+                             ? MarketInfo(global_336_string_3130,MODE_BID)
+                             : MarketInfo(global_336_string_3130,MODE_ASK);
+         OrderClose(OrderTicket(),OrderLots(),friday_price,(int)global_38_double_C0,Red);
+       }
+     }
      for (temp_int_71 = MT4OrdersTotal() ; temp_int_71 >= 0 ; temp_int_71=temp_int_71 - 1)
      {
        if ( OrderSelect(temp_int_71,0,0) != true || OrderSymbol() != global_336_string_3130 )   continue;
@@ -4059,14 +3934,6 @@ g_initialLegacyRiskLotPending=true;
              }
            }
          }
-       }
-       if ( FridayCloseOpen && OrderType() == 0 )
-       {
-         OrderClose(OrderTicket(),OrderLots(),MarketInfo(global_336_string_3130,MODE_BID),(int)global_38_double_C0,Red); 
-       }
-       if ( FridayCloseOpen && OrderType() == 1 )
-       {
-         OrderClose(OrderTicket(),OrderLots(),MarketInfo(global_336_string_3130,MODE_ASK),(int)global_38_double_C0,Red); 
        }
        if ( ( OrderType() != 4 && OrderType() != 5 ) || !(FridayClosePending) )   continue;
        OrderDelete(OrderTicket(),Red); 
@@ -6083,10 +5950,12 @@ g_initialLegacyRiskLotPending=true;
            }
            global_191_double_520 = temp_double_27 ;
            local_4_double = global_191_double_520 ;
-           if ( MarketInfo(global_336_string_3130,MODE_BID)<local_4_double )
-           {
-             Print("Closing with virtual SL"); 
-             RefreshRates(); 
+            if ( MarketInfo(global_336_string_3130,MODE_BID)<local_4_double )
+            {
+              Print("Closing with virtual SL"); 
+              Print("Virtual_SL: ",DoubleToString(local_4_double,global_190_int_518));
+              Print("Last Bid: ",DoubleToString(MarketInfo(global_336_string_3130,MODE_BID),global_190_int_518));
+              RefreshRates(); 
              OrderClose(local_9_long,local_12_double,MarketInfo(global_336_string_3130,MODE_BID),(int)global_1_double_0,0xFFFFFFFF); 
              return(true); 
            }
@@ -6202,10 +6071,12 @@ g_initialLegacyRiskLotPending=true;
              }
            }
            global_191_double_520 = local_7_double ;
-           if ( MarketInfo(global_336_string_3130,MODE_BID)<local_7_double )
-           {
-             Print("Closing with virtual SL"); 
-             RefreshRates(); 
+            if ( MarketInfo(global_336_string_3130,MODE_BID)<local_7_double )
+            {
+              Print("Closing with virtual SL"); 
+              Print("Virtual_SL: ",DoubleToString(local_7_double,global_190_int_518));
+              Print("Last Bid: ",DoubleToString(MarketInfo(global_336_string_3130,MODE_BID),global_190_int_518));
+              RefreshRates(); 
              OrderClose(local_9_long,local_12_double,MarketInfo(global_336_string_3130,MODE_BID),(int)global_1_double_0,0xFFFFFFFF); 
              return(true); 
            }
@@ -6811,10 +6682,12 @@ g_initialLegacyRiskLotPending=true;
            }
            global_191_double_520 = temp_double_27 ;
            local_4_double = global_191_double_520 ;
-           if ( MarketInfo(global_336_string_3130,MODE_ASK)>local_4_double )
-           {
-             Print("Closing with virtual SL"); 
-             RefreshRates(); 
+            if ( MarketInfo(global_336_string_3130,MODE_ASK)>local_4_double )
+            {
+              Print("Closing with virtual SL"); 
+              Print("Virtual_SL: ",DoubleToString(local_4_double,global_190_int_518));
+              Print("Last Ask: ",DoubleToString(MarketInfo(global_336_string_3130,MODE_ASK),global_190_int_518));
+              RefreshRates(); 
              OrderClose(local_9_long,local_12_double,MarketInfo(global_336_string_3130,MODE_ASK),(int)global_1_double_0,0xFFFFFFFF); 
              return(true); 
            }
@@ -6930,10 +6803,12 @@ g_initialLegacyRiskLotPending=true;
              }
            }
            global_191_double_520 = local_7_double ;
-           if ( MarketInfo(global_336_string_3130,MODE_ASK)>local_7_double )
-           {
-             Print("Closing with virtual SL"); 
-             RefreshRates(); 
+            if ( MarketInfo(global_336_string_3130,MODE_ASK)>local_7_double )
+            {
+              Print("Closing with virtual SL"); 
+              Print("Virtual_SL: ",DoubleToString(local_7_double,global_190_int_518));
+              Print("Last Ask: ",DoubleToString(MarketInfo(global_336_string_3130,MODE_ASK),global_190_int_518));
+              RefreshRates(); 
              OrderClose(local_9_long,local_12_double,MarketInfo(global_336_string_3130,MODE_ASK),(int)global_1_double_0,0xFFFFFFFF); 
              return(true); 
            }
