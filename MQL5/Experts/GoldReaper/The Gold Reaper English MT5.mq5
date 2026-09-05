@@ -195,22 +195,27 @@ bool MT4EuropeanDST()
 
 double AccountFreeMarginCheck(string symbol,int cmd,double volume)
 {
-   double margin=0.0;
-   ENUM_ORDER_TYPE type=(cmd==OP_BUY)?ORDER_TYPE_BUY:ORDER_TYPE_SELL;
-   double price=(cmd==OP_BUY)?SymbolInfoDouble(symbol,SYMBOL_ASK):SymbolInfoDouble(symbol,SYMBOL_BID);
-   if(!OrderCalcMargin(type,symbol,volume,price,margin))
-      return AccountInfoDouble(ACCOUNT_MARGIN_FREE);
-   // The original EA applies the broker's 1:50 metals margin ceiling when
-   // AccountFreeMarginCheck() is evaluated, even if the tester account uses
-   // a higher leverage.  OrderCalcMargin() alone uses the account leverage,
-   // which allowed oversized XAU orders that the original rejects.
-   if(StringFind(symbol,"XAU")==0)
+   if(volume<=0.0)
+      return 0.0;
+
+   // Recovered from the original V4.6 JIT: for ordinary symbols the check
+   // requires at least 70 account-currency units of both equity and free
+   // margin per 0.01 lot.  The original helper returns a boolean result even
+   // though its legacy call site compares the value with zero.
+   double lot_units=volume/0.01;
+   if(lot_units<=0.0)
+      return 0.0;
+   if(AccountInfoDouble(ACCOUNT_EQUITY)/lot_units<70.0)
    {
-      double account_leverage=(double)AccountInfoInteger(ACCOUNT_LEVERAGE);
-      if(account_leverage>50.0)
-         margin*=account_leverage/50.0;
+      Print("equity too low");
+      return 0.0;
    }
-   return AccountInfoDouble(ACCOUNT_MARGIN_FREE)-margin;
+   if(AccountInfoDouble(ACCOUNT_MARGIN_FREE)/lot_units<70.0)
+   {
+      Print("free margin too low");
+      return 0.0;
+   }
+   return 1.0;
 }
 
 //====================================================================
@@ -786,6 +791,7 @@ void MT4BuildLiveCache()
       g_live_orders[n].comment=::OrderGetString(ORDER_COMMENT);
       g_live_orders[n].magic=(int)::OrderGetInteger(ORDER_MAGIC);
    }
+
    ArrayResize(g_live_orders,g_live_count);
    g_live_valid=true;
 }
@@ -3615,7 +3621,7 @@ g_initialLegacyRiskLotPending=true;
          temp_int_17 = 1;
          for (temp_int_18 = MT4OrdersTotal() ; temp_int_18 >= 0 ; temp_int_18=temp_int_18 - 1)
          {
-            if ( OrderSelect(temp_int_18,0,0) != true || OrderMagicNumber() != global_93_int_1F0 || OrderSymbol() != global_336_string_3130 || OrderType() != 4 || (OrderExpiration()>0 && OrderExpiration()<=TimeCurrent()) )   continue;
+            if ( OrderSelect(temp_int_18,0,0) != true || OrderMagicNumber() != global_93_int_1F0 || OrderSymbol() != global_336_string_3130 || OrderType() != 4 || !(MarketInfo(global_336_string_3130,MODE_ASK)<OrderOpenPrice()-global_309_double_2898) )   continue;
            OrderDelete(OrderTicket(),0xFFFFFFFF); 
            
          }
@@ -3623,7 +3629,7 @@ g_initialLegacyRiskLotPending=true;
          {
            for (temp_int_19 = MT4OrdersTotal() ; temp_int_19 >= 0 ; temp_int_19=temp_int_19 - 1)
            {
-              if ( OrderSelect(temp_int_19,0,0) != true || OrderMagicNumber() != global_96_int_208 || OrderSymbol() != global_336_string_3130 || OrderType() != 4 || (OrderExpiration()>0 && OrderExpiration()<=TimeCurrent()) )   continue;
+              if ( OrderSelect(temp_int_19,0,0) != true || OrderMagicNumber() != global_96_int_208 || OrderSymbol() != global_336_string_3130 || OrderType() != 4 || !(MarketInfo(global_336_string_3130,MODE_ASK)<OrderOpenPrice()-global_309_double_2898) )   continue;
              OrderDelete(OrderTicket(),0xFFFFFFFF); 
              
            }
@@ -3631,7 +3637,7 @@ g_initialLegacyRiskLotPending=true;
          temp_int_20 = 1;
          for (temp_int_21 = MT4OrdersTotal() ; temp_int_21 >= 0 ; temp_int_21=temp_int_21 - 1)
          {
-            if ( OrderSelect(temp_int_21,0,0) != true || OrderMagicNumber() != global_93_int_1F0 || OrderSymbol() != global_336_string_3130 || OrderType() != 5 || (OrderExpiration()>0 && OrderExpiration()<=TimeCurrent()) )   continue;
+            if ( OrderSelect(temp_int_21,0,0) != true || OrderMagicNumber() != global_93_int_1F0 || OrderSymbol() != global_336_string_3130 || OrderType() != 5 || !(MarketInfo(global_336_string_3130,MODE_BID)>OrderOpenPrice()+global_309_double_2898) )   continue;
            OrderDelete(OrderTicket(),0xFFFFFFFF); 
            
          }
@@ -3639,7 +3645,7 @@ g_initialLegacyRiskLotPending=true;
          {
            for (temp_int_22 = MT4OrdersTotal() ; temp_int_22 >= 0 ; temp_int_22=temp_int_22 - 1)
            {
-              if ( OrderSelect(temp_int_22,0,0) != true || OrderMagicNumber() != global_96_int_208 || OrderSymbol() != global_336_string_3130 || OrderType() != 5 || (OrderExpiration()>0 && OrderExpiration()<=TimeCurrent()) )   continue;
+              if ( OrderSelect(temp_int_22,0,0) != true || OrderMagicNumber() != global_96_int_208 || OrderSymbol() != global_336_string_3130 || OrderType() != 5 || !(MarketInfo(global_336_string_3130,MODE_BID)>OrderOpenPrice()+global_309_double_2898) )   continue;
              OrderDelete(OrderTicket(),0xFFFFFFFF); 
              
            }
@@ -3660,7 +3666,7 @@ g_initialLegacyRiskLotPending=true;
          {
            for (temp_int_24 = MT4OrdersTotal() ; temp_int_24 >= 0 ; temp_int_24=temp_int_24 - 1)
            {
-              if ( OrderSelect(temp_int_24,0,0) != true || OrderMagicNumber() != global_96_int_208 || OrderSymbol() != global_336_string_3130 || OrderType() != 4 || (OrderExpiration()>0 && OrderExpiration()<=TimeCurrent()) )   continue;
+              if ( OrderSelect(temp_int_24,0,0) != true || OrderMagicNumber() != global_96_int_208 || OrderSymbol() != global_336_string_3130 || OrderType() != 4 || !(MarketInfo(global_336_string_3130,MODE_ASK)<OrderOpenPrice()-global_309_double_2898) )   continue;
              OrderDelete(OrderTicket(),0xFFFFFFFF); 
              
            }
@@ -3681,7 +3687,7 @@ g_initialLegacyRiskLotPending=true;
          {
            for (temp_int_26 = MT4OrdersTotal() ; temp_int_26 >= 0 ; temp_int_26=temp_int_26 - 1)
            {
-              if ( OrderSelect(temp_int_26,0,0) != true || OrderMagicNumber() != global_96_int_208 || OrderSymbol() != global_336_string_3130 || OrderType() != 5 || (OrderExpiration()>0 && OrderExpiration()<=TimeCurrent()) )   continue;
+              if ( OrderSelect(temp_int_26,0,0) != true || OrderMagicNumber() != global_96_int_208 || OrderSymbol() != global_336_string_3130 || OrderType() != 5 || !(MarketInfo(global_336_string_3130,MODE_BID)>OrderOpenPrice()+global_309_double_2898) )   continue;
              OrderDelete(OrderTicket(),0xFFFFFFFF); 
              
            }
@@ -3798,7 +3804,7 @@ g_initialLegacyRiskLotPending=true;
            temp_int_44 = 1;
            for (temp_int_45 = MT4OrdersTotal() ; temp_int_45 >= 0 ; temp_int_45=temp_int_45 - 1)
            {
-              if ( OrderSelect(temp_int_45,0,0) != true || OrderMagicNumber() != global_93_int_1F0 || OrderSymbol() != global_336_string_3130 || OrderType() != 4 || (OrderExpiration()>0 && OrderExpiration()<=TimeCurrent()) )   continue;
+              if ( OrderSelect(temp_int_45,0,0) != true || OrderMagicNumber() != global_93_int_1F0 || OrderSymbol() != global_336_string_3130 || OrderType() != 4 || !(MarketInfo(global_336_string_3130,MODE_ASK)<OrderOpenPrice()-global_309_double_2898) )   continue;
              OrderDelete(OrderTicket(),0xFFFFFFFF); 
              
            }
@@ -3806,7 +3812,7 @@ g_initialLegacyRiskLotPending=true;
            {
              for (temp_int_46 = MT4OrdersTotal() ; temp_int_46 >= 0 ; temp_int_46=temp_int_46 - 1)
              {
-                if ( OrderSelect(temp_int_46,0,0) != true || OrderMagicNumber() != global_96_int_208 || OrderSymbol() != global_336_string_3130 || OrderType() != 4 || (OrderExpiration()>0 && OrderExpiration()<=TimeCurrent()) )   continue;
+                if ( OrderSelect(temp_int_46,0,0) != true || OrderMagicNumber() != global_96_int_208 || OrderSymbol() != global_336_string_3130 || OrderType() != 4 || !(MarketInfo(global_336_string_3130,MODE_ASK)<OrderOpenPrice()-global_309_double_2898) )   continue;
                OrderDelete(OrderTicket(),0xFFFFFFFF); 
                
              }
@@ -3814,7 +3820,7 @@ g_initialLegacyRiskLotPending=true;
            temp_int_47 = 1;
            for (temp_int_48 = MT4OrdersTotal() ; temp_int_48 >= 0 ; temp_int_48=temp_int_48 - 1)
            {
-              if ( OrderSelect(temp_int_48,0,0) != true || OrderMagicNumber() != global_93_int_1F0 || OrderSymbol() != global_336_string_3130 || OrderType() != 5 || (OrderExpiration()>0 && OrderExpiration()<=TimeCurrent()) )   continue;
+              if ( OrderSelect(temp_int_48,0,0) != true || OrderMagicNumber() != global_93_int_1F0 || OrderSymbol() != global_336_string_3130 || OrderType() != 5 || !(MarketInfo(global_336_string_3130,MODE_BID)>OrderOpenPrice()+global_309_double_2898) )   continue;
              OrderDelete(OrderTicket(),0xFFFFFFFF); 
              
            }
@@ -3822,7 +3828,7 @@ g_initialLegacyRiskLotPending=true;
            {
              for (temp_int_49 = MT4OrdersTotal() ; temp_int_49 >= 0 ; temp_int_49=temp_int_49 - 1)
              {
-                if ( OrderSelect(temp_int_49,0,0) != true || OrderMagicNumber() != global_96_int_208 || OrderSymbol() != global_336_string_3130 || OrderType() != 5 || (OrderExpiration()>0 && OrderExpiration()<=TimeCurrent()) )   continue;
+                if ( OrderSelect(temp_int_49,0,0) != true || OrderMagicNumber() != global_96_int_208 || OrderSymbol() != global_336_string_3130 || OrderType() != 5 || !(MarketInfo(global_336_string_3130,MODE_BID)>OrderOpenPrice()+global_309_double_2898) )   continue;
                OrderDelete(OrderTicket(),0xFFFFFFFF); 
                
              }
@@ -3843,7 +3849,7 @@ g_initialLegacyRiskLotPending=true;
            {
              for (temp_int_51 = MT4OrdersTotal() ; temp_int_51 >= 0 ; temp_int_51=temp_int_51 - 1)
              {
-                if ( OrderSelect(temp_int_51,0,0) != true || OrderMagicNumber() != global_96_int_208 || OrderSymbol() != global_336_string_3130 || OrderType() != 4 || (OrderExpiration()>0 && OrderExpiration()<=TimeCurrent()) )   continue;
+                if ( OrderSelect(temp_int_51,0,0) != true || OrderMagicNumber() != global_96_int_208 || OrderSymbol() != global_336_string_3130 || OrderType() != 4 || !(MarketInfo(global_336_string_3130,MODE_ASK)<OrderOpenPrice()-global_309_double_2898) )   continue;
                OrderDelete(OrderTicket(),0xFFFFFFFF); 
                
              }
@@ -3864,7 +3870,7 @@ g_initialLegacyRiskLotPending=true;
            {
              for (temp_int_53 = MT4OrdersTotal() ; temp_int_53 >= 0 ; temp_int_53=temp_int_53 - 1)
              {
-                if ( OrderSelect(temp_int_53,0,0) != true || OrderMagicNumber() != global_96_int_208 || OrderSymbol() != global_336_string_3130 || OrderType() != 5 || (OrderExpiration()>0 && OrderExpiration()<=TimeCurrent()) )   continue;
+                if ( OrderSelect(temp_int_53,0,0) != true || OrderMagicNumber() != global_96_int_208 || OrderSymbol() != global_336_string_3130 || OrderType() != 5 || !(MarketInfo(global_336_string_3130,MODE_BID)>OrderOpenPrice()+global_309_double_2898) )   continue;
                OrderDelete(OrderTicket(),0xFFFFFFFF); 
                
              }
@@ -9623,9 +9629,9 @@ g_initialLegacyRiskLotPending=true;
    global_334_string_3120=ST1_Comment + "_XAUUSD_4";
  }
  global_93_int_1F0=ST1_MagicNumber + 2;
- // The Market EX5 uses the 52-point DD weight before the fixed-value return
- // as well.  Keeping the reconstructed 57-point value rounds strategy 2 down
- // by one lot step once the sizing balance crosses the 0.03 threshold.
+ // Repeated isolated probes of the Market EX5 use the 52-point DD weight
+ // in variable-value mode.  A single cold-agent matrix run produced 57-like
+ // sizing; that run is treated as an environment-state counterexample.
  global_397_double_6768 = ConvertUsdToAccountCurrency(52.0) ;
  if ( !(UseVariableValues) )   return;
  global_7_double_50 = 1600.0 ;
