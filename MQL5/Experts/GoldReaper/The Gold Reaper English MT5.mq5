@@ -10670,7 +10670,17 @@ g_initialLegacyRiskLotPending=true;
    if ( OrderSelect(local_2_int,0,1) != true )   continue;
    temp_long_2 = OrderCloseTime();
    if ( temp_long_2 < iTime(global_336_string_3130,MT4Period(PERIOD_D1),0) )   continue;
-   local_3_double = OrderProfit() + OrderSwap() + OrderCommission() ;
+   // The original EX5 daily-DD path accounts for the commission attached to
+   // the closing history deal.  The generic MT4 history view also carries a
+   // proportional entry commission, which made the reconstructed threshold
+   // fire one or two ticks too early.  Keep the generic history semantics for
+   // panels/ranking, but use the close-deal commission in this risk guard.
+   double temp_daily_close_commission = OrderCommission();
+   if ( g_sel_hist_index>=0 )
+   {
+     temp_daily_close_commission = HistoryDealGetDouble((ulong)g_hist_ticket[g_sel_hist_index],DEAL_COMMISSION);
+   }
+   local_3_double = OrderProfit() + OrderSwap() + temp_daily_close_commission ;
    local_1_double = local_3_double + local_1_double ;
    
  }
