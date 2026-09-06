@@ -2084,7 +2084,7 @@ g_initialLegacyRiskLotPending=true;
  {
    g_startLots_rw = MarketInfo(global_336_string_3130,MODE_MINLOT) ;
  }
- if ( TradeFrequency == 5 && Risk == 1234 )
+  if ( TradeFrequency == 5 && Risk == 1234 )
  {
    local_2_double = ConvertAccountCurrencyToUsd(AccountInfoDouble(ACCOUNT_BALANCE)) ;
    local_3_double = MaxAllowedDD / 100.0 * local_2_double ;
@@ -2722,16 +2722,28 @@ g_initialLegacyRiskLotPending=true;
  }
  // Original V4.6 live-calendar cache: refresh after 900 seconds, or immediately
  // whenever no event is cached.  Tester bypasses this path and uses hardcoded dates.
- if ( EnableNFP_Filter && UseMQL5Calendar && MQLInfoInteger(MQL_TESTER) != 1 )
+  if ( EnableNFP_Filter && UseMQL5Calendar && MQLInfoInteger(MQL_TESTER) != 1 )
  {
    datetime temp_nfpRefreshNow = TimeTradeServer();
    if ( temp_nfpRefreshNow > g_nfpCalendarLastRefresh + 900 || g_nextNFPCalendar == 0 )
    {
      g_nextNFPCalendar = GetNextNFPFromCalendar();
-     g_nfpCalendarLastRefresh = TimeTradeServer();
-   }
- }
- if ( TradeFrequency == 5 && Risk == 1234 )
+      g_nfpCalendarLastRefresh = TimeTradeServer();
+    }
+  }
+  // Original Market EX5 behavior for this incompatible input combination:
+  // manual frequency never initializes the historical-DD divisor, so the
+  // first tick terminates with a zero-divide critical error.
+  if ( TradeFrequency == Manual_Strategy_Selection && Risk == MaxHistoricalDD && UseWeightedLots &&
+       (RunStrat1 || RunStrat2 || RunStrat3 || RunStrat4 || RunStrat5 ||
+        RunStrat6 || RunStrat7 || RunStrat8 || RunStrat9) )
+  {
+    string original_manual_dd_empty=StringSubstr(Symbol(),0,0);
+    int original_manual_dd_divisor=(int)StringToInteger(original_manual_dd_empty);
+    int original_manual_dd_result=(int)AccountInfoInteger(ACCOUNT_LOGIN)/original_manual_dd_divisor;
+    Print("manual historical-DD compatibility result: ",original_manual_dd_result);
+  }
+  if ( TradeFrequency == 5 && Risk == 1234 )
  {
    local_2_double = ConvertAccountCurrencyToUsd(AccountInfoDouble(ACCOUNT_BALANCE)) ;
    local_3_double = MaxAllowedDD / 100.0 * local_2_double ;
@@ -4444,11 +4456,11 @@ g_initialLegacyRiskLotPending=true;
  }
  if ( Risk == 1234 )
  {
-   if ( UseWeightedLots )
-   {
-     if ( global_397_double_6768==0.0 )
-     {
-       global_397_double_6768 = 100000.0 ;
+  if ( UseWeightedLots )
+  {
+    if ( global_397_double_6768==0.0 )
+    {
+      global_397_double_6768 = 100000.0 ;
      }
      global_146_double_410 = MaxAllowedDD / global_398_double_6770 ;
      if ( SymbolInfoDouble(global_336_string_3130,36)==0.1 )
