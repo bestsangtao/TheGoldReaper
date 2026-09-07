@@ -1715,16 +1715,17 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
    return(g_hardcoded_nfp_value);
   }
 
- // The original runtime closes NFP positions in two stable groups: BUY first,
- // then SELL. Within each group the newest (highest) position ticket is closed
- // first. A single reverse SELECT_BY_POS pass on MT5 interleaves the two sides
- // and changes the tester trade-event order when both sides are open.
+ // The original runtime closes managed positions in two stable groups: BUY
+ // first, then SELL. Within each group the newest (highest) position ticket is
+ // closed first. Capture a ticket snapshot before sending any close request;
+ // otherwise every successful close rebuilds the synthetic MQL4 trade pool and
+ // changes the meaning of the next SELECT_BY_POS index.
  bool IsNfpManagedMagic(const int magic)
  {
    return(magic >= ST1_MagicNumber + 1 && magic <= ST1_MagicNumber + 15);
  }
 
- void CloseNfpPositionsByType(const int order_type)
+ void CloseManagedPositionsByType(const int order_type,const int close_slippage)
  {
    long tickets[];
    int ticket_count=0;
@@ -1748,14 +1749,20 @@ input bool RunStrat9=true  ;    //Run Strategy 9 (high risk)
      double close_price=(order_type==OP_BUY)
                         ? MarketInfo(global_336_string_3130,MODE_BID)
                         : MarketInfo(global_336_string_3130,MODE_ASK);
-     OrderClose(OrderTicket(),OrderLots(),close_price,99999,Red);
+      OrderClose(OrderTicket(),OrderLots(),close_price,close_slippage,Red);
    }
  }
 
  void CloseNfpOpenTradesInOriginalOrder()
  {
-   CloseNfpPositionsByType(OP_BUY);
-   CloseNfpPositionsByType(OP_SELL);
+   CloseManagedPositionsByType(OP_BUY,99999);
+   CloseManagedPositionsByType(OP_SELL,99999);
+ }
+
+ void CloseDailyDDPositionsInOriginalOrder()
+ {
+   CloseManagedPositionsByType(OP_BUY,(int)global_38_double_C0);
+   CloseManagedPositionsByType(OP_SELL,(int)global_38_double_C0);
  }
 
  // Original V4.6 dump has no withdrawal-reconciliation layer here.
@@ -10641,22 +10648,6 @@ g_initialLegacyRiskLotPending=true;
  double     temp_double_1;
  long       temp_long_2;
  int        temp_int_3;
- int        temp_int_4;
- int        temp_int_5;
- int        temp_int_6;
- int        temp_int_7;
- int        temp_int_8;
- int        temp_int_9;
- int        temp_int_10;
- int        temp_int_11;
- int        temp_int_12;
- int        temp_int_13;
- int        temp_int_14;
- int        temp_int_15;
- int        temp_int_16;
- int        temp_int_17;
- int        temp_int_18;
- int        temp_int_19;
 
  temp_double_1 = AccountEquity();
  if ( temp_double_1==AccountBalance() )   return;
@@ -10692,93 +10683,10 @@ g_initialLegacyRiskLotPending=true;
  {
    Print("Max Daily Drawdown reached, closing trades and skipping rest of the day"); 
  }
- for (temp_int_3 = MT4OrdersTotal() ; temp_int_3 >= 0 ; temp_int_3=temp_int_3 - 1)
- {
-   if ( OrderSelect(temp_int_3,0,0) != true || OrderSymbol() != global_336_string_3130 )   continue;
-   temp_int_4 = OrderMagicNumber();
-   temp_int_5=ST1_MagicNumber + 1;
-   if ( temp_int_4 != temp_int_5 )
-   {
-     temp_int_5 = OrderMagicNumber();
-     temp_int_6=ST1_MagicNumber + 2;
-     if ( temp_int_5 != temp_int_6 )
-     {
-       temp_int_6 = OrderMagicNumber();
-       temp_int_7=ST1_MagicNumber + 3;
-       if ( temp_int_6 != temp_int_7 )
-       {
-         temp_int_7 = OrderMagicNumber();
-         temp_int_8=ST1_MagicNumber + 4;
-         if ( temp_int_7 != temp_int_8 )
-         {
-           temp_int_8 = OrderMagicNumber();
-           temp_int_9=ST1_MagicNumber + 5;
-           if ( temp_int_8 != temp_int_9 )
-           {
-             temp_int_9 = OrderMagicNumber();
-             temp_int_10=ST1_MagicNumber + 6;
-             if ( temp_int_9 != temp_int_10 )
-             {
-               temp_int_10 = OrderMagicNumber();
-               temp_int_11=ST1_MagicNumber + 7;
-               if ( temp_int_10 != temp_int_11 )
-               {
-                 temp_int_11 = OrderMagicNumber();
-                 temp_int_12=ST1_MagicNumber + 8;
-                 if ( temp_int_11 != temp_int_12 )
-                 {
-                   temp_int_12 = OrderMagicNumber();
-                   temp_int_13=ST1_MagicNumber + 9;
-                   if ( temp_int_12 != temp_int_13 )
-                   {
-                     temp_int_13 = OrderMagicNumber();
-                     temp_int_14=ST1_MagicNumber + 10;
-                     if ( temp_int_13 != temp_int_14 )
-                     {
-                       temp_int_14 = OrderMagicNumber();
-                       temp_int_15=ST1_MagicNumber + 11;
-                       if ( temp_int_14 != temp_int_15 )
-                       {
-                         temp_int_15 = OrderMagicNumber();
-                         temp_int_16=ST1_MagicNumber + 12;
-                         if ( temp_int_15 != temp_int_16 )
-                         {
-                           temp_int_16 = OrderMagicNumber();
-                           temp_int_17=ST1_MagicNumber + 13;
-                           if ( temp_int_16 != temp_int_17 )
-                           {
-                             temp_int_17 = OrderMagicNumber();
-                             temp_int_18=ST1_MagicNumber + 14;
-                             if ( temp_int_17 != temp_int_18 )
-                             {
-                               temp_int_18 = OrderMagicNumber();
-                               temp_int_19=ST1_MagicNumber + 15;
-                             if ( temp_int_18 != temp_int_19 )   continue;
-                             }
-                           }
-                         }
-                       }
-                     }
-                   }
-                 }
-               }
-             }
-           }
-         }
-       }
-     }
-   }
-   if ( OrderType() == 0 )
-   {
-     OrderClose(OrderTicket(),OrderLots(),MarketInfo(global_336_string_3130,MODE_BID),(int)global_38_double_C0,Red); 
-   }
-   if ( OrderType() == 1 )
-   {
-     OrderClose(OrderTicket(),OrderLots(),MarketInfo(global_336_string_3130,MODE_ASK),(int)global_38_double_C0,Red); 
-   }
-   // The original closes market positions before it starts deleting pending
-   // orders at the daily-DD boundary. Pending orders are handled in pass 2.
- }
+ // Close from an immutable ticket snapshot. The original daily-DD path closes
+ // BUY positions before SELL positions and visits newest tickets first within
+ // each side. Pending orders remain a separate second pass below.
+ CloseDailyDDPositionsInOriginalOrder();
  for (temp_int_3 = MT4OrdersTotal() ; temp_int_3 >= 0 ; temp_int_3=temp_int_3 - 1)
  {
    if ( OrderSelect(temp_int_3,0,0) != true || OrderSymbol() != global_336_string_3130 ) continue;
