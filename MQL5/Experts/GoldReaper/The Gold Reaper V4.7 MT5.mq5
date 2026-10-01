@@ -3487,6 +3487,20 @@ g_initialLegacyRiskLotPending=true;
 
  global_328_int_3100 = arg_0_int ;
  local_2_bool = false ;
+
+ // Original V47 JIT +0x1DE1A snapshots SymbolInfoTick, then +0x1DEB1
+ // stores ask-bid in the working spread before management/trade requests.
+ // Requests can advance tester quotes; the later HL calculation (+0x28F8D)
+ // still reads this spread, not a fresh quote after resizing pending orders.
+ MqlTick temp_processTick;
+ if ( SymbolInfoTick(global_336_string_3130,temp_processTick) )
+ {
+   global_1_double_0 = temp_processTick.ask - temp_processTick.bid;
+ }
+ else
+ {
+   Print("Tick not ok");
+ }
  
  if ( global_81_double_1A0>0.0 )
  {
@@ -4008,7 +4022,7 @@ g_initialLegacyRiskLotPending=true;
      }
    }
  }
- global_1_double_0 = MarketInfo(global_336_string_3130,MODE_ASK) - MarketInfo(global_336_string_3130,MODE_BID) ;
+ // Keep the process-entry spread snapshot, as in the original JIT.
  if ( global_35_bool_AF )
  {
    if ( global_1_double_0>g_MaxSpread_rw * global_229_double_1E00 )
