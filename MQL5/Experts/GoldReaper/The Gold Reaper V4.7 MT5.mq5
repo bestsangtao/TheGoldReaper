@@ -3896,37 +3896,14 @@ g_initialLegacyRiskLotPending=true;
  {
    if ( DayOfWeek() == 5 && Hour() >= FridayStopHour && !(global_305_bool_2880) )
    {
-     // The original MT4 trade pool visits live positions before pending orders
-     // during the reverse Friday-cleanup pass.  The MQL5 compatibility cache
-     // stores positions before orders, so its reverse pass would otherwise
-     // cancel pending orders first.  Close managed positions explicitly in
-     // newest-ticket-first order, then let the legacy pass delete pendings.
+     // Original JIT Friday cleanup at +0x36DB0 calls +0x365A0 (BUY)
+     // before +0x36980 (SELL), then runs the pending-order deletion pass.
+     // Keep the two position groups separate; a combined ticket sort can
+     // interleave a SELL close ahead of older BUY positions.
      if ( FridayCloseOpen )
      {
-       long friday_position_tickets[];
-       int friday_position_count=0;
-       int friday_live_total=MT4OrdersTotal();
-       for (int friday_scan=0; friday_scan<friday_live_total; friday_scan++)
-       {
-         if ( OrderSelect(friday_scan,SELECT_BY_POS,MODE_TRADES) != true ||
-              OrderSymbol() != global_336_string_3130 ||
-              (OrderType() != OP_BUY && OrderType() != OP_SELL) ||
-              !IsNfpManagedMagic(OrderMagicNumber()) )
-           continue;
-         ArrayResize(friday_position_tickets,friday_position_count+1);
-         friday_position_tickets[friday_position_count++]=OrderTicket();
-       }
-       ArraySort(friday_position_tickets);
-       for (int friday_close=friday_position_count-1; friday_close>=0; friday_close--)
-       {
-         if ( OrderSelect(friday_position_tickets[friday_close],SELECT_BY_TICKET,MODE_TRADES) != true )
-           continue;
-         int friday_type=OrderType();
-         double friday_price=(friday_type==OP_BUY)
-                             ? MarketInfo(global_336_string_3130,MODE_BID)
-                             : MarketInfo(global_336_string_3130,MODE_ASK);
-         OrderClose(OrderTicket(),OrderLots(),friday_price,(int)global_38_double_C0,Red);
-       }
+       CloseManagedPositionsByType(OP_BUY,(int)global_38_double_C0);
+       CloseManagedPositionsByType(OP_SELL,(int)global_38_double_C0);
      }
      for (temp_int_71 = MT4OrdersTotal() ; temp_int_71 >= 0 ; temp_int_71=temp_int_71 - 1)
      {
